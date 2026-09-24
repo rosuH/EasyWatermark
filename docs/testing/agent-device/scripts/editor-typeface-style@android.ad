@@ -3,7 +3,7 @@ open me.rosuh.easywatermark.debug
 wait label="Save"
 press label="Style"
 wait label="TileMode"
-press 699 2110
+press id="editorOption-TextTypeFace"
 wait label="Bold"
 press label="Bold"
 wait label="Bold"

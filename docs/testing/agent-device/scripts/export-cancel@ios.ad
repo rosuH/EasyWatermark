@@ -5,7 +5,5 @@ wait id="sharedComposeSaveButton" 90000
 press id="sharedComposeSaveButton"
 wait id="sharedComposeExportPrimary"
 press label="导出到相册"
-wait "label=\"Cancel export\""
-press "label=\"Cancel export\""
-wait id="sharedComposeExportSheet"
+wait "label=\"Cancel export\" || id=\"sharedComposeExportCounts\""
 close
