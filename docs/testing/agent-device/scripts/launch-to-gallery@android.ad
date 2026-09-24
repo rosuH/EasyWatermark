@@ -1,6 +1,6 @@
 context platform=android
 open me.rosuh.easywatermark.debug --relaunch
-wait label="Choose Images"
+wait "label=\"Choose Images\""
 press label="About"
 wait label="Version"
 scroll down
@@ -8,7 +8,7 @@ scroll down
 wait "label=\"Use in-app gallery\""
 press "label=\"Use in-app gallery\""
 press label="Back"
-wait label="Choose Images"
-press label="Choose Images"
+wait "label=\"Choose Images\""
+press "label=\"Choose Images\""
 wait text "Choose more…"
 close

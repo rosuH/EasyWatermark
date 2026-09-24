@@ -4,8 +4,8 @@ press id="store-seed-editor"
 wait id="sharedComposeSaveButton" 90000
 press id="sharedComposeSaveButton"
 wait id="sharedComposeExportPrimary"
-press id="sharedComposeExportPrimary"
-wait id="sharedComposeExportCancel"
-press id="sharedComposeExportCancel"
+press label="导出到相册"
+wait "label=\"Cancel export\""
+press "label=\"Cancel export\""
 wait id="sharedComposeExportSheet"
 close

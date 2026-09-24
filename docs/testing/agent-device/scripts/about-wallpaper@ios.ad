@@ -1,4 +1,4 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
-wait label="Choose Images"
+wait "label=\"Choose Images\""
 close
