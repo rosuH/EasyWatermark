@@ -1,6 +1,5 @@
 context platform=android
 open me.rosuh.easywatermark.debug
-wait label="Save" 45000
 press label="Save"
 wait "label=\"Output format\""
 press value="PNG"
