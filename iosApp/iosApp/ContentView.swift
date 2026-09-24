@@ -143,7 +143,7 @@ private enum StoreCaptureHooks {
         // About/Open Source/Editor back taps (XCUITest id=aboutBack hits store-seed-editor).
         NSLayoutConstraint.activate([
             bar.leadingAnchor.constraint(equalTo: hostView.leadingAnchor),
-            bar.topAnchor.constraint(equalTo: hostView.safeAreaLayoutGuide.topAnchor, constant: 56),
+            bar.topAnchor.constraint(equalTo: hostView.safeAreaLayoutGuide.topAnchor, constant: 96),
             stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
             stack.topAnchor.constraint(equalTo: bar.topAnchor),
@@ -167,6 +167,11 @@ private final class StoreCaptureHookBar: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         superview?.bringSubviewToFront(self)
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hit = super.hitTest(point, with: event)
+        return hit is UIButton ? hit : nil
     }
 }
 #endif
