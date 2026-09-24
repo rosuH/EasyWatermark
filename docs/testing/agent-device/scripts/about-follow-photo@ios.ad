@@ -8,6 +8,6 @@ scroll down
 scroll down
 press "role=switch label=\"Theme editor from photo\""
 wait "role=switch label=\"Theme editor from photo\""
-press label="Back"
+press id="aboutBack"
 wait id="launchPickImageButton"
 close
