@@ -168,6 +168,11 @@ class _VideoProducer:
                 pass
         finally:
             self._cleanup()
+            # iOS has no idb here, so the thread ends at once. Subscribers
+            # must wake and let the page fall back to a still.
+            self._stop.set()
+            with self._cv:
+                self._cv.notify_all()
 
     def _run_android(self, serial: str) -> None:
         jar = scrcpy_server_jar()

@@ -958,17 +958,28 @@ def write_record(rec: dict) -> Path:
     return path
 
 
+def outcome_counts(tasks: list) -> tuple[int, int]:
+    """Rows the page calls pass and fail. review_required is a pass awaiting confirm."""
+    passed = failed = 0
+    for task in tasks or []:
+        if not isinstance(task, dict):
+            continue
+        state = task.get("state")
+        if state in {"passed", "review_required"}:
+            passed += 1
+        elif state in {"failed", "uncovered"}:
+            failed += 1
+    return passed, failed
+
+
 def finalize_record(rec: dict) -> None:
     rec["finished"] = iso(utc_now())
-    pass_n = fail_n = skip_n = 0
+    skip_n = 0
     for task in rec["tasks"]:
         for case in task.get("cases") or []:
-            if case.get("status") == "failed":
-                fail_n += 1
-            elif case.get("status") == "passed":
-                pass_n += 1
-            elif case.get("status") == "skipped":
+            if case.get("status") == "skipped":
                 skip_n += 1
+    pass_n, fail_n = outcome_counts(rec.get("tasks") or [])
     rec["pass_count"] = pass_n
     rec["fail_count"] = fail_n
     rec["skip_count"] = skip_n
@@ -1025,6 +1036,10 @@ def run_summaries() -> list[dict]:
             rec = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
+        if not isinstance(rec, dict):
+            continue
+        rec = reap_stale_run(rec)
+        passed_n, failed_n = outcome_counts(rec.get("tasks") or [])
         items.append(
             {
                 "id": rec.get("id", path.stem),
@@ -1034,8 +1049,8 @@ def run_summaries() -> list[dict]:
                 "git": rec.get("git"),
                 "selection": rec.get("selection"),
                 "source": rec.get("source") or "",
-                "pass_count": rec.get("pass_count", 0),
-                "fail_count": rec.get("fail_count", 0),
+                "pass_count": passed_n,
+                "fail_count": failed_n,
                 "skip_count": rec.get("skip_count", 0),
                 "duration_s": rec.get("duration_s"),
                 "historical": bool(rec.get("historical")),
@@ -1052,9 +1067,12 @@ def load_run(run_id: str) -> dict | None:
     if not path.is_file():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        rec = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    if not isinstance(rec, dict):
+        return None
+    return reap_stale_run(rec)
 
 
 def latest_run() -> dict | None:
@@ -2059,14 +2077,8 @@ def _run_batched_steps(
     return 0
 
 
-def release_agent_session(cmd: list[str] | None, logf=None) -> None:
-    """Drop the agent-device session lock. Never pass --shutdown."""
-    if not cmd or "--session" not in cmd:
-        return
-    index = cmd.index("--session")
-    if index + 1 >= len(cmd):
-        return
-    session = cmd[index + 1]
+def _close_named_session(session: str, logf=None) -> None:
+    """Close one agent-device session. Never pass --shutdown."""
     if not session or session.startswith("-"):
         return
     try:
@@ -2086,6 +2098,121 @@ def release_agent_session(cmd: list[str] | None, logf=None) -> None:
         detail = (proc.stderr or proc.stdout or "").strip()
         logf.write(f"session close {session}: {proc.returncode} {detail[:240]}\n")
         logf.flush()
+
+
+def release_agent_session(cmd: list[str] | None, logf=None) -> None:
+    """Drop the agent-device session lock. Never pass --shutdown."""
+    if not cmd or "--session" not in cmd:
+        return
+    index = cmd.index("--session")
+    if index + 1 >= len(cmd):
+        return
+    _close_named_session(cmd[index + 1], logf)
+
+
+def _listed_agent_sessions() -> list[str]:
+    try:
+        proc = subprocess.run(
+            [agent_device_bin(), "session", "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    try:
+        payload = json.loads(proc.stdout or "")
+    except json.JSONDecodeError:
+        return []
+    data = payload.get("data") if isinstance(payload, dict) else None
+    raw = data.get("sessions") if isinstance(data, dict) else None
+    if not isinstance(raw, list):
+        return []
+    names: list[str] = []
+    for item in raw:
+        if isinstance(item, str) and item:
+            names.append(item)
+        elif isinstance(item, dict):
+            name = str(item.get("name") or item.get("id") or item.get("session") or "")
+            if name:
+                names.append(name)
+    return names
+
+
+def reap_orphan_ios_runners(logf=None) -> list[int]:
+    """Stop AgentDeviceRunner xcodebuild left after its parent exited.
+
+    Only processes reparented to launchd (ppid 1) whose command is the
+    agent-device iOS runner. Never touches the simulator or the emulator.
+    """
+    try:
+        proc = subprocess.run(
+            ["ps", "-ax", "-o", "pid=,ppid=,command="],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        if logf is not None:
+            logf.write(f"ios runner scan failed: {exc}\n")
+            logf.flush()
+        return []
+    killed: list[int] = []
+    for line in (proc.stdout or "").splitlines():
+        parts = line.strip().split(None, 2)
+        if len(parts) < 3:
+            continue
+        pid_s, ppid_s, cmd = parts
+        if ppid_s != "1":
+            continue
+        if "xcodebuild" not in cmd or "AgentDeviceRunner" not in cmd:
+            continue
+        if "platform=iOS Simulator" not in cmd and "iOS Simulator" not in cmd:
+            continue
+        try:
+            pid = int(pid_s)
+        except ValueError:
+            continue
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError as exc:
+            if logf is not None:
+                logf.write(f"ios runner {pid} term failed: {exc}\n")
+            continue
+        killed.append(pid)
+        if logf is not None:
+            logf.write(f"ios runner {pid} SIGTERM (orphaned xcodebuild)\n")
+            logf.flush()
+    deadline = time.monotonic() + 3
+    for pid in killed:
+        while time.monotonic() < deadline and _pid_alive(pid):
+            time.sleep(0.2)
+        if _pid_alive(pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+    return killed
+
+
+def close_ios_sessions_after_run(rec: dict | None, logf=None) -> None:
+    """Close iOS agent-device sessions this run left open. Never --shutdown."""
+    names: set[str] = set()
+    for task in (rec or {}).get("tasks") or []:
+        if not isinstance(task, dict) or task.get("platform") != "ios":
+            continue
+        cmd = task.get("cmd") if isinstance(task.get("cmd"), list) else []
+        session = _cmd_flag(cmd, "--session")
+        if session:
+            names.add(session)
+    for name in _listed_agent_sessions():
+        if name.startswith("testmap-") and name.endswith("-ios"):
+            names.add(name)
+    for name in sorted(names):
+        _close_named_session(name, logf)
+    reap_orphan_ios_runners(logf)
 
 
 def run_task(
@@ -2277,6 +2404,7 @@ def load_status_record(run_id: str | None = None) -> dict | None:
             continue
         if not isinstance(rec, dict) or rec.get("historical"):
             continue
+        rec = reap_stale_run(rec)
         started = str(rec.get("started") or "")
         if rec.get("state") in {"running", "paused"} and (
             running is None or started > str(running.get("started") or "")
@@ -2375,6 +2503,7 @@ def project_status(rec: dict | None) -> dict:
             current = {"id": row["id"], "edge_id": edge, "elapsed_s": row["duration_s"] or 0}
     done = sum(1 for row in queue if row["state"] not in {"pending", "running", "paused"})
     failed = sum(1 for row in queue if row["state"] == "failed")
+    passed_n, failed_n = outcome_counts(tasks)
     log_path = Path(rec["log"]) if rec.get("log") else None
     if log_path and not log_path.is_absolute():
         log_path = REPO_ROOT / log_path
@@ -2390,6 +2519,8 @@ def project_status(rec: dict | None) -> dict:
         "queue": queue,
         "tasks": queue,
         "progress": {"done": done, "total": len(queue), "failed": failed},
+        "pass_count": passed_n,
+        "fail_count": failed_n,
         "current": current,
         "elapsed_s": 0,
         "log_tail": log_tail(log_path) if log_path else [],
@@ -2408,6 +2539,32 @@ def _pid_alive(pid: int) -> bool:
     except OSError:
         return False
     return True
+
+
+def reap_stale_run(rec: dict) -> dict:
+    """A running record whose process is gone is interrupted, not still running."""
+    if not isinstance(rec, dict) or rec.get("historical"):
+        return rec
+    if rec.get("finished"):
+        return rec
+    if rec.get("state") not in {"running", "paused"}:
+        return rec
+    pid = rec.get("pid")
+    if isinstance(pid, int) and pid > 0 and _pid_alive(pid):
+        return rec
+    rec["state"] = "interrupted"
+    rec["finished"] = iso(utc_now())
+    for task in rec.get("tasks") or []:
+        if isinstance(task, dict) and task.get("state") in {"pending", "running", "paused", None}:
+            task["state"] = "interrupted"
+    passed_n, failed_n = outcome_counts(rec.get("tasks") or [])
+    rec["pass_count"] = passed_n
+    rec["fail_count"] = failed_n
+    try:
+        write_record(rec)
+    except OSError:
+        return rec
+    return rec
 
 
 def _drain_runner_output(proc: subprocess.Popen) -> None:
@@ -2945,6 +3102,9 @@ class ActiveRun:
                 if rows is None:
                     continue
                 task["steps"] = [_step_public(row, task) for row in rows]
+            passed_n, failed_n = outcome_counts(self.rec.get("tasks") or [])
+            self.rec["pass_count"] = passed_n
+            self.rec["fail_count"] = failed_n
             write_record(self.rec)
 
     def _running(self, platform: str) -> dict | None:
@@ -3245,6 +3405,10 @@ def run_record(rec: dict) -> int:
     finally:
         signal.signal(signal.SIGINT, prev_int)
         signal.signal(signal.SIGTERM, prev_term)
+        try:
+            close_ios_sessions_after_run(rec)
+        except Exception as exc:  # noqa: BLE001
+            print(f"ios session close failed: {exc}", file=sys.stderr)
 
 
 def run_foreground(

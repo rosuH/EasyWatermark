@@ -15,6 +15,7 @@ import signal
 import socket
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -70,6 +71,24 @@ from testmap_run import (  # noqa: E402
 )
 
 MANAGER = RunManager()
+_frame_lock = threading.Lock()
+_frame_at: dict[str, float] = {}
+
+
+def _run_is_live(snap: object) -> bool:
+    return isinstance(snap, dict) and snap.get("state") in {"running", "paused"}
+
+
+def _frame_wait(key: str, gap_s: float) -> None:
+    """Hold the request until this device may be captured. A 204 looks like a dead stream."""
+    while True:
+        now = time.monotonic()
+        with _frame_lock:
+            wait = gap_s - (now - _frame_at.get(key, 0.0))
+            if wait <= 0:
+                _frame_at[key] = time.monotonic()
+                return
+        time.sleep(min(wait, 0.2))
 
 
 def _watch_preferred(snap: object, plat: str | None) -> dict | None:
@@ -238,6 +257,18 @@ class Handler(BaseHTTPRequestHandler):
             plat = (qs.get("platform") or [None])[0]
             did = (qs.get("device") or [None])[0]
             snap = MANAGER.snapshot()
+            live = _run_is_live(snap)
+            # No run: only a visible page asks, and at most once per 2s.
+            # A run still prefers /api/device-video; stills stay at 1 fps.
+            if not live:
+                if (qs.get("idle") or [""])[0] != "1":
+                    self.send_response(204)
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    return
+                _frame_wait(f"idle:{plat}:{did}", 2.0)
+            else:
+                _frame_wait(f"run:{plat}:{did}", 1.0)
             preferred = _watch_preferred(snap, plat)
             target = resolve_watch_target(plat, did, preferred)
             if not target:
@@ -257,6 +288,11 @@ class Handler(BaseHTTPRequestHandler):
             plat = (qs.get("platform") or [None])[0]
             did = (qs.get("device") or [None])[0]
             snap = MANAGER.snapshot()
+            if not _run_is_live(snap):
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
             preferred = _watch_preferred(snap, plat)
             if not resolve_watch_target(plat, did, preferred):
                 self.send_response(204)
@@ -287,6 +323,11 @@ class Handler(BaseHTTPRequestHandler):
             plat = (qs.get("platform") or [None])[0]
             did = (qs.get("device") or [None])[0]
             snap = MANAGER.snapshot()
+            if not _run_is_live(snap):
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
             preferred = _watch_preferred(snap, plat)
             target = resolve_watch_target(plat, did, preferred)
             if not target or target.get("platform") == "desktop" or (

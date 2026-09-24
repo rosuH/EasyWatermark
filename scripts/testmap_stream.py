@@ -266,8 +266,7 @@ class _Producer:
             frame = capture_watch_jpeg(self.target)
             if frame:
                 self._publish(frame)
-            else:
-                self._stop.wait(0.2)
+            self._stop.wait(1.0 if frame else 0.5)
 
     def _run(self) -> None:
         platform = self.target.get("platform")
