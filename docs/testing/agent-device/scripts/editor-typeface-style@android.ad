@@ -5,6 +5,6 @@ press label="Style"
 wait label="TileMode"
 press "value=\"Style\" selected=false"
 wait label="Bold"
-press 'role=radio label="Bold"'
-wait 'role=radio label="Bold"'
+press "role=radio label=\"Bold\""
+wait "role=radio label=\"Bold\""
 close
