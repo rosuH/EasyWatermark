@@ -139,9 +139,11 @@ private enum StoreCaptureHooks {
         }
         bar.addSubview(stack)
         hostView.addSubview(bar)
+        // Sit below the 48pt product back button. A top-start 44×44 hook steals
+        // About/Open Source/Editor back taps (XCUITest id=aboutBack hits store-seed-editor).
         NSLayoutConstraint.activate([
             bar.leadingAnchor.constraint(equalTo: hostView.leadingAnchor),
-            bar.topAnchor.constraint(equalTo: hostView.safeAreaLayoutGuide.topAnchor),
+            bar.topAnchor.constraint(equalTo: hostView.safeAreaLayoutGuide.topAnchor, constant: 56),
             stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
             stack.topAnchor.constraint(equalTo: bar.topAnchor),
