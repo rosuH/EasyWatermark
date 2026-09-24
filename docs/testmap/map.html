@@ -1578,10 +1578,10 @@ body.view-run .task-head {
 body.view-run .task-meter { display: contents; }
 body.view-run .task-meter-track {
   grid-column: 1 / -1;
-  height: 6px;
+  height: 8px;
   width: 100%;
   border-radius: 99px;
-  background: var(--bg-2);
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg-2));
   overflow: hidden;
 }
 body.view-run .task-meter-track i { display: block; height: 100%; width: 0; background: var(--accent); }
@@ -1596,6 +1596,7 @@ body.view-run .task-head .btn { grid-column: 2; grid-row: 2; flex: 0 0 auto; }
 .task-row.running .st-ico-wrap, .hist-row.running .st-ico-wrap { color: var(--accent); }
 .task-row.uncovered .st-ico-wrap, .hist-row.uncovered .st-ico-wrap { color: var(--warning); }
 body.view-run .watch-grid { grid-column: 2; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; align-items: stretch; }
+body.view-run .watch-slot[data-plat="desktop"] { display: none !important; }
 body.view-run .watch-result { grid-column: 1 / -1; grid-row: 3; margin: 0; min-height: 72px; }
 body.view-run .watch-status { display: none !important; }
 body.view-history .map-col,
@@ -1603,12 +1604,56 @@ body.view-history .inspector { display: none !important; }
 body.view-history .shell { grid-template-columns: 1fr; height: 100%; min-height: 0; }
 body.view-history .history-pane { display: flex; }
 body.view-run .watch-grid.one-card { grid-template-columns: minmax(640px, 1040px); justify-content: center; }
-body.view-run .watch-slot { height: 100%; min-height: 0; display: flex; flex-direction: column; }
-body.view-run .watch-label { flex: 0 0 16px; }
+body.view-run .watch-slot {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 16px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+body.view-run .watch-label {
+  grid-row: 1;
+  height: 16px;
+  line-height: 16px;
+  text-align: left;
+  padding: 0 2px;
+}
 body.view-run .watch-cap { display: none; }
-body.view-run .watch-body { flex: 1 1 auto; height: auto; min-height: 0; align-items: stretch; }
-body.view-run .watch-steps { display: block; min-width: 160px; flex: 1 1 auto; height: auto !important; max-height: none !important; }
-body.view-run .watch-phone { height: 100%; max-height: 100%; width: auto; max-width: 44%; flex: 0 0 auto; align-self: stretch; aspect-ratio: auto; }
+body.view-run .watch-body {
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: auto minmax(140px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  height: auto;
+  align-items: start;
+}
+body.view-run .watch-steps {
+  display: block;
+  min-width: 0;
+  height: 100% !important;
+  max-height: none !important;
+  overflow: auto;
+  align-self: stretch;
+}
+body.view-run .watch-phone,
+body.view-run .watch-slot[data-plat="ios"] .watch-phone,
+body.view-run .watch-slot.is-main .watch-phone {
+  width: auto;
+  height: 100%;
+  max-width: none;
+  max-height: 100%;
+  flex: none;
+  align-self: start;
+  justify-self: start;
+  aspect-ratio: 9 / 19.5;
+}
+body.view-run .watch-phone img,
+body.view-run .watch-phone canvas {
+  object-fit: contain;
+  object-position: top center;
+}
 body.view-run .wstep.muted { color: var(--text-3); }
 body.view-run .watch-result { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: rgba(22, 22, 12, 0.96); border: 1px solid var(--border-strong); border-radius: 12px; margin: 0; padding: 0; z-index: 4; overflow: hidden; }
 body.view-run .watch-result.is-open { height: auto; max-height: 250px; }
@@ -4862,11 +4907,11 @@ function fitWatchPhone(plat) {
   var steps = wEl(plat, "watch-steps");
   if (document.body.classList.contains("view-run")) {
     phone.style.width = "";
-    phone.style.height = "100%";
-    phone.style.maxWidth = "44%";
-    phone.style.maxHeight = "100%";
-    phone.style.flex = "0 0 auto";
-    phone.style.aspectRatio = "auto";
+    phone.style.height = "";
+    phone.style.maxWidth = "";
+    phone.style.maxHeight = "";
+    phone.style.flex = "";
+    phone.style.aspectRatio = "";
     if (steps) {
       steps.style.height = "";
       steps.style.maxHeight = "";
