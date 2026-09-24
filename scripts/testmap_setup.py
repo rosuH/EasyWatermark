@@ -14,6 +14,7 @@ live emulators/simulators.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shlex
@@ -263,6 +264,59 @@ def android_start_home(serial: str) -> None:
     )
 
 
+def android_frame_hash(serial: str) -> bytes:
+    """Hash the framebuffer below the status bar so the clock does not count as motion."""
+    raw = adb(serial, ["exec-out", "screencap"], binary=True, timeout=20)
+    if len(raw) < 16:
+        return hashlib.sha256(raw).digest()
+    width, height = struct.unpack_from("<II", raw, 0)
+    stride = width * 4
+    header = 16 if len(raw) >= 16 + height * stride else 12
+    skip_rows = min(120, height)
+    body = raw[header + skip_rows * stride :]
+    return hashlib.sha256(body).digest()
+
+
+def android_ui_contains(serial: str, text: str) -> bool:
+    remote = "/sdcard/ewm-ready.xml"
+    try:
+        adb_shell(serial, "uiautomator", "dump", remote)
+        xml = adb(serial, ["exec-out", "cat", remote], timeout=20)
+    except (ValueError, OSError, subprocess.TimeoutExpired):
+        return False
+    return f'text="{text}"' in xml or f'content-desc="{text}"' in xml
+
+
+def android_wait_editor_ready(serial: str) -> None:
+    """One editor gate for every Android editor case.
+
+    Wait until two consecutive frames match, then wait for Save here.
+    Case scripts must not each race label="Save" on entry.
+    """
+    previous = None
+    settled = False
+    deadline = time.time() + 40
+    while time.time() < deadline:
+        try:
+            current = android_frame_hash(serial)
+        except (ValueError, OSError, subprocess.TimeoutExpired):
+            time.sleep(0.7)
+            continue
+        if previous is not None and current == previous:
+            settled = True
+            break
+        previous = current
+        time.sleep(0.7)
+    if not settled:
+        raise ValueError("Android editor screen did not settle before Save")
+    ready = time.time() + 45
+    while time.time() < ready:
+        if android_ui_contains(serial, "Save"):
+            return
+        time.sleep(1)
+    raise ValueError("Android editor settled but Save was not in the accessibility tree")
+
+
 def android_share_in(serial: str, media_id: str) -> None:
     adb_shell(
         serial,
@@ -502,6 +556,8 @@ def apply_setup(
             state["damaged_remote"] = damage_source(
                 serial, Path(state["fixtures"]["A"]).name, marker, folder
             )
+        if setup not in {"home", "crash"}:
+            android_wait_editor_ready(serial)
         return state
     if platform == "ios":
         if setup not in IOS_SETUPS:

@@ -1,7 +1,6 @@
 context platform=android
 env TEMPLATE="EWM TEMPLATE AGENT DEVICE"
 open me.rosuh.easywatermark.debug
-wait label="Save"
 press label="Content"
 wait label="Text"
 press "label=\"👋 DO NOT REDISTRIBUTE\""
