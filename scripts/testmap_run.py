@@ -1713,17 +1713,89 @@ def _publish_agent_device_live(spec: dict) -> None:
 _CANCEL_COMPLETION = ("Share", "View in gallery", "sharedComposeExportCounts")
 
 
+def _cancel_surface_text(task: dict) -> str:
+    """Failure text plus the screen captured when Cancel export did not appear."""
+    parts: list[str] = []
+    for case in task.get("cases") or []:
+        if isinstance(case, dict):
+            parts.append(str(case.get("message") or ""))
+    roots: list[Path] = []
+    evidence = Path(str(task.get("evidence_dir") or ""))
+    if str(evidence):
+        roots.extend([evidence, evidence.parent])
+    seen: set[Path] = set()
+    names = {"cancel-surface.txt", "failure.txt", "replay.log"}
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if path.name not in names or path in seen or not path.is_file():
+                continue
+            try:
+                if path.stat().st_size > 1_500_000:
+                    continue
+                parts.append(path.read_text(encoding="utf-8", errors="replace"))
+            except OSError:
+                continue
+            seen.add(path)
+    return "\n".join(parts)
+
+
+def _capture_cancel_surface(cmd: list[str], spec: dict, logf) -> None:
+    """Read the screen after a missed Cancel export, before the session closes."""
+    output = Path(str(spec.get("agent_device_output") or ""))
+    if not str(output):
+        return
+    try:
+        output.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return
+    chunks: list[str] = []
+    session = _cmd_flag(cmd, "--session")
+    if session:
+        try:
+            proc = subprocess.run(
+                [agent_device_bin(), "--session", session, "snapshot", "--json"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=40,
+                check=False,
+            )
+            chunks.append(proc.stdout or "")
+            chunks.append(proc.stderr or "")
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            chunks.append(str(exc))
+    serial = _cmd_flag(cmd, "--serial")
+    if serial:
+        try:
+            from testmap_setup import adb, adb_shell
+
+            adb_shell(serial, "uiautomator", "dump", "/sdcard/ewm-cancel.xml")
+            xml = adb(serial, ["exec-out", "cat", "/sdcard/ewm-cancel.xml"], timeout=25)
+            chunks.append(xml if isinstance(xml, str) else "")
+        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+            chunks.append(str(exc))
+    text = "\n".join(chunks)
+    try:
+        (output / "cancel-surface.txt").write_text(text, encoding="utf-8")
+    except OSError as exc:
+        if logf is not None:
+            logf.write(f"cancel surface write failed: {exc}\n")
+            logf.flush()
+        return
+    if logf is not None:
+        logf.write(f"cancel surface bytes {len(text)}\n")
+        logf.flush()
+
+
 def _mark_cancel_uncovered(task: dict) -> None:
     """A finished export is not a passed cancel. Record it as uncovered."""
     if str(task.get("edge_id") or "") != "export-cancel":
         return
     if task.get("state") != "failed":
         return
-    blob = []
-    for case in task.get("cases") or []:
-        if isinstance(case, dict):
-            blob.append(str(case.get("message") or ""))
-    joined = " ".join(blob)
+    joined = _cancel_surface_text(task)
     if any(token in joined for token in _CANCEL_COMPLETION):
         task["state"] = "uncovered"
         task["note"] = "未覆盖取消"
@@ -2058,6 +2130,8 @@ def run_task(
         code = _run_batched_steps(
             cmd, rows, logf, tee_stdout, on_proc, on_step_event, should_stop, watch_plat, env
         )
+        if spec.get("edge_id") == "export-cancel" and code not in (0, None):
+            _capture_cancel_surface(cmd, spec, logf)
         release_agent_session(cmd, logf)
         _restore_agent_setup(setup_state, logf)
         extra = ingest_agent_device_result(spec, code)
@@ -2122,6 +2196,7 @@ def run_task(
             name="testmap-steps",
         )
         tail.start()
+    code = 1
     try:
         code = _tee_child(
             proc,
@@ -2137,6 +2212,8 @@ def run_task(
             replay_log.close()
         if on_proc:
             on_proc(None)
+        if spec.get("builder") == "agent-device" and spec.get("edge_id") == "export-cancel" and code not in (0, None):
+            _capture_cancel_surface(cmd, spec, logf)
         if spec.get("builder") == "agent-device":
             release_agent_session(cmd, logf)
         _restore_agent_setup(setup_state, logf)

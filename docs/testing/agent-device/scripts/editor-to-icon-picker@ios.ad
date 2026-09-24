@@ -1,6 +1,6 @@
 context platform=ios
 open me.rosuh.easywatermark.ios
-wait id="sharedComposeSaveButton"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible"
 press id="editorTab-0"
 wait id="editorOption-Icon"
 press id="editorOption-Icon"
