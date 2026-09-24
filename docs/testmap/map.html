@@ -111,6 +111,7 @@ button { letter-spacing: inherit; }
 .topbar-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
   min-width: 0;
   flex: 1 1 auto;
@@ -119,11 +120,11 @@ button { letter-spacing: inherit; }
   height: 28px;
   display: inline-flex;
   align-items: center;
-  max-width: 36ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
 }
-#pkg-line { max-width: 42ch; }
+.pkg-chip { white-space: nowrap; }
+#pkg-line { display: none; }
 #live-counts { flex: 0 0 auto; }
 .topbar-right {
   margin-left: auto;
@@ -1496,7 +1497,7 @@ body.view-run .inspector { grid-template-rows: minmax(0, 1fr); height: 100%; }
 body.view-run .watch-pane {
   height: 100%;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: minmax(340px, 34%) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 8px;
   min-height: 0;
@@ -1521,32 +1522,71 @@ body.view-run #task-rows {
 }
 body.view-run .task-row {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) 28px 36px 44px;
-  gap: 8px;
+  grid-template-columns: 16px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 2px 8px;
   align-items: center;
   width: 100%;
-  height: 32px;
-  padding: 0 8px;
+  min-height: 44px;
+  height: auto;
+  padding: 6px 8px;
   border: 0;
   border-radius: 6px;
   text-align: left;
   cursor: pointer;
   background: transparent;
   color: var(--text-2);
-  font: 500 12px/1 var(--sans);
+  font: 500 12px/1.25 var(--sans);
 }
-body.view-run .task-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-body.view-run .task-row .plat, body.view-run .task-row .kn { color: var(--text-3); font: 500 11px/1 var(--mono); }
-body.view-run .task-row .dur { margin: 0; text-align: right; font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text-3); }
+body.view-run .task-row .st-ico-wrap { grid-row: 1 / span 2; align-self: start; margin-top: 2px; }
+body.view-run .task-row .name {
+  grid-column: 2;
+  overflow: hidden;
+  color: var(--text);
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+body.view-run .task-row .meta {
+  grid-column: 2;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-3);
+  font: 500 11px/1 var(--sans);
+}
+body.view-run .task-row .plat { color: var(--text-2); }
+body.view-run .task-row .kn, body.view-run .task-row .dur {
+  margin: 0;
+  font: 500 11px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+body.view-run .task-row .dur { margin-left: auto; }
 body.view-run .task-row.running { background: var(--accent-dim); color: var(--text); }
 body.view-run .task-row.on { background: var(--accent-dim); }
 body.view-run .task-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-body.view-run .task-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; }
-body.view-run .task-meter { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-body.view-run .task-meter-track { height: 3px; border-radius: 99px; background: var(--bg-2); overflow: hidden; }
+body.view-run .task-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 6px 8px;
+  align-items: center;
+  padding: 0 4px 8px;
+}
+body.view-run .task-meter { display: contents; }
+body.view-run .task-meter-track {
+  grid-column: 1 / -1;
+  height: 6px;
+  width: 100%;
+  border-radius: 99px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
 body.view-run .task-meter-track i { display: block; height: 100%; width: 0; background: var(--accent); }
-body.view-run #task-progress { font: 500 11px/1.3 var(--sans); color: var(--text-2); font-variant-numeric: tabular-nums; }
-body.view-run .task-head .btn { flex: 0 0 auto; }
+body.view-run #task-progress { grid-column: 1; font: 500 12px/1.3 var(--sans); color: var(--text); font-variant-numeric: tabular-nums; }
+body.view-run .task-head .btn { grid-column: 2; grid-row: 2; flex: 0 0 auto; }
 .st-ico-wrap { display: grid; place-items: center; width: 16px; height: 16px; color: var(--text-3); }
 .st-ico { width: 14px; height: 14px; display: block; }
 .st-ico.spin { animation: spin 0.8s linear infinite; transform-origin: 50% 50%; }
@@ -1563,17 +1603,17 @@ body.view-history .inspector { display: none !important; }
 body.view-history .shell { grid-template-columns: 1fr; height: 100%; min-height: 0; }
 body.view-history .history-pane { display: flex; }
 body.view-run .watch-grid.one-card { grid-template-columns: minmax(640px, 1040px); justify-content: center; }
-body.view-run .watch-slot,
-body.view-run .watch-body { height: 100%; min-height: 0; }
-body.view-run .watch-body { flex: 1 1 auto; }
+body.view-run .watch-slot { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+body.view-run .watch-label { flex: 0 0 16px; }
+body.view-run .watch-cap { display: none; }
+body.view-run .watch-body { flex: 1 1 auto; height: auto; min-height: 0; align-items: stretch; }
 body.view-run .watch-steps { display: block; min-width: 160px; flex: 1 1 auto; height: auto !important; max-height: none !important; }
-body.view-run .watch-phone { height: 100%; max-width: 46%; align-self: stretch; }
+body.view-run .watch-phone { height: 100%; max-height: 100%; width: auto; max-width: 44%; flex: 0 0 auto; align-self: stretch; aspect-ratio: auto; }
 body.view-run .wstep.muted { color: var(--text-3); }
 body.view-run .watch-result { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: rgba(22, 22, 12, 0.96); border: 1px solid var(--border-strong); border-radius: 12px; margin: 0; padding: 0; z-index: 4; overflow: hidden; }
 body.view-run .watch-result.is-open { height: auto; max-height: 250px; }
 body.view-run .watch-result-tools { padding: 8px 12px; }
 body.view-run .watch-result-bar { flex: 1 1 auto; width: auto; min-width: 0; padding: 0; }
-body.view-run #exec-confirm { flex: 0 0 auto; }
 #watch-result-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: scroll; padding: 0 12px 10px; scroll-snap-type: y mandatory; scroll-padding-top: 28px; }
 #watch-result-shots { display: block; }
 .shot-group { margin: 0 0 8px; }
@@ -1609,7 +1649,7 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
 .history-pane { display: none; flex-direction: column; min-height: 0; overflow: auto; padding: 16px 18px; gap: 8px; }
 .hist-head, .hist-row {
   display: grid;
-  grid-template-columns: 16px minmax(168px, 1.5fr) 88px 92px minmax(64px, 1fr) 72px 132px 52px;
+  grid-template-columns: 16px minmax(220px, 2fr) 80px 80px 56px 108px minmax(150px, 1.2fr) 48px;
   gap: 10px;
   align-items: center;
   width: 100%;
@@ -1632,7 +1672,7 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
 .hist-row .when, .hist-row .dur, .hist-row .dev { font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hist-row .dur { text-align: right; }
 .mix { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.mix-bar { display: flex; height: 4px; width: 56px; border-radius: 99px; overflow: hidden; background: var(--bg-2); flex: 0 0 auto; }
+.mix-bar { display: flex; height: 6px; width: 72px; border-radius: 99px; overflow: hidden; background: var(--bg-2); flex: 0 0 auto; }
 .mix-bar i { display: block; height: 100%; }
 .mix-bar .p { background: var(--success); }
 .mix-bar .f { background: var(--error); }
@@ -1656,7 +1696,9 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
     </div>
     <div class="topbar-meta">
       <span id="git-sha" class="sha">—</span>
-      <span id="pkg-line" class="sha"></span>
+      <span id="pkg-android" class="sha pkg-chip" hidden></span>
+      <span id="pkg-ios" class="sha pkg-chip" hidden></span>
+      <span id="pkg-line" class="sha" hidden></span>
       <span id="live-counts" class="sha"></span>
     </div>
     <div class="topbar-right">
@@ -1776,7 +1818,6 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
         <section class="watch-result" id="watch-result" hidden>
           <div class="watch-result-tools">
             <button type="button" class="watch-result-bar" id="watch-result-toggle"><span id="watch-result-meta"></span></button>
-            <button type="button" class="btn" id="exec-confirm" hidden data-i18n="shots.confirm">Confirm visuals</button>
           </div>
           <div id="watch-result-body" hidden>
             <ul id="watch-result-fails"></ul>
@@ -2390,11 +2431,6 @@ var displayedRunId = "";
 function bindDisplayedRun(id) {
   displayedRunId = id || "";
   try { window.__ewmDisplayedRunId = displayedRunId; } catch (err) {}
-  var confirmBtn = $("btn-confirm");
-  if (confirmBtn) {
-    if (displayedRunId) confirmBtn.setAttribute("data-run-id", displayedRunId);
-    else confirmBtn.removeAttribute("data-run-id");
-  }
   var box = $("history-list");
   if (box) {
     box.querySelectorAll("details").forEach(function (d) {
@@ -3521,13 +3557,10 @@ function renderShots(e) {
       +'<span class="shot-cap">'+esc(caseTitle(w.ref))+"</span></div>";
   }).join("");
   var conf = confirmations[e.id];
-  var label = conf && conf.stale ? t("shots.reconfirm") : t("shots.confirm");
   return '<div class="shots"><h3>'+t("shots.title")+'</h3><div class="shot-grid">'+cells+"</div>"
-    +'<div class="shots-actions live-only">'
-    +'<button type="button" class="btn primary" id="btn-confirm" disabled>'+label+"</button>"
-    +(conf ? '<span class="st-chip '+(conf.stale ? "confirmed-stale" : "confirmed")+'" title="'+esc(confirmTooltip(e.id))+'">'
-      +(conf.stale ? t("shots.reconfirm") : t("shots.confirmed"))+"</span>" : "")
-    +"</div></div>";
+    +(conf ? '<div class="shots-actions"><span class="st-chip '+(conf.stale ? "confirmed-stale" : "confirmed")+'" title="'+esc(confirmTooltip(e.id))+'">'
+      +(conf.stale ? t("shots.reconfirm") : t("shots.confirmed"))+"</span></div>" : "")
+    +"</div>";
 }
 function bindEdgeRun(e) {
   var btn = $("btn-run-edge");
@@ -3546,11 +3579,7 @@ function bindEdgeRun(e) {
 function bindShots(e) {
   var loaded = 0;
   document.querySelectorAll("#detail .shot img").forEach(function (img) {
-    var enable = function () {
-      loaded++;
-      var btn = $("btn-confirm");
-      if (btn) btn.disabled = !consoleOnline || loaded < 1;
-    };
+    var enable = function () { loaded++; };
     if (img.complete && img.naturalWidth) enable();
     else img.addEventListener("load", enable);
     img.addEventListener("error", function () {
@@ -3567,10 +3596,6 @@ function bindShots(e) {
       if (img && img.naturalWidth) openLightbox(img.src, btn.getAttribute("data-ref") || img.alt);
     };
   });
-  var confirmBtn = $("btn-confirm");
-  if (confirmBtn) {
-    confirmBtn.onclick = function () { confirmEdge(e.id); };
-  }
 }
 function openLightbox(src, cap) {
   var box = $("lightbox");
@@ -3916,27 +3941,29 @@ function relTime(iso) {
 }
 var headGit = null;
 function updatePackages(st) {
-  var el = $("pkg-line");
-  if (!el) return;
   var refusal = st && st.package_refusal;
-  if (refusal) {
-    el.textContent = refusal;
-    el.title = refusal;
-    el.classList.add("dirty");
-    return;
-  }
-  el.classList.remove("dirty");
   var packages = st && st.packages;
-  if (!packages) { el.textContent = ""; el.title = ""; return; }
-  var parts = [];
   ["android", "ios"].forEach(function (plat) {
-    var info = packages[plat];
-    if (!info) return;
-    var sha = info.sha256 || "";
-    parts.push(plat + " " + (info.version || "?") + " / " + (info.version_code == null ? "?" : info.version_code) + " " + sha.slice(0, 12));
+    var el = $("pkg-" + plat);
+    if (!el) return;
+    if (refusal) {
+      el.hidden = plat !== "android";
+      if (plat === "android") {
+        el.textContent = refusal;
+        el.title = refusal;
+        el.classList.add("dirty");
+      }
+      return;
+    }
+    el.classList.remove("dirty");
+    var info = packages && packages[plat];
+    if (!info) { el.hidden = true; el.textContent = ""; el.title = ""; return; }
+    var sha = (info.sha256 || "").slice(0, 7);
+    var ver = (info.version || "?") + " / " + (info.version_code == null ? "?" : info.version_code);
+    el.hidden = false;
+    el.textContent = plat + " " + ver + (sha ? " " + sha : "");
+    el.title = JSON.stringify(info);
   });
-  el.textContent = parts.join(" · ");
-  el.title = parts.length ? JSON.stringify(packages) : "";
 }
 function updateSha() {
   var el = $("git-sha");
@@ -3957,7 +3984,7 @@ function mixBar(p, f, u) {
 }
 function histDevice(r) {
   var plats = r.platforms || [];
-  var short = {android: "A", ios: "iOS", desktop: "D"};
+  var short = {android: "Android", ios: "iOS", desktop: "Desktop"};
   if (plats.length) return plats.map(function (p) { return short[p] || p; }).join(" · ");
   return r.device && r.device !== "auto" ? r.device : "";
 }
@@ -4560,16 +4587,6 @@ function applyFocusedWatch(st) {
   renderWatchSteps(view);
   renderWatchResult(view);
   renderCasePaths(shown);
-  var confirm = $("exec-confirm");
-  if (confirm) {
-    var review = null;
-    shown.forEach(function (task) {
-      if (!review && task.state === "review_required") review = task;
-    });
-    var eid = review && (review.edge_id || taskEdgeId(review.id));
-    confirm.hidden = !eid;
-    confirm.onclick = function () { if (eid) confirmEdge(eid); };
-  }
   if (execJumpN != null && execPick) {
     var jumpPlat = "";
     var jumpN = execJumpN;
@@ -4632,7 +4649,7 @@ function renderTaskBoard(st) {
     var eid = task.edge_id || taskEdgeId(task.id);
     var title = eid ? edgeTitle(eid) : (task.label || task.id || "");
     var plat = taskPlatformOf(task);
-    var platMark = plat === "android" ? "A" : plat === "ios" ? "i" : (plat || "");
+    var platMark = plat === "android" ? "Android" : plat === "ios" ? "iOS" : (t("plat." + plat) || plat || "");
     var fail = failedStepOf(task);
     var key = taskRowKey(task, index);
     var on = focusKeys[key] ? " on" : "";
@@ -4641,9 +4658,7 @@ function renderTaskBoard(st) {
       + ' title="' + esc(title) + '">'
       + stateIcon(task.state, task.note)
       + '<span class="name">' + esc(title) + "</span>"
-      + '<span class="plat" title="' + esc(t("plat." + plat) || plat) + '">' + esc(platMark) + "</span>"
-      + '<span class="kn">' + esc(kn) + "</span>"
-      + '<span class="dur">' + esc(dur) + "</span></button></li>";
+      + '<span class="meta"><span class="plat">' + esc(platMark) + '</span><span class="kn">' + esc(kn) + '</span><span class="dur">' + esc(dur) + "</span></span></button></li>";
   }).join("");
   list.querySelectorAll(".task-row").forEach(function (btn) {
     btn.onclick = function () {
@@ -4813,14 +4828,8 @@ function wEl(plat, suffix) { return $(suffix + "-" + plat); }
 function syncWatchChrome(st) {
   st = st || lastStatusSnap || {};
   var stop = $("watch-stop");
-  var confirm = $("watch-confirm");
   var running = st.state === "running" || st.state === "paused";
   if (stop) stop.disabled = !consoleOnline || !running;
-  if (confirm) {
-    var can = consoleOnline && !!state.selected &&
-      (st.state === "review_required" || st.state === "failed");
-    confirm.disabled = !can;
-  }
   var status = $("watch-status");
   if (!status) return;
   if (!consoleOnline) { status.textContent = t("run.offline"); return; }
@@ -4854,10 +4863,10 @@ function fitWatchPhone(plat) {
   if (document.body.classList.contains("view-run")) {
     phone.style.width = "";
     phone.style.height = "100%";
-    phone.style.maxWidth = "46%";
+    phone.style.maxWidth = "44%";
     phone.style.maxHeight = "100%";
-    phone.style.flex = "0 1 auto";
-    phone.style.aspectRatio = ratioText;
+    phone.style.flex = "0 0 auto";
+    phone.style.aspectRatio = "auto";
     if (steps) {
       steps.style.height = "";
       steps.style.maxHeight = "";
@@ -5501,9 +5510,6 @@ function bootConsole() {
 
   $("btn-stop").onclick = function () { post("/api/stop").catch(function () {}); };
   if ($("watch-stop")) $("watch-stop").onclick = function () { post("/api/stop").catch(function () {}); };
-  if ($("watch-confirm")) $("watch-confirm").onclick = function () {
-    if (state.selected) confirmEdge(state.selected);
-  };
   bindWatchStream();
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") {
