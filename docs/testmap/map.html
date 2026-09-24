@@ -78,11 +78,15 @@ button { letter-spacing: inherit; }
 .topbar {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: var(--space-3);
+  height: 56px;
   min-height: 56px;
+  max-height: 56px;
   padding: 0 var(--space-3);
   background: var(--bg-1);
   border-bottom: 1px solid var(--border);
+  overflow: hidden;
 }
 .brand {
   display: flex;
@@ -111,10 +115,11 @@ button { letter-spacing: inherit; }
 .topbar-meta {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-2);
   min-width: 0;
   flex: 1 1 auto;
+  overflow: hidden;
 }
 .topbar-meta .sha {
   height: 28px;
@@ -122,15 +127,18 @@ button { letter-spacing: inherit; }
   align-items: center;
   max-width: none;
   overflow: visible;
+  flex: 0 0 auto;
 }
 .pkg-chip { white-space: nowrap; }
-#pkg-line { display: none; }
-#live-counts { flex: 0 0 auto; }
+#pkg-line { white-space: nowrap; }
+#live-counts { display: none !important; }
 .topbar-right {
   margin-left: auto;
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: var(--space-2);
+  flex: 0 1 auto;
   min-width: 0;
 }
 .pill {
@@ -594,8 +602,8 @@ button { letter-spacing: inherit; }
   border-radius: 4px;
 }
 .wstep .mk { color: var(--text-3); }
-.wstep .cmd { font-weight: 650; white-space: normal; overflow-wrap: anywhere; }
-.wstep .arg { grid-column: 2; color: var(--text-2); font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
+.wstep .cmd { font-weight: 650; white-space: normal; overflow-wrap: normal; word-break: normal; }
+.wstep .arg { grid-column: 2; color: var(--text-2); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wstep.current { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .wstep.done .mk { color: var(--ok, #2f6); }
 .wstep.failed { background: color-mix(in srgb, #e55 16%, transparent); }
@@ -1477,7 +1485,7 @@ html[data-mode="file"] .live-only { display: none !important; }
 .run-node.passed, .run-node.review_required { color: var(--ok, #2f6); }
 .run-gap { margin-left: auto; color: var(--text-3); font-weight: 500; }
 .watch-empty { display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; }
-.wstep .sub, .wstep .err { grid-column: 2; font-size: 11px; color: var(--text-3); white-space: normal; overflow-wrap: anywhere; }
+.wstep .sub, .wstep .err { grid-column: 2; font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wstep .err { color: #e55; }
 .wstep { cursor: pointer; }
 [hidden] { display: none !important; }
@@ -1497,12 +1505,13 @@ body.view-run .inspector { grid-template-rows: minmax(0, 1fr); height: 100%; }
 body.view-run .watch-pane {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(340px, 34%) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: 8px 16px;
   min-height: 0;
+  padding: 8px 12px 8px 16px;
 }
-body.view-run #run-path { grid-column: 1 / -1; }
+body.view-run #run-path { grid-column: 1 / -1; padding: 4px 0 0; }
 body.view-run #task-board {
   grid-column: 1;
   grid-row: 2;
@@ -1519,7 +1528,11 @@ body.view-run #task-rows {
   gap: 4px;
   overflow: auto;
   min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
+body.view-run #task-rows > li { margin: 0; padding: 0; width: 100%; list-style: none; }
 body.view-run .task-row {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr);
@@ -1529,7 +1542,7 @@ body.view-run .task-row {
   width: 100%;
   min-height: 44px;
   height: auto;
-  padding: 6px 8px;
+  padding: 6px 0;
   border: 0;
   border-radius: 6px;
   text-align: left;
@@ -1552,18 +1565,19 @@ body.view-run .task-row .name {
 body.view-run .task-row .meta {
   grid-column: 2;
   display: flex;
+  align-items: baseline;
   gap: 8px;
   min-width: 0;
   color: var(--text-3);
-  font: 500 11px/1 var(--sans);
+  font: 500 11px/1.2 var(--sans);
 }
-body.view-run .task-row .plat { color: var(--text-2); }
-body.view-run .task-row .kn, body.view-run .task-row .dur {
-  margin: 0;
-  font: 500 11px/1 var(--mono);
+body.view-run .task-row .plat { color: var(--text-2); font: 500 11px/1.2 var(--sans); }
+body.view-run .task-row .dur {
+  margin: 0 0 0 auto;
+  font: 500 11px/1.2 var(--mono);
   font-variant-numeric: tabular-nums;
+  color: var(--text-3);
 }
-body.view-run .task-row .dur { margin-left: auto; }
 body.view-run .task-row.running { background: var(--accent-dim); color: var(--text); }
 body.view-run .task-row.on { background: var(--accent-dim); }
 body.view-run .task-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -1573,7 +1587,7 @@ body.view-run .task-head {
   grid-template-rows: auto auto;
   gap: 6px 8px;
   align-items: center;
-  padding: 0 4px 8px;
+  padding: 0 0 8px;
 }
 body.view-run .task-meter { display: contents; }
 body.view-run .task-meter-track {
@@ -1623,15 +1637,16 @@ body.view-run .watch-cap { display: none; }
 body.view-run .watch-body {
   grid-row: 2;
   display: grid;
-  grid-template-columns: auto minmax(140px, 1fr);
+  grid-template-columns: minmax(0, auto) minmax(180px, 1fr);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   height: auto;
   align-items: start;
+  column-gap: 8px;
 }
 body.view-run .watch-steps {
   display: block;
-  min-width: 0;
+  min-width: 180px;
   height: 100% !important;
   max-height: none !important;
   overflow: auto;
@@ -1642,12 +1657,24 @@ body.view-run .watch-slot[data-plat="ios"] .watch-phone,
 body.view-run .watch-slot.is-main .watch-phone {
   width: auto;
   height: 100%;
-  max-width: none;
+  max-width: 100%;
   max-height: 100%;
+  min-width: 0;
   flex: none;
   align-self: start;
   justify-self: start;
   aspect-ratio: 9 / 19.5;
+}
+body.view-run .wstep .cmd {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+body.view-run .wstep .sub,
+body.view-run .wstep .arg,
+body.view-run .wstep .err {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 body.view-run .watch-phone img,
 body.view-run .watch-phone canvas {
@@ -3985,39 +4012,103 @@ function relTime(iso) {
   return t("rel.day", {n: Math.floor(s / 86400)});
 }
 var headGit = null;
-function updatePackages(st) {
-  var refusal = st && st.package_refusal;
-  var packages = st && st.packages;
-  ["android", "ios"].forEach(function (plat) {
-    var el = $("pkg-" + plat);
-    if (!el) return;
-    if (refusal) {
-      el.hidden = plat !== "android";
-      if (plat === "android") {
-        el.textContent = refusal;
-        el.title = refusal;
-        el.classList.add("dirty");
-      }
+var pkgCache = {android: null, ios: null, refusal: ""};
+var packingPkgs = false;
+function pkgVer(info) {
+  return (info.version || "?") + " / " + (info.version_code == null ? "?" : info.version_code);
+}
+function pkgLabel(plat, info, withHash) {
+  if (!info) return "";
+  var sha = (info.sha256 || "").slice(0, 7);
+  return plat + " " + pkgVer(info) + (withHash && sha ? " " + sha : "");
+}
+function topbarOverflows() {
+  var bar = document.querySelector(".topbar");
+  var meta = document.querySelector(".topbar-meta");
+  if (bar && (bar.scrollWidth > bar.clientWidth + 1 || bar.scrollHeight > bar.clientHeight + 1)) return true;
+  if (meta && meta.scrollWidth > meta.clientWidth + 1) return true;
+  var ids = ["git-sha", "pkg-android", "pkg-ios", "pkg-line"];
+  for (var i = 0; i < ids.length; i++) {
+    var el = $(ids[i]);
+    if (el && !el.hidden && el.scrollWidth > el.clientWidth + 1) return true;
+  }
+  return false;
+}
+function layoutPackages() {
+  var a = $("pkg-android");
+  var iosEl = $("pkg-ios");
+  var merged = $("pkg-line");
+  if (!a || !iosEl || !merged || packingPkgs) return;
+  packingPkgs = true;
+  function paintTwo(withHash) {
+    merged.hidden = true;
+    merged.textContent = "";
+    merged.title = "";
+    [ ["android", a], ["ios", iosEl] ].forEach(function (pair) {
+      var el = pair[1];
+      var info = pkgCache[pair[0]];
+      el.classList.remove("dirty");
+      if (!info) { el.hidden = true; el.textContent = ""; el.title = ""; return; }
+      el.hidden = false;
+      el.textContent = pkgLabel(pair[0], info, withHash);
+      el.title = JSON.stringify(info);
+    });
+  }
+  function paintMerged() {
+    a.hidden = true;
+    iosEl.hidden = true;
+    a.textContent = "";
+    iosEl.textContent = "";
+    var parts = [];
+    var tips = [];
+    ["android", "ios"].forEach(function (plat) {
+      var info = pkgCache[plat];
+      if (!info) return;
+      parts.push(plat + " " + pkgVer(info));
+      tips.push(JSON.stringify(info));
+    });
+    merged.hidden = !parts.length;
+    merged.textContent = parts.join(" · ");
+    merged.title = tips.join("\n");
+  }
+  try {
+    if (pkgCache.refusal) {
+      iosEl.hidden = true;
+      iosEl.textContent = "";
+      merged.hidden = true;
+      merged.textContent = "";
+      a.hidden = false;
+      a.textContent = pkgCache.refusal;
+      a.title = pkgCache.refusal;
+      a.classList.add("dirty");
       return;
     }
-    el.classList.remove("dirty");
-    var info = packages && packages[plat];
-    if (!info) { el.hidden = true; el.textContent = ""; el.title = ""; return; }
-    var sha = (info.sha256 || "").slice(0, 7);
-    var ver = (info.version || "?") + " / " + (info.version_code == null ? "?" : info.version_code);
-    el.hidden = false;
-    el.textContent = plat + " " + ver + (sha ? " " + sha : "");
-    el.title = JSON.stringify(info);
-  });
+    paintTwo(true);
+    if (!topbarOverflows()) return;
+    paintTwo(false);
+    if (!topbarOverflows()) return;
+    paintMerged();
+  } finally {
+    packingPkgs = false;
+  }
+}
+function updatePackages(st) {
+  pkgCache.refusal = (st && st.package_refusal) || "";
+  var packages = st && st.packages;
+  pkgCache.android = packages && packages.android || null;
+  pkgCache.ios = packages && packages.ios || null;
+  layoutPackages();
+  requestAnimationFrame(function () { layoutPackages(); });
 }
 function updateSha() {
   var el = $("git-sha");
   if (!el) return;
   var git = headGit;
-  if (!git || !git.sha) { el.textContent = "—"; el.classList.remove("dirty"); el.title = ""; return; }
+  if (!git || !git.sha) { el.textContent = "—"; el.classList.remove("dirty"); el.title = ""; layoutPackages(); return; }
   el.textContent = git.sha + (git.dirty ? " dirty" : "");
   el.classList.toggle("dirty", !!git.dirty);
   el.title = git.sha;
+  layoutPackages();
 }
 function mixBar(p, f, u) {
   var tot = (p || 0) + (f || 0) + (u || 0);
@@ -4703,7 +4794,7 @@ function renderTaskBoard(st) {
       + ' title="' + esc(title) + '">'
       + stateIcon(task.state, task.note)
       + '<span class="name">' + esc(title) + "</span>"
-      + '<span class="meta"><span class="plat">' + esc(platMark) + '</span><span class="kn">' + esc(kn) + '</span><span class="dur">' + esc(dur) + "</span></span></button></li>";
+      + '<span class="meta"><span class="plat">' + esc(platMark + " · " + kn) + '</span><span class="dur">' + esc(dur) + "</span></span></button></li>";
   }).join("");
   list.querySelectorAll(".task-row").forEach(function (btn) {
     btn.onclick = function () {
@@ -5357,9 +5448,10 @@ function renderWatchSteps(st) {
       if (ms == null && live && stt === "current" && rec.start) ms = Date.now() - rec.start;
       var sub = part.raw ? part.raw : "";
       if (ms != null) sub += (sub ? " · " : "") + formatMs(ms);
-      return '<li class="wstep ' + stt + '" data-n="' + row.n + '" data-plat="' + plat + '"><span class="mk">' + mark + '</span><span class="cmd">' + esc(stepPhrase(row, opt[stepKey(row)])) + '</span>' +
-        (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') +
-        (stt === "failed" && err ? '<span class="err">' + esc(err) + '</span>' : '') + '</li>';
+      var phrase = stepPhrase(row, opt[stepKey(row)]);
+      return '<li class="wstep ' + stt + '" data-n="' + row.n + '" data-plat="' + plat + '" title="' + esc(phrase + (sub ? " · " + sub : "")) + '"><span class="mk">' + mark + '</span><span class="cmd">' + esc(phrase) + '</span>' +
+        (sub ? '<span class="sub" title="' + esc(sub) + '">' + esc(sub) + '</span>' : '') +
+        (stt === "failed" && err ? '<span class="err" title="' + esc(err) + '">' + esc(err) + '</span>' : '') + '</li>';
     }).join("");
     if (!html) html = '<li class="wstep muted">'+esc(t("watch.waitingSteps"))+"</li>";
     if (list.dataset.html !== html) {
@@ -5685,7 +5777,11 @@ if (resultToggle) resultToggle.onclick = function () {
   if (box) box.classList.toggle("is-open", !body.hidden);
   requestAnimationFrame(function () { requestAnimationFrame(function () { fitWatchPhone(); }); });
 };
-window.addEventListener("resize", function () { fitWatchPhone(); });
+window.addEventListener("resize", function () { fitWatchPhone(); layoutPackages(); });
+if (typeof ResizeObserver === "function") {
+  var topbarEl = document.querySelector(".topbar");
+  if (topbarEl) new ResizeObserver(function () { layoutPackages(); }).observe(topbarEl);
+}
 ["android", "ios", "desktop"].forEach(function (plat) {
   var btn = $("watch-retry-" + plat);
   if (!btn) return;
