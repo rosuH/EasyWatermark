@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import me.rosuh.easywatermark.ui.ProductShellTransitions
+import me.rosuh.easywatermark.ui.ewmTestTagsAsResourceId
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 
 /**
@@ -27,7 +28,9 @@ fun OpenSourceOverlayHost(
         visible = visible,
         enter = ProductShellTransitions.openSourceEnter(motionPolicy),
         exit = ProductShellTransitions.openSourceExit(motionPolicy),
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .ewmTestTagsAsResourceId(),
     ) {
         OpenSourceScreen(
             onBack = onBack,

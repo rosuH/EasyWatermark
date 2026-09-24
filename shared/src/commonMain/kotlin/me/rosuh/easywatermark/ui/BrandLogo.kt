@@ -1,11 +1,5 @@
 package me.rosuh.easywatermark.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,10 +7,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.geometry.Offset
@@ -122,25 +118,29 @@ fun GradientMaskedLogo(
     }
 
     val sweepMs = EwmTheme.motion.logoSweepMs
-    val transition = rememberInfiniteTransition(label = "logoMesh")
-    // Same phase as the old linear Brush sweep (1 → 0.1, reverse).
-    val pos by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = sweepMs, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "logoMeshPos",
-    )
+    // 80ms ticks: same reverse 1→0.1 sweep, without a 60fps Compose clock (emulator idle CPU).
+    val pos = remember { mutableFloatStateOf(1f) }
+    LaunchedEffect(sweepMs) {
+        val frameMs = 80L
+        var elapsed = 0L
+        val period = 2L * sweepMs
+        while (true) {
+            val cycle = (elapsed % period).toFloat()
+            val half = sweepMs.toFloat()
+            val t = if (cycle <= half) cycle / half else 2f - cycle / half
+            pos.floatValue = 1f - 0.9f * t
+            delay(frameMs)
+            elapsed += frameMs
+        }
+    }
+    val p = pos.floatValue
 
-    // Painter block re-runs in DrawScope each draw and reads [pos]. Keep one instance.
-    val meshPainter = remember {
+    val meshPainter = remember(p) {
         MeshGradientPainter(rows = 2, columns = 2, hasBicubicColor = true) {
             // Large field travel so the wash is as readable as the old linear sweep.
             // pos=1 → colors biased top-left/amber; pos=0.1 → pull toward cyan bottom-right.
-            val ox = (1.1f - pos) * 0.9f - 0.45f
-            val oy = pos * 0.65f - 0.25f
+            val ox = (1.1f - p) * 0.9f - 0.45f
+            val oy = p * 0.65f - 0.25f
             // Row 0
             setVertex(0, 0, Offset(0f, 0f), LogoAmber)
             setVertex(0, 1, Offset((0.5f + ox * 0.55f).coerceIn(0.05f, 0.95f), (0f + oy * 0.35f).coerceIn(0f, 0.45f)), LogoGold)
@@ -171,12 +171,10 @@ fun GradientMaskedLogo(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // Read [pos] here so the layer invalidates every frame even if Painter
-                // snapshot observation misses on a given backend.
+                // Read pos in the layer so draw invalidates without recomposing the tree.
                 .graphicsLayer {
                     blendMode = BlendMode.SrcAtop
-                    // Tiny no-op dependence keeps the read live without visible jitter.
-                    translationX = pos * 0.001f
+                    translationX = p * 0.001f
                 }
                 .paint(meshPainter),
         )

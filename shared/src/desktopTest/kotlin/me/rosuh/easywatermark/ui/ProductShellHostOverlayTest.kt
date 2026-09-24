@@ -34,6 +34,18 @@ class ProductShellHostOverlayTest {
             !Regex("""AnimatedContent\(\s*targetState\s*=\s*route""").containsMatchIn(src),
             "must not AnimatedContent(route) — that disposes Launch under About",
         )
+        assertTrue(
+            src.contains("PointerEventPass.Final"),
+            "About overlay must consume leftover pointers after children, not before",
+        )
+        assertTrue(
+            src.contains("ewmTestTagsAsResourceId"),
+            "shell root must expose testTags as resource-ids",
+        )
+        assertTrue(
+            !src.contains("event.changes.forEach { it.consume() }"),
+            "must not consume-all on a sibling Box in front of About",
+        )
     }
 
     @Test
@@ -48,6 +60,32 @@ class ProductShellHostOverlayTest {
             "meshReady must not key on obscured",
         )
         assertTrue(src.contains("&& !obscured"))
+        assertTrue(src.contains("mutableFloatStateOf"))
+        assertTrue(src.contains("delay("), "mesh must not pin a 60fps InfiniteTransition clock")
+        assertTrue(!src.contains("rememberInfiniteTransition"))
+    }
+
+    @Test
+    fun recovery_and_openSource_expose_test_tags_as_resource_ids() {
+        val recovery = readFirst(
+            "shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/RecoveryScreen.kt",
+        )
+        val openSource = readFirst(
+            "shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/about/OpenSourceOverlayHost.kt",
+        )
+        val carousel = readFirst(
+            "shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/EditorOptionCarousel.kt",
+        )
+        assertTrue(recovery.contains("ewmTestTagsAsResourceId"))
+        assertTrue(recovery.contains("sharedComposeRecoveryClose"))
+        assertTrue(openSource.contains("ewmTestTagsAsResourceId"))
+        assertTrue(
+            carousel.contains("clickable { onOptionSelected(item) }"),
+        )
+        val clickableAt = carousel.indexOf("clickable { onOptionSelected(item) }")
+        val testTagAt = carousel.indexOf("itemTestTag?.invoke(item)?.let { Modifier.testTag(it) }")
+        val mergeAt = carousel.indexOf("semantics(mergeDescendants = true)")
+        assertTrue(clickableAt >= 0 && testTagAt > clickableAt && mergeAt > testTagAt)
     }
 
     private fun readFirst(vararg paths: String): String {
