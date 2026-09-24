@@ -5,7 +5,7 @@ press label="About"
 wait label="Version"
 scroll down
 scroll down
-wait "label=\"Use in-app gallery\""
+wait "label=\"Use in-app gallery\"" 60000
 press "label=\"Use in-app gallery\""
 press label="Back"
 wait "label=\"Choose Images\""

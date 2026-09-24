@@ -696,8 +696,31 @@ def task_edge_id(task_id: str) -> str:
     return raw[5:].split("@", 1)[0].split("#", 1)[0]
 
 
-def expand_mobile_parallel(task_ids: list[str]) -> list[str]:
+def _pinned_platform(device_request: str | None) -> str | None:
+    """A concrete serial or UDID runs only that device's platform."""
+    request = (device_request or "").strip()
+    if not request or request == "auto":
+        return None
+    if request.startswith("emulator-"):
+        return "android"
+    if re.fullmatch(r"[0-9A-Fa-f-]{25,}", request):
+        return "ios"
+    return None
+
+
+def _task_platform(task_id: str) -> str | None:
+    if "@android" in task_id:
+        return "android"
+    if "@ios" in task_id:
+        return "ios"
+    return None
+
+
+def expand_mobile_parallel(task_ids: list[str], device_request: str | None = None) -> list[str]:
     """If a mobile #agent edge is queued, also queue the other OS when supported."""
+    pinned = _pinned_platform(device_request)
+    if pinned:
+        return [tid for tid in task_ids if _task_platform(tid) in {None, pinned}]
     if os.environ.get("TESTMAP_NO_EXPAND") == "1":
         return list(task_ids)
     out = list(task_ids)
@@ -946,7 +969,7 @@ def finalize_record(rec: dict) -> None:
         rec["duration_s"] = round(finished_ts - started_ts, 2)
     if any(t["state"] == "stopped" for t in rec["tasks"]) or rec["state"] == "paused":
         rec["state"] = "stopped"
-    elif any(t["state"] == "failed" for t in rec["tasks"]):
+    elif any(t["state"] in {"failed", "uncovered"} for t in rec["tasks"]):
         rec["state"] = "failed"
     elif any(t["state"] == "blocked" for t in rec["tasks"]):
         rec["state"] = "blocked"
@@ -1685,6 +1708,25 @@ def _publish_agent_device_live(spec: dict) -> None:
         )
     except OSError:
         return
+
+
+_CANCEL_COMPLETION = ("Share", "View in gallery", "sharedComposeExportCounts")
+
+
+def _mark_cancel_uncovered(task: dict) -> None:
+    """A finished export is not a passed cancel. Record it as uncovered."""
+    if str(task.get("edge_id") or "") != "export-cancel":
+        return
+    if task.get("state") != "failed":
+        return
+    blob = []
+    for case in task.get("cases") or []:
+        if isinstance(case, dict):
+            blob.append(str(case.get("message") or ""))
+    joined = " ".join(blob)
+    if any(token in joined for token in _CANCEL_COMPLETION):
+        task["state"] = "uncovered"
+        task["note"] = "未覆盖取消"
 
 
 def _agent_task_state(spec: dict, extra: dict) -> str:
@@ -2969,6 +3011,7 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
         task["state"] = "passed"
     else:
         task["state"] = "failed"
+    _mark_cancel_uncovered(task)
     active.finish_task_rows(task, task["state"] in {"passed", "review_required"})
     active.flush()
 
@@ -3046,7 +3089,7 @@ def run_foreground(
 ) -> int:
     """Run tasks in this process. The record is on disk before the first case."""
     origin = source if source in {"manual", "select", "verify"} else "manual"
-    rec = new_record(expand_mobile_parallel(task_ids), device)
+    rec = new_record(expand_mobile_parallel(task_ids, device), device)
     rec["source"] = origin
     rec["pid"] = os.getpid()
     rec["tasks"] = _repeat_tasks(rec["tasks"], repeats)

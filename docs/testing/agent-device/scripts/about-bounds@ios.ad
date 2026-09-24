@@ -8,6 +8,6 @@ scroll down
 scroll down
 press "role=switch label=\"Show Bounds\""
 wait "role=switch label=\"Show Bounds\""
-press label="Back"
+press id="aboutBack"
 wait id="launchPickImageButton"
 close

@@ -3210,8 +3210,6 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
           <div id="run-manual"></div>
           <div class="actions">
             <button type="button" class="btn primary" id="btn-start" disabled data-i18n="run.start">Start</button>
-            <button type="button" class="btn" id="btn-pause" disabled data-i18n="run.pause" data-i18n-title="run.pauseTitle">Pause queue</button>
-            <button type="button" class="btn" id="btn-resume" disabled data-i18n="run.resume" data-i18n-title="run.resumeTitle">Resume</button>
             <button type="button" class="btn danger" id="btn-stop-advanced" disabled data-i18n="run.stop" data-i18n-title="run.stopTitle">Stop</button>
           </div>
           <div class="progress-wrap" id="run-progress" hidden>
@@ -5131,7 +5129,7 @@ function setConsoleOnline(on) {
   var wasOffline = !consoleOnline;
   consoleOnline = on;
   if (!on) {
-    ["btn-start","btn-pause","btn-resume","btn-stop"].forEach(function (id) { var el = $(id); if (el) el.disabled = true; });
+    ["btn-start","btn-stop"].forEach(function (id) { var el = $(id); if (el) el.disabled = true; });
   } else {
     syncStartButton();
   }
@@ -5697,8 +5695,8 @@ function openShot(i) {
   openLightbox(item.src, item.cap);
 }
 function taskStateLabel(state) {
-  var zh = {pending: "等待", running: "进行中", paused: "暂停", passed: "通过", review_required: "待确认", failed: "失败", skipped: "跳过", stopped: "已停止", blocked: "阻塞"};
-  var en = {pending: "pending", running: "running", paused: "paused", passed: "passed", review_required: "review", failed: "failed", skipped: "skipped", stopped: "stopped", blocked: "blocked"};
+  var zh = {pending: "等待", running: "进行中", paused: "暂停", passed: "通过", review_required: "待确认", failed: "失败", uncovered: "未覆盖取消", skipped: "跳过", stopped: "已停止", blocked: "阻塞"};
+  var en = {pending: "pending", running: "running", paused: "paused", passed: "passed", review_required: "review", failed: "failed", uncovered: "cancel not covered", skipped: "skipped", stopped: "stopped", blocked: "blocked"};
   var table = lang === "zh" ? zh : en;
   return table[state] || state || "";
 }
@@ -5865,7 +5863,7 @@ function renderTaskBoard(st) {
     return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-key="' + esc(key) + '"'
       + (fail && fail.n != null ? ' data-fail-n="' + esc(String(fail.n)) + '"' : "") + ">"
       + '<span class="name">' + esc(title) + "</span><span>" + esc(plat) + "</span><span>" + esc(kn) + "</span><span>"
-      + esc(taskStateLabel(task.state)) + '</span><span class="dur">' + esc(dur) + "</span></button></li>";
+      + esc(taskStateLabel(task.state)) + (task.note ? " " + esc(task.note) : "") + '</span><span class="dur">' + esc(dur) + "</span></button></li>";
   }).join("");
   list.querySelectorAll(".task-row").forEach(function (btn) {
     btn.onclick = function () {
@@ -5906,11 +5904,9 @@ function renderRunStatus(st) {
       (st.state === "passed" || st.state === "failed" || st.state === "stopped" || st.state === "review_required")) {
     showRunResult(st.id);
   }
-  var pause = !!st.pause_queue;
   var running = st.state === "running" || st.state === "paused";
-  $("btn-pause").disabled = !consoleOnline || st.state !== "running";
-  $("btn-resume").disabled = !consoleOnline || !pause;
-  $("btn-stop").disabled = !consoleOnline || !running;
+  var stopBtn = $("btn-stop") || $("btn-stop-advanced");
+  if (stopBtn) stopBtn.disabled = !consoleOnline || !running;
   var q = st.queue || [];
   var done = q.filter(function (t) { return t.state === "passed" || t.state === "failed" || t.state === "stopped"; }).length;
   var wrap = $("run-progress");
@@ -6658,8 +6654,7 @@ function bootConsole() {
   $("btn-start").onclick = startRun;
   if ($("btn-refresh-devices")) $("btn-refresh-devices").onclick = loadDevices;
   loadDevices();
-  $("btn-pause").onclick = function () { post("/api/pause").catch(function () {}); };
-  $("btn-resume").onclick = function () { post("/api/resume").catch(function () {}); };
+
   $("btn-stop").onclick = function () { post("/api/stop").catch(function () {}); };
   if ($("watch-stop")) $("watch-stop").onclick = function () { post("/api/stop").catch(function () {}); };
   if ($("watch-confirm")) $("watch-confirm").onclick = function () {
