@@ -958,18 +958,20 @@ def write_record(rec: dict) -> Path:
     return path
 
 
-def outcome_counts(tasks: list) -> tuple[int, int]:
-    """Rows the page calls pass and fail. review_required is a pass awaiting confirm."""
-    passed = failed = 0
+def outcome_counts(tasks: list) -> tuple[int, int, int]:
+    """Pass is review_required or passed. Uncovered is its own bucket, not fail."""
+    passed = failed = uncovered = 0
     for task in tasks or []:
         if not isinstance(task, dict):
             continue
         state = task.get("state")
         if state in {"passed", "review_required"}:
             passed += 1
-        elif state in {"failed", "uncovered"}:
+        elif state == "uncovered":
+            uncovered += 1
+        elif state == "failed":
             failed += 1
-    return passed, failed
+    return passed, failed, uncovered
 
 
 def finalize_record(rec: dict) -> None:
@@ -979,9 +981,10 @@ def finalize_record(rec: dict) -> None:
         for case in task.get("cases") or []:
             if case.get("status") == "skipped":
                 skip_n += 1
-    pass_n, fail_n = outcome_counts(rec.get("tasks") or [])
+    pass_n, fail_n, uncovered_n = outcome_counts(rec.get("tasks") or [])
     rec["pass_count"] = pass_n
     rec["fail_count"] = fail_n
+    rec["uncovered_count"] = uncovered_n
     rec["skip_count"] = skip_n
     started_ts = _iso_ts(rec.get("started"))
     finished_ts = _iso_ts(rec.get("finished"))
@@ -1039,7 +1042,12 @@ def run_summaries() -> list[dict]:
         if not isinstance(rec, dict):
             continue
         rec = reap_stale_run(rec)
-        passed_n, failed_n = outcome_counts(rec.get("tasks") or [])
+        passed_n, failed_n, uncovered_n = outcome_counts(rec.get("tasks") or [])
+        plats: list[str] = []
+        for task in rec.get("tasks") or []:
+            plat = str(task.get("platform") or "")
+            if plat and plat not in plats:
+                plats.append(plat)
         items.append(
             {
                 "id": rec.get("id", path.stem),
@@ -1049,8 +1057,11 @@ def run_summaries() -> list[dict]:
                 "git": rec.get("git"),
                 "selection": rec.get("selection"),
                 "source": rec.get("source") or "",
+                "device": rec.get("device") or "",
+                "platforms": plats,
                 "pass_count": passed_n,
                 "fail_count": failed_n,
+                "uncovered_count": uncovered_n,
                 "skip_count": rec.get("skip_count", 0),
                 "duration_s": rec.get("duration_s"),
                 "historical": bool(rec.get("historical")),
@@ -1845,6 +1856,25 @@ def _mark_cancel_uncovered(task: dict) -> None:
         task["note"] = "未覆盖取消"
 
 
+_IOS_EXPORT_UNCOVERED = {
+    "export-failure-recovery": "iOS 上没有可以触发导出失败的接缝",
+    "export-cancel": "iOS 上没有可以触发慢速导出或取消的接缝",
+}
+
+
+def _mark_ios_export_uncovered(task: dict) -> None:
+    """These iOS edges cannot be forced. They are gaps, not failures."""
+    if task.get("platform") != "ios":
+        return
+    reason = _IOS_EXPORT_UNCOVERED.get(str(task.get("edge_id") or ""))
+    if not reason:
+        return
+    if task.get("state") not in {"failed", "review_required", "passed", "uncovered"}:
+        return
+    task["state"] = "uncovered"
+    task["note"] = reason
+
+
 def _agent_task_state(spec: dict, extra: dict) -> str:
     builder = spec.get("builder")
     if builder == "artemis":
@@ -2094,9 +2124,12 @@ def _close_named_session(session: str, logf=None) -> None:
             logf.write(f"session close {session} failed: {exc}\n")
             logf.flush()
         return
-    if logf is not None and proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout or "").strip()
-        logf.write(f"session close {session}: {proc.returncode} {detail[:240]}\n")
+    if logf is not None:
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout or "").strip()
+            logf.write(f"session close {session}: {proc.returncode} {detail[:240]}\n")
+        else:
+            logf.write(f"session close {session}: ok\n")
         logf.flush()
 
 
@@ -2198,21 +2231,40 @@ def reap_orphan_ios_runners(logf=None) -> list[int]:
 
 
 def close_ios_sessions_after_run(rec: dict | None, logf=None) -> None:
-    """Close iOS agent-device sessions this run left open. Never --shutdown."""
+    """Close iOS sessions recorded on this run. Never --shutdown."""
     names: set[str] = set()
+    has_ios = False
     for task in (rec or {}).get("tasks") or []:
         if not isinstance(task, dict) or task.get("platform") != "ios":
             continue
+        has_ios = True
         cmd = task.get("cmd") if isinstance(task.get("cmd"), list) else []
         session = _cmd_flag(cmd, "--session")
         if session:
             names.add(session)
-    for name in _listed_agent_sessions():
-        if name.startswith("testmap-") and name.endswith("-ios"):
-            names.add(name)
+    if logf is not None:
+        if not has_ios:
+            logf.write("ios session close: no ios tasks, skip\n")
+            logf.flush()
+            return
+        logf.write(
+            "ios session close: "
+            + (", ".join(sorted(names)) if names else "(none recorded)")
+            + "\n"
+        )
+        logf.flush()
+    elif not has_ios:
+        return
     for name in sorted(names):
         _close_named_session(name, logf)
-    reap_orphan_ios_runners(logf)
+    killed = reap_orphan_ios_runners(logf)
+    if logf is not None:
+        logf.write(
+            "ios runner reap: "
+            + (", ".join(str(pid) for pid in killed) if killed else "none")
+            + "\n"
+        )
+        logf.flush()
 
 
 def run_task(
@@ -2503,7 +2555,7 @@ def project_status(rec: dict | None) -> dict:
             current = {"id": row["id"], "edge_id": edge, "elapsed_s": row["duration_s"] or 0}
     done = sum(1 for row in queue if row["state"] not in {"pending", "running", "paused"})
     failed = sum(1 for row in queue if row["state"] == "failed")
-    passed_n, failed_n = outcome_counts(tasks)
+    passed_n, failed_n, uncovered_n = outcome_counts(tasks)
     log_path = Path(rec["log"]) if rec.get("log") else None
     if log_path and not log_path.is_absolute():
         log_path = REPO_ROOT / log_path
@@ -2521,6 +2573,7 @@ def project_status(rec: dict | None) -> dict:
         "progress": {"done": done, "total": len(queue), "failed": failed},
         "pass_count": passed_n,
         "fail_count": failed_n,
+        "uncovered_count": uncovered_n,
         "current": current,
         "elapsed_s": 0,
         "log_tail": log_tail(log_path) if log_path else [],
@@ -2536,6 +2589,8 @@ def project_status(rec: dict | None) -> dict:
 def _pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
+    except PermissionError:
+        return True
     except OSError:
         return False
     return True
@@ -2557,9 +2612,10 @@ def reap_stale_run(rec: dict) -> dict:
     for task in rec.get("tasks") or []:
         if isinstance(task, dict) and task.get("state") in {"pending", "running", "paused", None}:
             task["state"] = "interrupted"
-    passed_n, failed_n = outcome_counts(rec.get("tasks") or [])
+    passed_n, failed_n, uncovered_n = outcome_counts(rec.get("tasks") or [])
     rec["pass_count"] = passed_n
     rec["fail_count"] = failed_n
+    rec["uncovered_count"] = uncovered_n
     try:
         write_record(rec)
     except OSError:
@@ -3102,9 +3158,10 @@ class ActiveRun:
                 if rows is None:
                     continue
                 task["steps"] = [_step_public(row, task) for row in rows]
-            passed_n, failed_n = outcome_counts(self.rec.get("tasks") or [])
+            passed_n, failed_n, uncovered_n = outcome_counts(self.rec.get("tasks") or [])
             self.rec["pass_count"] = passed_n
             self.rec["fail_count"] = failed_n
+            self.rec["uncovered_count"] = uncovered_n
             write_record(self.rec)
 
     def _running(self, platform: str) -> dict | None:
@@ -3278,6 +3335,7 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
     else:
         task["state"] = "failed"
     _mark_cancel_uncovered(task)
+    _mark_ios_export_uncovered(task)
     active.finish_task_rows(task, task["state"] in {"passed", "review_required"})
     active.flush()
 
@@ -3406,7 +3464,8 @@ def run_record(rec: dict) -> int:
         signal.signal(signal.SIGINT, prev_int)
         signal.signal(signal.SIGTERM, prev_term)
         try:
-            close_ios_sessions_after_run(rec)
+            with log_path.open("a", encoding="utf-8") as logf:
+                close_ios_sessions_after_run(rec, logf)
         except Exception as exc:  # noqa: BLE001
             print(f"ios session close failed: {exc}", file=sys.stderr)
 
