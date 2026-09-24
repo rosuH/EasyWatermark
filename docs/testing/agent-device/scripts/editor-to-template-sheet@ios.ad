@@ -3,12 +3,15 @@ env TEMPLATE="EWM TEMPLATE AGENT DEVICE"
 open me.rosuh.easywatermark.ios --relaunch
 press id="store-seed-editor"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
 press id="watermarkTextContent"
 wait id="watermarkTextTemplateIcon"
 press id="watermarkTextTemplateIcon"
 wait text "模板列表"
-press label="添加"
-wait id="templateEditField"
+wait absent id="templateEditField" 5000
+press id="templateAddButton"
+wait id="templateEditField" 20000
 fill id="templateEditField" "${TEMPLATE}"
 press id="templateEditConfirm"
 wait text "EWM TEMPLATE AGENT DEVICE"

@@ -71,11 +71,20 @@ from testmap_agent_device import (  # noqa: E402
     maybe_prepare_ios_runner,
     validate_agent_device_binding,
 )
-from testmap_setup import ANDROID_SETUPS, IOS_SETUPS, apply_setup, restore_setup  # noqa: E402
+from testmap_setup import (  # noqa: E402
+    ANDROID_SETUPS,
+    IOS_SETUPS,
+    android_installed,
+    apply_setup,
+    ios_installed,
+    product_version,
+    restore_setup,
+)
 from testmap_devices import (  # noqa: E402
     capture_device_frame,
     default_watch_slots,
     ensure_device_ready,
+    resolve_device,
     resolve_watch_target,
 )
 from testmap_steps import (  # noqa: E402
@@ -1710,34 +1719,44 @@ def _publish_agent_device_live(spec: dict) -> None:
         return
 
 
-_CANCEL_COMPLETION = ("Share", "View in gallery", "sharedComposeExportCounts")
+# Completion-page markers. Matched only against cancel-surface.txt, not logs.
+_CANCEL_COMPLETION = (
+    'text="Share"',
+    'content-desc="Share"',
+    '"label": "Share"',
+    '"label":"Share"',
+    "View in gallery",
+    "sharedComposeExportCounts",
+    'text="分享"',
+    '"label": "分享"',
+    '"label":"分享"',
+)
 
 
 def _cancel_surface_text(task: dict) -> str:
-    """Failure text plus the screen captured when Cancel export did not appear."""
-    parts: list[str] = []
-    for case in task.get("cases") or []:
-        if isinstance(case, dict):
-            parts.append(str(case.get("message") or ""))
-    roots: list[Path] = []
+    """The snapshot taken when the export-cancel script finished or failed."""
     evidence = Path(str(task.get("evidence_dir") or ""))
-    if str(evidence):
-        roots.extend([evidence, evidence.parent])
+    if not str(evidence):
+        return ""
+    roots = [evidence, evidence.parent]
     seen: set[Path] = set()
-    names = {"cancel-surface.txt", "failure.txt", "replay.log"}
+    parts: list[str] = []
     for root in roots:
         if not root.is_dir():
             continue
-        for path in root.rglob("*"):
-            if path.name not in names or path in seen or not path.is_file():
+        direct = root / "cancel-surface.txt"
+        candidates = [direct] if direct.is_file() else []
+        candidates.extend(root.rglob("cancel-surface.txt"))
+        for path in candidates:
+            if path in seen or not path.is_file():
                 continue
+            seen.add(path)
             try:
                 if path.stat().st_size > 1_500_000:
                     continue
                 parts.append(path.read_text(encoding="utf-8", errors="replace"))
             except OSError:
                 continue
-            seen.add(path)
     return "\n".join(parts)
 
 
@@ -1752,10 +1771,18 @@ def _capture_cancel_surface(cmd: list[str], spec: dict, logf) -> None:
         return
     chunks: list[str] = []
     session = _cmd_flag(cmd, "--session")
+    serial = _cmd_flag(cmd, "--serial")
+    udid = _cmd_flag(cmd, "--udid")
     if session:
+        snap = [agent_device_bin()]
+        if serial:
+            snap.extend(["--serial", serial])
+        if udid:
+            snap.extend(["--udid", udid])
+        snap.extend(["--session", session, "snapshot", "--json"])
         try:
             proc = subprocess.run(
-                [agent_device_bin(), "--session", session, "snapshot", "--json"],
+                snap,
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,
@@ -1766,7 +1793,6 @@ def _capture_cancel_surface(cmd: list[str], spec: dict, logf) -> None:
             chunks.append(proc.stderr or "")
         except (OSError, subprocess.TimeoutExpired) as exc:
             chunks.append(str(exc))
-    serial = _cmd_flag(cmd, "--serial")
     if serial:
         try:
             from testmap_setup import adb, adb_shell
@@ -1790,13 +1816,13 @@ def _capture_cancel_surface(cmd: list[str], spec: dict, logf) -> None:
 
 
 def _mark_cancel_uncovered(task: dict) -> None:
-    """A finished export is not a passed cancel. Record it as uncovered."""
+    """A completion page is not a passed cancel. Judge only the captured snapshot."""
     if str(task.get("edge_id") or "") != "export-cancel":
         return
-    if task.get("state") != "failed":
+    if task.get("state") not in {"failed", "review_required", "passed"}:
         return
-    joined = _cancel_surface_text(task)
-    if any(token in joined for token in _CANCEL_COMPLETION):
+    surface = _cancel_surface_text(task)
+    if surface and any(token in surface for token in _CANCEL_COMPLETION):
         task["state"] = "uncovered"
         task["note"] = "未覆盖取消"
 
@@ -2130,7 +2156,7 @@ def run_task(
         code = _run_batched_steps(
             cmd, rows, logf, tee_stdout, on_proc, on_step_event, should_stop, watch_plat, env
         )
-        if spec.get("edge_id") == "export-cancel" and code not in (0, None):
+        if spec.get("edge_id") == "export-cancel":
             _capture_cancel_surface(cmd, spec, logf)
         release_agent_session(cmd, logf)
         _restore_agent_setup(setup_state, logf)
@@ -2212,7 +2238,7 @@ def run_task(
             replay_log.close()
         if on_proc:
             on_proc(None)
-        if spec.get("builder") == "agent-device" and spec.get("edge_id") == "export-cancel" and code not in (0, None):
+        if spec.get("builder") == "agent-device" and spec.get("edge_id") == "export-cancel":
             _capture_cancel_surface(cmd, spec, logf)
         if spec.get("builder") == "agent-device":
             release_agent_session(cmd, logf)
@@ -2341,6 +2367,7 @@ def project_status(rec: dict | None) -> dict:
             "state": task.get("state") or "pending",
             "exit_code": task.get("exit_code"),
             "duration_s": task.get("duration_s"),
+            "note": task.get("note") or "",
             "steps": steps,
         }
         queue.append(row)
@@ -2358,6 +2385,8 @@ def project_status(rec: dict | None) -> dict:
         "source": rec.get("source") or "manual",
         "pid": rec.get("pid"),
         "git": rec.get("git"),
+        "packages": rec.get("packages") or {},
+        "package_refusal": rec.get("package_refusal") or "",
         "queue": queue,
         "tasks": queue,
         "progress": {"done": done, "total": len(queue), "failed": failed},
@@ -3093,6 +3122,60 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
     active.flush()
 
 
+def _task_platforms(rec: dict) -> list[str]:
+    found: list[str] = []
+    for task in rec.get("tasks") or []:
+        plat = str(task.get("platform") or "")
+        if plat in {"android", "ios"} and plat not in found:
+            found.append(plat)
+    return found
+
+
+def _read_installed_packages(rec: dict, logf) -> str:
+    """Fill rec['packages']. Return a refusal reason when a version does not match."""
+    expected_name, expected_code = product_version()
+    rec["product_version"] = {"name": expected_name, "code": expected_code}
+    packages: dict[str, dict] = {}
+    reasons: list[str] = []
+    device = str(rec.get("device") or "auto")
+    wanted = None if device in {"", "auto"} else device
+    for plat in _task_platforms(rec):
+        try:
+            chosen = resolve_device(plat, wanted)
+            if plat == "android":
+                info = android_installed(str(chosen["id"]))
+            else:
+                info = ios_installed(str(chosen["id"]))
+        except (OSError, ValueError, subprocess.TimeoutExpired, RuntimeError) as exc:
+            reasons.append(f"{plat}: {exc}")
+            continue
+        packages[plat] = info
+        if info.get("version") != expected_name or info.get("version_code") != expected_code:
+            reasons.append(
+                f"{plat} {info.get('package')} is {info.get('version')} "
+                f"({info.get('version_code')}), ProductVersion is {expected_name} ({expected_code})"
+            )
+    rec["packages"] = packages
+    if not reasons:
+        logf.write(f"packages match ProductVersion {expected_name} ({expected_code})\n")
+        for plat, info in packages.items():
+            logf.write(
+                f"  {plat} {info.get('package')} {info.get('version')} "
+                f"{info.get('version_code')} sha256 {info.get('sha256')}\n"
+            )
+        logf.flush()
+        return ""
+    reason = " ".join(reasons)
+    rec["package_refusal"] = reason
+    logf.write(f"package refused: {reason}\n")
+    logf.flush()
+    for task in rec.get("tasks") or []:
+        if task.get("state") in {None, "pending"}:
+            task["state"] = "blocked"
+            task["note"] = reason
+    return reason
+
+
 def run_record(rec: dict) -> int:
     """Run every task in this process. One failure does not skip the rest."""
     active = ActiveRun(rec)
@@ -3117,6 +3200,12 @@ def run_record(rec: dict) -> int:
             with active.log_lock:
                 logf.write(f"# run {rec['id']} started {rec['started']} pid {rec.get('pid')}\n")
                 logf.flush()
+            if _read_installed_packages(rec, logf):
+                finalize_record(rec)
+                active.flush()
+                print(f"state={rec['state']}", flush=True)
+                return 1
+            write_record(rec)
             lanes: dict[str, list[dict]] = {"android": [], "ios": [], "host": []}
             for task in rec["tasks"]:
                 lanes[_task_lane(task_run_spec(task))].append(task)

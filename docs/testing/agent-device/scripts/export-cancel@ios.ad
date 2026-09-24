@@ -2,9 +2,15 @@ context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
 press id="store-seed-editor"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
 press id="sharedComposeSaveButton"
 wait id="sharedComposeExportPrimary"
 press label="导出到相册"
 wait "label=\"Cancel export\"" 20000
 press "label=\"Cancel export\""
+wait "label=\"Export cancelled.\" || label=\"导出已取消。\"" 15000
+wait absent "label=\"Share\"" 5000
+wait absent "label=\"分享\"" 5000
+wait absent "label=\"View in gallery\"" 5000
 close
