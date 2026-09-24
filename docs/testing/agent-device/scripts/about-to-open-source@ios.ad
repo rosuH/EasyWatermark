@@ -5,7 +5,7 @@ press id="launchAboutButton"
 wait label="版本"
 press label="开源许可"
 wait id="openSourceContentMaxWidth"
-press 56 168
+press 70 256
 wait label="版本"
 press label="Back"
 wait id="launchPickImageButton"

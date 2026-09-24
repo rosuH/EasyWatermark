@@ -144,7 +144,7 @@ def make_fixtures(folder: Path, marker: str) -> dict[str, Path]:
     """Stdlib A/B/icon PNGs. A = blue/yellow, B = purple/green, icon = red."""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
-    width, height = PNG_SIZE
+    width, height = (2400, 2400) if str(marker).startswith("exportcancel") else PNG_SIZE
     paths = {key: folder / f"ewm-suite-{marker}-{key}.png" for key in ("A", "B", "C", "icon")}
     write_png(
         paths["A"],
@@ -323,16 +323,14 @@ def read_private(serial: str, path: str) -> bytes | None:
 
 
 def write_private(serial: str, path: str, data: bytes, timeout: int = 45) -> None:
+    # One remote shell string so the redirect runs inside run-as, not outside it.
+    script = f"cat > {path}"
     argv = [
         adb_bin(),
         "-s",
         serial,
         "shell",
-        "run-as",
-        ANDROID_PACKAGE,
-        "sh",
-        "-c",
-        f"cat > {shlex.quote(path)}",
+        f"run-as {ANDROID_PACKAGE} sh -c {shlex.quote(script)}",
     ]
     result = subprocess.run(argv, capture_output=True, timeout=timeout, input=data)
     if result.returncode != 0:
@@ -516,6 +514,8 @@ def apply_setup(
             ios_revoke_library_read(udid)
         else:
             ios_grant_library_read(udid)
+            if setup == "failure":
+                simctl(udid, "privacy", udid, "revoke", "photos-add", IOS_BUNDLE)
         # Home stays on the launch screen after terminate. Editor and failure
         # scripts press store-seed-editor themselves; terminate is what drops
         # the previous editor session first.

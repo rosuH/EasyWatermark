@@ -4,5 +4,5 @@ wait id="launchPickImageButton"
 press id="launchAboutButton"
 wait label="版本"
 press label="Back"
-wait id="launchPickImageButton"
+wait id="launchPickImageButton" 20000
 close
