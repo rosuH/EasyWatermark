@@ -108,7 +108,23 @@ button { letter-spacing: inherit; }
   white-space: nowrap;
 }
 .sha.dirty { color: var(--warning); border-color: rgba(229, 197, 14, 0.35); }
-#pkg-line { max-width: 520px; overflow: hidden; text-overflow: ellipsis; }
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.topbar-meta .sha {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  max-width: 36ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#pkg-line { max-width: 42ch; }
+#live-counts { flex: 0 0 auto; }
 .topbar-right {
   margin-left: auto;
   display: flex;
@@ -1505,18 +1521,40 @@ body.view-run #task-rows {
 }
 body.view-run .task-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
-  gap: 6px;
+  grid-template-columns: 16px minmax(0, 1fr) 28px 36px 44px;
+  gap: 8px;
   align-items: center;
   width: 100%;
-  border-radius: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
   text-align: left;
   cursor: pointer;
   background: transparent;
+  color: var(--text-2);
+  font: 500 12px/1 var(--sans);
 }
-body.view-run .task-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.view-run .task-row.on { border-color: var(--accent); color: var(--text); background: var(--accent-dim); }
-body.view-run .task-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+body.view-run .task-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+body.view-run .task-row .plat, body.view-run .task-row .kn { color: var(--text-3); font: 500 11px/1 var(--mono); }
+body.view-run .task-row .dur { margin: 0; text-align: right; font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text-3); }
+body.view-run .task-row.running { background: var(--accent-dim); color: var(--text); }
+body.view-run .task-row.on { background: var(--accent-dim); }
+body.view-run .task-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+body.view-run .task-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; }
+body.view-run .task-meter { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+body.view-run .task-meter-track { height: 3px; border-radius: 99px; background: var(--bg-2); overflow: hidden; }
+body.view-run .task-meter-track i { display: block; height: 100%; width: 0; background: var(--accent); }
+body.view-run #task-progress { font: 500 11px/1.3 var(--sans); color: var(--text-2); font-variant-numeric: tabular-nums; }
+body.view-run .task-head .btn { flex: 0 0 auto; }
+.st-ico-wrap { display: grid; place-items: center; width: 16px; height: 16px; color: var(--text-3); }
+.st-ico { width: 14px; height: 14px; display: block; }
+.st-ico.spin { animation: spin 0.8s linear infinite; transform-origin: 50% 50%; }
+.task-row.failed .st-ico-wrap, .hist-row.failed .st-ico-wrap { color: var(--error); }
+.task-row.review_required .st-ico-wrap, .task-row.passed .st-ico-wrap,
+.hist-row.review_required .st-ico-wrap, .hist-row.passed .st-ico-wrap { color: var(--success); }
+.task-row.running .st-ico-wrap, .hist-row.running .st-ico-wrap { color: var(--accent); }
+.task-row.uncovered .st-ico-wrap, .hist-row.uncovered .st-ico-wrap { color: var(--warning); }
 body.view-run .watch-grid { grid-column: 2; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; align-items: stretch; }
 body.view-run .watch-result { grid-column: 1 / -1; grid-row: 3; margin: 0; min-height: 72px; }
 body.view-run .watch-status { display: none !important; }
@@ -1528,8 +1566,9 @@ body.view-run .watch-grid.one-card { grid-template-columns: minmax(640px, 1040px
 body.view-run .watch-slot,
 body.view-run .watch-body { height: 100%; min-height: 0; }
 body.view-run .watch-body { flex: 1 1 auto; }
-body.view-run .watch-steps { min-width: 160px; }
-body.view-run .watch-steps:empty { min-width: 0; }
+body.view-run .watch-steps { display: block; min-width: 160px; flex: 1 1 auto; height: auto !important; max-height: none !important; }
+body.view-run .watch-phone { height: 100%; max-width: 46%; align-self: stretch; }
+body.view-run .wstep.muted { color: var(--text-3); }
 body.view-run .watch-result { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: rgba(22, 22, 12, 0.96); border: 1px solid var(--border-strong); border-radius: 12px; margin: 0; padding: 0; z-index: 4; overflow: hidden; }
 body.view-run .watch-result.is-open { height: auto; max-height: 250px; }
 body.view-run .watch-result-tools { padding: 8px 12px; }
@@ -1570,23 +1609,35 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
 .history-pane { display: none; flex-direction: column; min-height: 0; overflow: auto; padding: 16px 18px; gap: 8px; }
 .hist-head, .hist-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.6fr) 88px minmax(120px, 1fr) 64px 64px;
+  grid-template-columns: 16px minmax(168px, 1.5fr) 88px 92px minmax(64px, 1fr) 72px 132px 52px;
   gap: 10px;
   align-items: center;
   width: 100%;
   text-align: left;
 }
-.hist-head { font: 600 11px/1.3 var(--sans); color: var(--text-3); padding: 0 8px 6px; }
+.hist-head { font: 600 11px/1.3 var(--sans); color: var(--text-3); padding: 0 10px 6px; }
 .hist-row {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--text);
-  padding: 8px;
+  padding: 0 10px;
   cursor: pointer;
   font: 500 12px/1.3 var(--sans);
 }
-.hist-row code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-row:hover { background: var(--bg-2); }
+.hist-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.hist-row code, .hist-row .src, .hist-row .sha-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-row .when, .hist-row .dur, .hist-row .dev { font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-row .dur { text-align: right; }
+.mix { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mix-bar { display: flex; height: 4px; width: 56px; border-radius: 99px; overflow: hidden; background: var(--bg-2); flex: 0 0 auto; }
+.mix-bar i { display: block; height: 100%; }
+.mix-bar .p { background: var(--success); }
+.mix-bar .f { background: var(--error); }
+.mix-bar .u { background: var(--warning); }
+.mix-n { font: 500 11px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text-2); white-space: nowrap; }
 .wstep.on { box-shadow: inset 2px 0 0 var(--accent); }
 </style>
 </head>
@@ -1603,9 +1654,11 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
       </svg>
       <h1 data-i18n="title">E2E Test Map</h1>
     </div>
-    <span id="git-sha" class="sha">—</span>
-    <span id="pkg-line" class="sha"></span>
-    <span id="live-counts" class="sha"></span>
+    <div class="topbar-meta">
+      <span id="git-sha" class="sha">—</span>
+      <span id="pkg-line" class="sha"></span>
+      <span id="live-counts" class="sha"></span>
+    </div>
     <div class="topbar-right">
       <div class="view-switch" role="group" aria-label="View">
         <button type="button" id="view-map" class="on" data-i18n="view.catalog">Catalog</button>
@@ -1674,7 +1727,10 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
         <div id="run-path" class="run-path"></div>
         <div id="task-board" class="task-board" hidden>
           <div class="task-head">
-            <p id="task-progress"></p>
+            <div class="task-meter">
+              <div class="task-meter-track" aria-hidden="true"><i id="task-meter-fill"></i></div>
+              <p id="task-progress"></p>
+            </div>
             <button type="button" class="btn danger" id="btn-stop" disabled data-i18n="run.stop">Stop</button>
           </div>
           <ol id="task-rows"></ol>
@@ -1816,7 +1872,7 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
       </details>
     </aside>
     <section id="history-pane" class="history-pane">
-      <div class="hist-head"><span>id</span><span data-i18n="history.source">Source</span><span>SHA</span><span data-i18n="history.pass">Pass</span><span data-i18n="history.fail">Fail</span></div>
+      <div class="hist-head"><span></span><span>id</span><span data-i18n="history.when">Started</span><span>SHA</span><span data-i18n="history.source">Source</span><span data-i18n="history.device">Device</span><span data-i18n="history.mix">Pass / fail</span><span data-i18n="history.dur">Time</span></div>
       <div id="history-board"></div>
     </section>
   </div>
@@ -1882,6 +1938,8 @@ const I18N = {
     "view.catalog": "Catalog", "view.history": "History",
     "draft.title": "This run", "draft.repeat": "Repeat", "draft.run": "Run", "draft.remove": "Remove",
     "history.source": "Source", "history.pass": "Pass", "history.fail": "Fail",
+    "history.when": "Started", "history.device": "Device", "history.mix": "Pass / fail / gap", "history.dur": "Time",
+    "watch.waitingSteps": "Waiting for steps",
     "node.running": "Running", "node.passed": "Done", "node.failed": "Failed",
     "legend.nodes": "node state this run",
     "watch.title": "Device",
@@ -2070,6 +2128,8 @@ const I18N = {
     "view.catalog": "用例目录", "view.history": "历史",
     "draft.title": "本次任务列表", "draft.repeat": "重复", "draft.run": "运行", "draft.remove": "删除",
     "history.source": "来源", "history.pass": "通过", "history.fail": "失败",
+    "history.when": "开始", "history.device": "设备", "history.mix": "通过 / 失败 / 未覆盖", "history.dur": "耗时",
+    "watch.waitingSteps": "等待步骤",
     "node.running": "进行中", "node.passed": "完成", "node.failed": "失败",
     "legend.nodes": "本轮节点状态",
     "watch.title": "真机画面",
@@ -3887,19 +3947,42 @@ function updateSha() {
   el.classList.toggle("dirty", !!git.dirty);
   el.title = git.sha;
 }
+function mixBar(p, f, u) {
+  var tot = (p || 0) + (f || 0) + (u || 0);
+  var tp = tot ? Math.round(100 * p / tot) : 0;
+  var tf = tot ? Math.round(100 * f / tot) : 0;
+  var tu = tot ? Math.max(0, 100 - tp - tf) : 0;
+  if (!tot) tu = 0;
+  return '<span class="mix"><span class="mix-bar" aria-hidden="true"><i class="p" style="width:'+tp+'%"></i><i class="f" style="width:'+tf+'%"></i><i class="u" style="width:'+tu+'%"></i></span><span class="mix-n">'+p+" / "+f+" / "+u+"</span></span>";
+}
+function histDevice(r) {
+  var plats = r.platforms || [];
+  var short = {android: "A", ios: "iOS", desktop: "D"};
+  if (plats.length) return plats.map(function (p) { return short[p] || p; }).join(" · ");
+  return r.device && r.device !== "auto" ? r.device : "";
+}
 function renderHistory(runs) {
   lastRuns = runs;
   var board = $("history-board");
   if (board) {
     board.innerHTML = (runs || []).map(function (r) {
       var git = r.git || {};
-      var sha = (git.sha || "") + (git.dirty ? " dirty" : "");
-      return '<button type="button" class="hist-row" data-open-run="'+esc(r.id)+'">'
+      var sha = git.sha || "";
+      var shortSha = sha.slice(0, 8) + (git.dirty ? " · dirty" : "");
+      var p = r.pass_count || 0;
+      var f = r.fail_count || 0;
+      var u = r.uncovered_count || 0;
+      var dur = r.duration_s != null ? Math.round(r.duration_s) + "s" : "";
+      var src = r.source || "";
+      return '<button type="button" class="hist-row '+esc(r.state||"")+'" data-open-run="'+esc(r.id)+'">'
+        + stateIcon(r.state)
         +'<code title="'+esc(r.id||"")+'">'+esc(r.id||"")+"</code>"
-        +"<span>"+esc((r.source || "") + (r.state ? " · " + statusLabel(r.state) : ""))+"</span>"
-        +'<span title="'+esc(sha)+'">'+esc(sha)+"</span>"
-        +"<span>"+esc(String(r.pass_count||0))+"</span>"
-        +"<span>"+esc(String(r.fail_count||0))+"</span></button>";
+        +'<span class="when" title="'+esc(r.started||"")+'">'+esc(relTime(r.started))+"</span>"
+        +'<span class="sha-cell" title="'+esc(sha+(git.dirty?" dirty":""))+'">'+esc(shortSha)+"</span>"
+        +'<span class="src" title="'+esc(src)+'">'+esc(src)+"</span>"
+        +'<span class="dev">'+esc(histDevice(r))+"</span>"
+        + mixBar(p, f, u)
+        +'<span class="dur">'+esc(dur)+"</span></button>";
     }).join("") || '<p class="empty">'+esc(t("history.empty"))+"</p>";
     board.querySelectorAll("[data-open-run]").forEach(function (btn) {
       btn.onclick = function () { openHistoryRun(btn.getAttribute("data-open-run")); };
@@ -4292,11 +4375,29 @@ function openShot(i) {
 function countOutcomes(tasks) {
   var pass = 0;
   var fail = 0;
+  var uncovered = 0;
   (tasks || []).forEach(function (task) {
     if (task.state === "passed" || task.state === "review_required") pass += 1;
-    else if (task.state === "failed" || task.state === "uncovered") fail += 1;
+    else if (task.state === "uncovered") uncovered += 1;
+    else if (task.state === "failed") fail += 1;
   });
-  return {pass: pass, fail: fail};
+  return {pass: pass, fail: fail, uncovered: uncovered};
+}
+function stateIcon(state, extra) {
+  var label = taskStateLabel(state);
+  var title = extra ? label + " " + extra : label;
+  var body = {
+    running: '<svg class="st-ico spin" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="20 12"/></svg>',
+    review_required: '<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.2 8.2l1.9 1.9 3.8-4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    passed: '<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.2 8.2l1.9 1.9 3.8-4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    failed: '<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    uncovered: '<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    pending: '<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+    interrupted: '<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 5.5v5M9.5 5.5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    stopped: '<svg class="st-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 5.5v5M9.5 5.5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'
+  };
+  var mark = body[state] || body.pending;
+  return '<span class="st-ico-wrap" aria-label="'+esc(label)+'" title="'+esc(title)+'">'+mark+"</span>";
 }
 function taskPlatformOf(task) {
   if (!task) return "";
@@ -4483,6 +4584,15 @@ function applyFocusedWatch(st) {
   }
   setTimeout(function () { fitWatchPhone(); }, 40);
 }
+var taskListPinned = false;
+var taskListRunId = "";
+function bindTaskListScroll(list) {
+  if (list.dataset.scrollBound) return;
+  list.dataset.scrollBound = "1";
+  ["wheel", "touchstart", "pointerdown"].forEach(function (ev) {
+    list.addEventListener(ev, function () { taskListPinned = true; }, {passive: true});
+  });
+}
 function renderTaskBoard(st) {
   var board = $("task-board");
   var progress = $("task-progress");
@@ -4495,11 +4605,18 @@ function renderTaskBoard(st) {
     return;
   }
   board.hidden = false;
+  bindTaskListScroll(list);
+  if (taskListRunId !== st.id) {
+    taskListRunId = st.id;
+    taskListPinned = false;
+  }
   var prog = st.progress || {};
   var done = prog.done != null ? prog.done : 0;
   var total = prog.total != null ? prog.total : tasks.length;
   var counts = countOutcomes(tasks);
   if (progress) progress.textContent = done + "/" + total + " · " + t("run.counts", counts);
+  var fill = $("task-meter-fill");
+  if (fill) fill.style.width = (total ? Math.round(100 * done / total) : 0) + "%";
   var focusKeys = {};
   platformsInRun(st).forEach(function (plat) {
     var focus = focusedTaskFor(st, plat);
@@ -4507,20 +4624,26 @@ function renderTaskBoard(st) {
       if (focus && task === focus) focusKeys[taskRowKey(task, index)] = true;
     });
   });
+  var y = list.scrollTop;
   list.innerHTML = tasks.map(function (task, index) {
     var repeat = task.repeat || {};
     var kn = (repeat.k || 1) + "/" + (repeat.n || 1);
-    var dur = task.duration_s != null ? (task.duration_s + "s") : "";
+    var dur = task.duration_s != null ? Number(task.duration_s).toFixed(task.duration_s >= 10 ? 0 : 1) + "s" : "";
     var eid = task.edge_id || taskEdgeId(task.id);
     var title = eid ? edgeTitle(eid) : (task.label || task.id || "");
-    var plat = t("plat." + (task.platform || "")) || task.platform || "";
+    var plat = taskPlatformOf(task);
+    var platMark = plat === "android" ? "A" : plat === "ios" ? "i" : (plat || "");
     var fail = failedStepOf(task);
     var key = taskRowKey(task, index);
     var on = focusKeys[key] ? " on" : "";
-    return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-key="' + esc(key) + '" data-plat="' + esc(taskPlatformOf(task)) + '"'
-      + (fail && fail.n != null ? ' data-fail-n="' + esc(String(fail.n)) + '"' : "") + ">"
-      + '<span class="name">' + esc(title) + "</span><span>" + esc(plat) + "</span><span>" + esc(kn) + "</span><span>"
-      + esc(taskStateLabel(task.state)) + (task.note ? " " + esc(task.note) : "") + '</span><span class="dur">' + esc(dur) + "</span></button></li>";
+    return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-key="' + esc(key) + '" data-plat="' + esc(plat) + '"'
+      + (fail && fail.n != null ? ' data-fail-n="' + esc(String(fail.n)) + '"' : "")
+      + ' title="' + esc(title) + '">'
+      + stateIcon(task.state, task.note)
+      + '<span class="name">' + esc(title) + "</span>"
+      + '<span class="plat" title="' + esc(t("plat." + plat) || plat) + '">' + esc(platMark) + "</span>"
+      + '<span class="kn">' + esc(kn) + "</span>"
+      + '<span class="dur">' + esc(dur) + "</span></button></li>";
   }).join("");
   list.querySelectorAll(".task-row").forEach(function (btn) {
     btn.onclick = function () {
@@ -4534,6 +4657,11 @@ function renderTaskBoard(st) {
       renderTaskBoard(st);
     };
   });
+  if (taskListPinned) list.scrollTop = y;
+  else {
+    var cur = list.querySelector(".task-row.running");
+    if (cur && cur.scrollIntoView) cur.scrollIntoView({block: "nearest"});
+  }
 }
 function renderRunStatus(st) {
   lastStatusSnap = st;
@@ -4723,6 +4851,19 @@ function fitWatchPhone(plat) {
   var h = Math.max(160, (slot.clientHeight || 0) - chrome);
   if (!slot.clientHeight) return;
   var steps = wEl(plat, "watch-steps");
+  if (document.body.classList.contains("view-run")) {
+    phone.style.width = "";
+    phone.style.height = "100%";
+    phone.style.maxWidth = "46%";
+    phone.style.maxHeight = "100%";
+    phone.style.flex = "0 1 auto";
+    phone.style.aspectRatio = ratioText;
+    if (steps) {
+      steps.style.height = "";
+      steps.style.maxHeight = "";
+    }
+    return;
+  }
   var hasSteps = !!(steps && steps.children.length);
   var share = hasSteps ? 0.46 : 0.72;
   var maxW = Math.max(120, (slot.clientWidth || h) * share);
@@ -5166,6 +5307,7 @@ function renderWatchSteps(st) {
         (sub ? '<span class="sub">' + esc(sub) + '</span>' : '') +
         (stt === "failed" && err ? '<span class="err">' + esc(err) + '</span>' : '') + '</li>';
     }).join("");
+    if (!html) html = '<li class="wstep muted">'+esc(t("watch.waitingSteps"))+"</li>";
     if (list.dataset.html !== html) {
       list.dataset.html = html;
       list.innerHTML = html;
