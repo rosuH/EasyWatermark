@@ -116,15 +116,15 @@ fun <T> EditorOptionCarousel(
                             Color.Transparent
                         },
                     )
+                    .clickable { onOptionSelected(item) }
                     .then(
                         itemTestTag?.invoke(item)?.let { Modifier.testTag(it) } ?: Modifier,
                     )
-                    // I2: selected + Tab role; name comes from merged EditorOptionItem CD/label.
+                    // Merge last so testTag + click + label land on one a11y node (resource-id).
                     .semantics(mergeDescendants = true) {
                         this.selected = isSelected
                         role = Role.Tab
-                    }
-                    .clickable { onOptionSelected(item) },
+                    },
             ) {
                 Column(
                     verticalArrangement = Arrangement.Center,
