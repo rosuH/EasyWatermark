@@ -9,7 +9,7 @@ wait id="colorSwatch-custom"
 press id="colorSwatch-custom"
 wait text "选择颜色"
 fill label="#RRGGBB" "00D1FF"
-keyboard dismiss
+keyboard return
 press label="确认"
 wait id="sharedComposeSaveButton" 90000
 close
