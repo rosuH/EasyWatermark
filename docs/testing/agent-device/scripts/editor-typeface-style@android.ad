@@ -2,6 +2,7 @@ context platform=android
 open me.rosuh.easywatermark.debug
 press label="Style"
 wait label="TileMode"
+wait id="editorOption-TextTypeFace"
 press id="editorOption-TextTypeFace"
 wait label="Bold"
 press label="Bold"
