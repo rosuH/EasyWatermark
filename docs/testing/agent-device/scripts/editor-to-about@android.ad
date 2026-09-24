@@ -1,6 +1,5 @@
 context platform=android
 open me.rosuh.easywatermark.debug
-wait label="Save"
 press label="About"
 wait label="Version"
 press label="Back"
