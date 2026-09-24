@@ -4,7 +4,7 @@ open me.rosuh.easywatermark.debug
 wait label="Save"
 press label="Content"
 wait label="Text"
-press label="👋图片仅供测试，请勿作其他用途"
+press "label=\"👋 DO NOT REDISTRIBUTE\""
 wait "label=\"Edit watermark\""
 press "label=\"Template List\""
 wait label="Add"

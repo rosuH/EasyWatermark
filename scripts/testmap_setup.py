@@ -332,7 +332,7 @@ def write_private(serial: str, path: str, data: bytes, timeout: int = 45) -> Non
         ANDROID_PACKAGE,
         "sh",
         "-c",
-        f"mkdir -p {shlex.quote(str(Path(path).parent))} && cat > {shlex.quote(path)}",
+        f"cat > {shlex.quote(path)}",
     ]
     result = subprocess.run(argv, capture_output=True, timeout=timeout, input=data)
     if result.returncode != 0:
