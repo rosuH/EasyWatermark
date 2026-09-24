@@ -213,6 +213,18 @@ def android_force_stop(serial: str) -> None:
     adb_shell(serial, "am", "force-stop", ANDROID_PACKAGE)
 
 
+def android_reset_saved_config(serial: str) -> None:
+    """Drop saved watermark text so the next launch shows the default label."""
+    for name in (
+        "files/datastore/sp_water_mark_config.preferences_pb",
+        "files/datastore/sp_water_mark_user_config.preferences_pb",
+    ):
+        try:
+            adb_shell(serial, "run-as", ANDROID_PACKAGE, "rm", "-f", name)
+        except ValueError:
+            continue
+
+
 def android_leave_system_picker(serial: str) -> None:
     """Leave a system photo picker so the next case does not open behind it."""
     try:
@@ -320,7 +332,7 @@ def write_private(serial: str, path: str, data: bytes, timeout: int = 45) -> Non
         ANDROID_PACKAGE,
         "sh",
         "-c",
-        f"mkdir -p -- {shlex.quote(str(Path(path).parent))} && cat > {shlex.quote(path)}",
+        f"mkdir -p {shlex.quote(str(Path(path).parent))} && cat > {shlex.quote(path)}",
     ]
     result = subprocess.run(argv, capture_output=True, timeout=timeout, input=data)
     if result.returncode != 0:
@@ -475,6 +487,7 @@ def apply_setup(
         # share one sample image into the editor.
         android_leave_system_picker(serial)
         android_force_stop(serial)
+        android_reset_saved_config(serial)
         if setup == "wide":
             state["display_backup"] = record_display(serial)
             set_wide(serial)

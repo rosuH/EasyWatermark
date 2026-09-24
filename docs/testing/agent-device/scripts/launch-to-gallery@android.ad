@@ -10,5 +10,5 @@ press "label=\"Use in-app gallery\""
 press label="Back"
 wait "label=\"Choose Images\""
 press "label=\"Choose Images\""
-wait text "Choose more…"
+wait text "Choose picture"
 close

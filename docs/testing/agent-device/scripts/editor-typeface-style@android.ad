@@ -3,7 +3,7 @@ open me.rosuh.easywatermark.debug
 wait label="Save"
 press label="Style"
 wait label="TileMode"
-press value="Style"
+press "value=\"Style\" selected=false"
 wait label="Bold"
 press 'role=radio label="Bold"'
 wait 'role=radio label="Bold"'

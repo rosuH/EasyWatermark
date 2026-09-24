@@ -3,7 +3,7 @@ open me.rosuh.easywatermark.debug
 wait label="Save"
 press label="Save"
 wait "label=\"Export to the album\""
-press "label=\"Export to the album\""
+press value="Export to the album"
 wait "label=\"Cancel export\""
 press "label=\"Cancel export\""
 wait "label=\"Output format\""

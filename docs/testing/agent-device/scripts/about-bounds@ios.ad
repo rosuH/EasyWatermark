@@ -5,8 +5,9 @@ press id="launchAboutButton"
 wait label="版本"
 scroll down
 scroll down
-press 'role=switch label="Show Bounds"'
-wait 'role=switch label="Show Bounds"'
+scroll down
+press "role=switch label=\"Show Bounds\""
+wait "role=switch label=\"Show Bounds\""
 press label="Back"
 wait id="launchPickImageButton"
 close
