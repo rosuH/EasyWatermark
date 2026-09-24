@@ -1,6 +1,6 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
-wait id="launchPickImageButton"
+wait id="launchPickImageButton" 20000
 press id="launchAboutButton"
 wait label="版本"
 scroll down
