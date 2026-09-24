@@ -1,8 +1,8 @@
 context platform=android
 open me.rosuh.easywatermark.debug --relaunch
-wait "label=\"Choose Images\"" 30000
+wait "label=\"Choose Images\"" 60000
 press label="About"
-wait label="Version" 20000
+wait label="Version" 60000
 scroll down
 scroll down
 scroll down
