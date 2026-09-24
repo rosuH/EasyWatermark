@@ -5,6 +5,6 @@ press label="Save"
 wait "label=\"Export to the album\""
 press value="Export to the album"
 wait "label=\"Retry failed\""
-press "label=\"Retry failed\""
+press value="Retry failed"
 wait text "succeeded"
 close

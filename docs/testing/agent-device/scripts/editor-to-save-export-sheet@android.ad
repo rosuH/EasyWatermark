@@ -6,6 +6,6 @@ wait "label=\"Output format\""
 wait text "JPEG"
 press value="JPEG"
 wait label="Quality"
-press text="PNG"
+press value="PNG"
 wait text "PNG"
 close
