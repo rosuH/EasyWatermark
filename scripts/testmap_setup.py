@@ -479,21 +479,38 @@ def ios_terminate(udid: str) -> None:
 
 
 def ios_clear_saved_config(udid: str) -> None:
-    """Drop saved watermark and user config so the next launch is the default session."""
+    """Drop watermark prefs and editor leftovers. The template DB stays.
+
+    Editor images and the about-return route live in process memory, so
+    terminate already drops them. The extra deletes are the on-disk leftovers
+    that are not templates: staged tmp files, and UIKit's saved state if the
+    simulator wrote one. Documents/ewm-db*, watermark_icons/, and the
+    follow-photo default are left in place.
+    """
     try:
         container = simctl(udid, "get_app_container", udid, IOS_BUNDLE, "data").strip()
     except (ValueError, OSError, subprocess.TimeoutExpired):
         return
-    docs = Path(container) / "Documents"
-    if not docs.is_dir():
-        return
-    for name in (
-        "sp_water_mark_config.preferences_pb",
-        "sp_water_mark_user_config.preferences_pb",
-    ):
-        path = docs / name
-        if path.is_file():
-            path.unlink()
+    root = Path(container)
+    docs = root / "Documents"
+    if docs.is_dir():
+        for name in (
+            "sp_water_mark_config.preferences_pb",
+            "sp_water_mark_user_config.preferences_pb",
+        ):
+            path = docs / name
+            if path.is_file():
+                path.unlink()
+    tmp = root / "tmp"
+    if tmp.is_dir():
+        for path in tmp.iterdir():
+            if path.is_file() and path.name.startswith("ewm_src_"):
+                path.unlink()
+    saved = root / "Library" / "Saved Application State"
+    if saved.is_dir():
+        shutil.rmtree(saved)
+    elif saved.is_file():
+        saved.unlink()
 
 
 def apply_setup(

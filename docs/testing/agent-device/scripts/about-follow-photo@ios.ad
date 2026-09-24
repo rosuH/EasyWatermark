@@ -1,6 +1,6 @@
 context platform=ios
 open me.rosuh.easywatermark.ios --relaunch
-wait id="launchPickImageButton"
+wait "id=\"launchPickImageButton\" label=\"选择图片\" visible"
 press id="launchAboutButton"
 wait label="版本"
 scroll down
@@ -9,5 +9,5 @@ scroll down
 press "role=switch label=\"Theme editor from photo\""
 wait "role=switch label=\"Theme editor from photo\""
 press id="aboutBack"
-wait id="launchPickImageButton"
+wait "id=\"launchPickImageButton\" label=\"选择图片\" visible"
 close
