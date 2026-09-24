@@ -3,6 +3,9 @@ open me.rosuh.easywatermark.debug --relaunch
 wait "label=\"Choose Images\""
 press label="About"
 wait label="Version"
+scroll down
+scroll down
+scroll down
 press "label=\"Show Bounds\""
 wait "label=\"Show Bounds\""
 press label="Back"

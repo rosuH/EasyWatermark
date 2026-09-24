@@ -3,8 +3,8 @@ open me.rosuh.easywatermark.debug
 wait label="Save"
 press label="Style"
 wait label="TileMode"
-press 'role=radio label="Single"'
-wait 'role=radio label="Single"'
+press "role=radio label=\"Single\""
+wait "role=radio label=\"Single\" selected=true"
 press "label=\"Watermark preview\""
 wait "label=\"Watermark preview\""
 close
