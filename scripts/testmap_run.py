@@ -698,6 +698,8 @@ def task_edge_id(task_id: str) -> str:
 
 def expand_mobile_parallel(task_ids: list[str]) -> list[str]:
     """If a mobile #agent edge is queued, also queue the other OS when supported."""
+    if os.environ.get("TESTMAP_NO_EXPAND") == "1":
+        return list(task_ids)
     out = list(task_ids)
     seen = set(out)
     for tid in list(task_ids):
