@@ -88,6 +88,16 @@ class ProductShellHostOverlayTest {
         assertTrue(clickableAt >= 0 && testTagAt > clickableAt && mergeAt > testTagAt)
     }
 
+    @Test
+    fun ios_store_seed_hooks_sit_below_back_button() {
+        val src = readFirst("iosApp/iosApp/ContentView.swift")
+        assertTrue(src.contains("store-seed-"))
+        assertTrue(
+            src.contains("constant: 56"),
+            "store-seed hook bar must sit below the 48pt back button",
+        )
+    }
+
     private fun readFirst(vararg paths: String): String {
         val cwd = File("").absoluteFile
         val candidates = paths.flatMap { path ->
