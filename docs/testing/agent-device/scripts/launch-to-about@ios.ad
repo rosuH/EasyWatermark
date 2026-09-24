@@ -3,6 +3,6 @@ open me.rosuh.easywatermark.ios --relaunch
 wait id="launchPickImageButton"
 press id="launchAboutButton"
 wait label="版本"
-press label="Back"
+press id="aboutBack"
 wait id="launchPickImageButton" 20000
 close
