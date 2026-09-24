@@ -1517,16 +1517,19 @@ body.view-run .task-row {
 body.view-run .task-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 body.view-run .task-row.on { border-color: var(--accent); color: var(--text); background: var(--accent-dim); }
 body.view-run .task-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-body.view-run .watch-grid { grid-column: 2; grid-row: 2; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; }
-body.view-run .watch-result { grid-column: 1 / -1; grid-row: 3; margin: 0; }
+body.view-run .watch-grid { grid-column: 2; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; align-items: stretch; }
+body.view-run .watch-result { grid-column: 1 / -1; grid-row: 3; margin: 0; min-height: 72px; }
 body.view-run .watch-status { display: none !important; }
 body.view-history .map-col,
 body.view-history .inspector { display: none !important; }
 body.view-history .shell { grid-template-columns: 1fr; height: 100%; min-height: 0; }
 body.view-history .history-pane { display: flex; }
-body.view-run .watch-grid.one-card { grid-template-columns: minmax(280px, 760px); justify-content: center; }
+body.view-run .watch-grid.one-card { grid-template-columns: minmax(640px, 1040px); justify-content: center; }
 body.view-run .watch-slot,
 body.view-run .watch-body { height: 100%; min-height: 0; }
+body.view-run .watch-body { flex: 1 1 auto; }
+body.view-run .watch-steps { min-width: 160px; }
+body.view-run .watch-steps:empty { min-width: 0; }
 body.view-run .watch-result { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: rgba(22, 22, 12, 0.96); border: 1px solid var(--border-strong); border-radius: 12px; margin: 0; padding: 0; z-index: 4; overflow: hidden; }
 body.view-run .watch-result.is-open { height: auto; max-height: 250px; }
 body.view-run .watch-result-tools { padding: 8px 12px; }
@@ -1602,6 +1605,7 @@ body.view-run #exec-confirm { flex: 0 0 auto; }
     </div>
     <span id="git-sha" class="sha">—</span>
     <span id="pkg-line" class="sha"></span>
+    <span id="live-counts" class="sha"></span>
     <div class="topbar-right">
       <div class="view-switch" role="group" aria-label="View">
         <button type="button" id="view-map" class="on" data-i18n="view.catalog">Catalog</button>
@@ -1959,6 +1963,7 @@ const I18N = {
     "status.viewer": "viewer-only", "status.offline": "offline",
     "status.online": "online", "status.running": "running", "status.paused": "paused",
     "status.passed": "passed", "status.failed": "failed", "status.stopped": "stopped",
+    "status.interrupted": "interrupted",
     "run.offline": "Console server offline — start with scripts/e2e-console.sh",
     "run.start": "Start", "run.startN": "Start · {n}",
     "run.pause": "Pause queue", "run.resume": "Resume", "run.stop": "Stop",
@@ -2146,6 +2151,7 @@ const I18N = {
     "status.viewer": "仅浏览", "status.offline": "离线",
     "status.online": "在线", "status.running": "运行中", "status.paused": "已暂停",
     "status.passed": "通过", "status.failed": "失败", "status.stopped": "已停止",
+    "status.interrupted": "已中断",
     "run.offline": "控制台服务未启动 — 请运行 scripts/e2e-console.sh",
     "run.start": "开始", "run.startN": "开始 · {n}",
     "run.pause": "暂停队列", "run.resume": "继续", "run.stop": "停止",
@@ -2299,6 +2305,7 @@ var edgeBadges = {};
 var edgeResults = {};
 var draftIds = [];
 var execPick = "";
+var execPickByPlat = {android: "", ios: "", desktop: ""};
 var execJumpN = null;
 var pinnedRunId = "";
 var watchHoldReplay = false;
@@ -3674,6 +3681,7 @@ function updateStatusPill() {
   if (lastRunState === "review_required") { pill.className = "pill online"; pill.innerHTML = "<i></i>"+t("status.review_required"); return; }
   if (lastRunState === "failed") { pill.className = "pill offline"; pill.innerHTML = "<i></i>"+t("status.failed"); return; }
   if (lastRunState === "stopped") { pill.className = "pill offline"; pill.innerHTML = "<i></i>"+t("status.stopped"); return; }
+  if (lastRunState === "interrupted") { pill.className = "pill offline"; pill.innerHTML = "<i></i>"+t("status.interrupted"); return; }
   pill.className = "pill online"; pill.innerHTML = "<i></i>"+t("status.online");
 }
 function setQueueMessage(msg) {
@@ -3888,7 +3896,7 @@ function renderHistory(runs) {
       var sha = (git.sha || "") + (git.dirty ? " dirty" : "");
       return '<button type="button" class="hist-row" data-open-run="'+esc(r.id)+'">'
         +'<code title="'+esc(r.id||"")+'">'+esc(r.id||"")+"</code>"
-        +"<span>"+esc(r.source||"")+"</span>"
+        +"<span>"+esc((r.source || "") + (r.state ? " · " + statusLabel(r.state) : ""))+"</span>"
         +'<span title="'+esc(sha)+'">'+esc(sha)+"</span>"
         +"<span>"+esc(String(r.pass_count||0))+"</span>"
         +"<span>"+esc(String(r.fail_count||0))+"</span></button>";
@@ -3960,7 +3968,7 @@ function renderResultView(rec) {
     +'<span class="st-chip '+esc(rec.state||"")+'">'+esc(statusLabel(rec.state))+"</span>"
     +'<code class="hist-id" title="'+esc(rec.id||"")+'">'+esc(rec.id||"")+"</code></div>"
     +'<div class="result-meta">'+(rec.duration_s != null ? t("run.wall", {s: rec.duration_s, n: tasks.length}) : "—")
-    +" · "+t("run.counts", {pass: rec.pass_count||0, fail: rec.fail_count||0})
+    +" · "+t("run.counts", countOutcomes(tasks))
     +(rec.skip_count ? " / skip "+rec.skip_count : "")
     +"</div></div>";
   var hasTaskLinks = tasks.some(function (task) { return task.evidence_links && task.evidence_links.length; });
@@ -4140,6 +4148,7 @@ function startDraft() {
   if (!n || n < 1) n = 1;
   pinnedRunId = "";
   execPick = "";
+  execPickByPlat = {android: "", ios: "", desktop: ""};
   execJumpN = null;
   watchHoldReplay = false;
   watchViewLocked = false;
@@ -4158,6 +4167,7 @@ function openHistoryRun(id) {
   if (!id) return;
   pinnedRunId = id;
   execPick = "";
+  execPickByPlat = {android: "", ios: "", desktop: ""};
   execJumpN = null;
   watchHoldReplay = false;
   bindDisplayedRun(id);
@@ -4165,6 +4175,7 @@ function openHistoryRun(id) {
   setSection("run");
   fetch("/api/status?id=" + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (st) {
     renderRunStatus(st);
+    openResultBody();
   }).catch(function () {});
 }
 function platformsInRun(st) {
@@ -4185,7 +4196,7 @@ function syncRunCards(st) {
   if (grid) {
     var cards = plats.length || 2;
     grid.classList.toggle("one-card", cards === 1);
-    grid.style.gridTemplateColumns = cards === 1 ? "" : "repeat(" + cards + ", minmax(0, 1fr))";
+    grid.style.gridTemplateColumns = cards === 1 ? "" : "repeat(" + Math.max(cards, 1) + ", minmax(0, 1fr))";
   }
   var bar = $("run-path");
   if (!bar) return;
@@ -4278,9 +4289,24 @@ function openShot(i) {
   var item = shotGallery[shotIndex];
   openLightbox(item.src, item.cap);
 }
+function countOutcomes(tasks) {
+  var pass = 0;
+  var fail = 0;
+  (tasks || []).forEach(function (task) {
+    if (task.state === "passed" || task.state === "review_required") pass += 1;
+    else if (task.state === "failed" || task.state === "uncovered") fail += 1;
+  });
+  return {pass: pass, fail: fail};
+}
+function taskPlatformOf(task) {
+  if (!task) return "";
+  if (task.platform) return task.platform;
+  var m = String(task.id || "").match(/@(android|ios|desktop)/);
+  return m ? m[1] : "";
+}
 function taskStateLabel(state) {
-  var zh = {pending: "等待", running: "进行中", paused: "暂停", passed: "通过", review_required: "待确认", failed: "失败", uncovered: "未覆盖取消", skipped: "跳过", stopped: "已停止", blocked: "阻塞"};
-  var en = {pending: "pending", running: "running", paused: "paused", passed: "passed", review_required: "review", failed: "failed", uncovered: "cancel not covered", skipped: "skipped", stopped: "stopped", blocked: "blocked"};
+  var zh = {pending: "等待", running: "进行中", paused: "暂停", passed: "通过", review_required: "待确认", failed: "失败", uncovered: "未覆盖取消", skipped: "跳过", stopped: "已停止", blocked: "阻塞", interrupted: "已中断"};
+  var en = {pending: "pending", running: "running", paused: "paused", passed: "passed", review_required: "review", failed: "failed", uncovered: "cancel not covered", skipped: "skipped", stopped: "stopped", blocked: "blocked", interrupted: "interrupted"};
   var table = lang === "zh" ? zh : en;
   return table[state] || state || "";
 }
@@ -4291,15 +4317,33 @@ function taskRowKey(task, index) {
   var repeat = (task && task.repeat) || {};
   return [task && task.id || "", task && task.platform || "", repeat.k || 1, index].join("|");
 }
-function focusedTask(st) {
+function focusedTaskFor(st, plat) {
   var tasks = taskListOf(st);
-  if (execPick) {
-    for (var i = 0; i < tasks.length; i++) if (taskRowKey(tasks[i], i) === execPick) return tasks[i];
+  var pick = execPickByPlat[plat] || "";
+  if (pick) {
+    for (var i = 0; i < tasks.length; i++) {
+      if (taskRowKey(tasks[i], i) === pick && taskPlatformOf(tasks[i]) === plat) return tasks[i];
+    }
   }
+  var running = null;
+  var lastDone = null;
+  var first = null;
   for (var j = 0; j < tasks.length; j++) {
-    if (tasks[j].state === "running" || tasks[j].state === "paused") return tasks[j];
+    if (taskPlatformOf(tasks[j]) !== plat) continue;
+    if (!first) first = tasks[j];
+    var state = tasks[j].state;
+    if (state === "running" || state === "paused") running = tasks[j];
+    if (state && state !== "pending") lastDone = tasks[j];
   }
-  return tasks[0] || null;
+  return running || lastDone || first;
+}
+function focusedTask(st) {
+  var plats = platformsInRun(st);
+  for (var i = 0; i < plats.length; i++) {
+    var task = focusedTaskFor(st, plats[i]);
+    if (task) return task;
+  }
+  return taskListOf(st)[0] || null;
 }
 function taskStepsOf(task) { return (task && task.steps) || []; }
 function failedStepOf(task) {
@@ -4315,42 +4359,55 @@ function openResultBody() {
   setTimeout(function () { fitWatchPhone(); }, 40);
 }
 function renderCasePath(task) {
+  renderCasePaths(task ? [task] : []);
+}
+function renderCasePaths(tasks) {
   var bar = $("run-path");
   if (!bar) return;
-  if (!task) { bar.textContent = ""; return; }
-  var eid = task.edge_id || taskEdgeId(task.id);
-  var edge = DATA.edges.find(function (item) { return item.id === eid; });
-  var plat = t("plat." + (task.platform || "")) || task.platform || "";
-  if (!edge) { bar.textContent = (eid || task.id || "") + (plat ? " · " + plat : ""); return; }
-  bar.textContent = nodeTitle(edge.from) + " → " + nodeTitle(edge.to) + " · " + edgeTitle(eid) + (plat ? " · " + plat : "");
+  var parts = [];
+  (tasks || []).forEach(function (task) {
+    if (!task) return;
+    var eid = task.edge_id || taskEdgeId(task.id);
+    var edge = DATA.edges.find(function (item) { return item.id === eid; });
+    var plat = t("plat." + (taskPlatformOf(task) || "")) || taskPlatformOf(task) || "";
+    var path = edge ? (nodeTitle(edge.from) + " → " + nodeTitle(edge.to)) : (eid || task.id || "");
+    parts.push((plat ? plat + " " : "") + path);
+  });
+  bar.textContent = parts.join("    ·    ");
 }
 function paintReplayFrame(plat, task, st) {
-  var live = !!(st && (st.state === "running" || st.state === "paused") && task && (task.state === "running" || task.state === "paused"));
-  watchHoldReplay = !live;
-  if (live) return;
-  WATCH_PLATS.forEach(function (p) {
-    stopWatch(p);
-    if (watchCtl[p]) watchCtl[p].streamKey = "replay";
-  });
+  var liveRun = !!(st && (st.state === "running" || st.state === "paused"));
+  var taskLive = !!(task && (task.state === "running" || task.state === "paused"));
+  if (liveRun && taskLive) return;
+  var ctl = watchCtl[plat];
   var steps = taskStepsOf(task);
   var shot = "";
   steps.forEach(function (row) {
-    if (execJumpN != null && String(row.n) === String(execJumpN) && row.shot) shot = row.shot;
+    if (execJumpN != null && String(row.n) === String(execJumpN) && row.shot && row.platform === plat) shot = row.shot;
   });
   if (!shot) {
     for (var i = steps.length - 1; i >= 0; i--) if (steps[i].shot) { shot = steps[i].shot; break; }
   }
+  var token = "replay:" + ((st && st.id) || "") + ":" + plat + ":" + shot;
+  if (ctl && ctl.streamKey === token) return;
+  var prevKey = ctl ? String(ctl.streamKey || "") : "";
+  if (prevKey.indexOf("live:") === 0 || prevKey.indexOf("idle:") === 0) stopWatch(plat);
+  if (ctl) ctl.streamKey = token;
   var img = plat && wEl(plat, "watch-img");
   var empty = plat && wEl(plat, "watch-empty");
   var canvas = plat && wEl(plat, "watch-canvas");
   if (canvas) canvas.hidden = true;
-  if (!(img && shot && st && st.id)) return;
+  if (!(img && shot && st && st.id)) {
+    if (img) { img.removeAttribute("src"); img.hidden = true; }
+    if (empty) empty.hidden = false;
+    return;
+  }
   img.hidden = false;
   img.src = "/api/runs/" + encodeURIComponent(st.id) + "/steps/" + encodeURIComponent(shot);
   if (empty) empty.hidden = true;
   img.onload = function () {
-    var ctl = watchCtl[plat];
-    if (ctl) { ctl.natW = img.naturalWidth || 0; ctl.natH = img.naturalHeight || 0; }
+    var box = watchCtl[plat];
+    if (box) { box.natW = img.naturalWidth || 0; box.natH = img.naturalHeight || 0; }
     fitWatchPhone(plat);
   };
 }
@@ -4373,44 +4430,58 @@ function jumpToStep(plat, n) {
 }
 function applyFocusedWatch(st) {
   if (!st) return;
-  var task = focusedTask(st);
-  var plat = (task && task.platform) || "";
-  var steps = taskStepsOf(task).map(function (row) {
-    var copy = {};
-    Object.keys(row || {}).forEach(function (k) { copy[k] = row[k]; });
-    if (!copy.platform) copy.platform = plat;
-    return copy;
+  syncRunCards(st);
+  var plats = platformsInRun(st);
+  var shown = [];
+  var steps = [];
+  var anyLive = false;
+  plats.forEach(function (plat) {
+    var task = focusedTaskFor(st, plat);
+    if (!task) return;
+    shown.push(task);
+    if (task.state === "running" || task.state === "paused") anyLive = true;
+    taskStepsOf(task).forEach(function (row) {
+      var copy = {};
+      Object.keys(row || {}).forEach(function (k) { copy[k] = row[k]; });
+      if (!copy.platform) copy.platform = plat;
+      steps.push(copy);
+    });
+    paintReplayFrame(plat, task, st);
   });
-  var taskLive = !!(task && (task.state === "running" || task.state === "paused"));
+  watchHoldReplay = !(st.state === "running" || st.state === "paused") || !anyLive;
   var view = {
     id: st.id,
-    state: taskLive ? (st.state || "running") : ((task && task.state) || st.state || "idle"),
+    state: st.state || "idle",
     log_tail: st.log_tail || [],
-    queue: task ? [task] : [],
+    queue: shown,
     steps: steps
   };
   renderWatchSteps(view);
   renderWatchResult(view);
-  document.querySelectorAll(".watch-slot").forEach(function (el) {
-    el.hidden = !plat || el.getAttribute("data-plat") !== plat;
-  });
-  var grid = document.querySelector(".watch-grid");
-  if (grid) grid.classList.add("one-card");
-  renderCasePath(task);
-  paintReplayFrame(plat, task, st);
+  renderCasePaths(shown);
   var confirm = $("exec-confirm");
   if (confirm) {
-    var eid = task && (task.edge_id || taskEdgeId(task.id));
-    var show = !!(eid && (task.state === "review_required" || st.state === "review_required"));
-    confirm.hidden = !show;
+    var review = null;
+    shown.forEach(function (task) {
+      if (!review && task.state === "review_required") review = task;
+    });
+    var eid = review && (review.edge_id || taskEdgeId(review.id));
+    confirm.hidden = !eid;
     confirm.onclick = function () { if (eid) confirmEdge(eid); };
   }
-  if (execJumpN != null && plat) {
-    var n = execJumpN;
+  if (execJumpN != null && execPick) {
+    var jumpPlat = "";
+    var jumpN = execJumpN;
+    plats.forEach(function (plat) {
+      if (execPickByPlat[plat] === execPick) jumpPlat = plat;
+    });
     execJumpN = null;
-    openResultBody();
-    jumpToStep(plat, n);
+    if (jumpPlat) {
+      openResultBody();
+      jumpToStep(jumpPlat, jumpN);
+    }
   }
+  setTimeout(function () { fitWatchPhone(); }, 40);
 }
 function renderTaskBoard(st) {
   var board = $("task-board");
@@ -4427,12 +4498,14 @@ function renderTaskBoard(st) {
   var prog = st.progress || {};
   var done = prog.done != null ? prog.done : 0;
   var total = prog.total != null ? prog.total : tasks.length;
-  var failed = prog.failed || 0;
-  if (progress) progress.textContent = done + "/" + total + (failed ? (" · " + failed + (lang === "zh" ? " 失败" : " failed")) : "");
-  var focus = focusedTask(st);
-  var focusKey = "";
-  tasks.forEach(function (task, index) {
-    if (focus && task === focus) focusKey = taskRowKey(task, index);
+  var counts = countOutcomes(tasks);
+  if (progress) progress.textContent = done + "/" + total + " · " + t("run.counts", counts);
+  var focusKeys = {};
+  platformsInRun(st).forEach(function (plat) {
+    var focus = focusedTaskFor(st, plat);
+    tasks.forEach(function (task, index) {
+      if (focus && task === focus) focusKeys[taskRowKey(task, index)] = true;
+    });
   });
   list.innerHTML = tasks.map(function (task, index) {
     var repeat = task.repeat || {};
@@ -4443,8 +4516,8 @@ function renderTaskBoard(st) {
     var plat = t("plat." + (task.platform || "")) || task.platform || "";
     var fail = failedStepOf(task);
     var key = taskRowKey(task, index);
-    var on = key === focusKey ? " on" : "";
-    return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-key="' + esc(key) + '"'
+    var on = focusKeys[key] ? " on" : "";
+    return '<li><button type="button" class="task-row ' + esc(task.state || "") + on + '" data-key="' + esc(key) + '" data-plat="' + esc(taskPlatformOf(task)) + '"'
       + (fail && fail.n != null ? ' data-fail-n="' + esc(String(fail.n)) + '"' : "") + ">"
       + '<span class="name">' + esc(title) + "</span><span>" + esc(plat) + "</span><span>" + esc(kn) + "</span><span>"
       + esc(taskStateLabel(task.state)) + (task.note ? " " + esc(task.note) : "") + '</span><span class="dur">' + esc(dur) + "</span></button></li>";
@@ -4452,6 +4525,8 @@ function renderTaskBoard(st) {
   list.querySelectorAll(".task-row").forEach(function (btn) {
     btn.onclick = function () {
       execPick = btn.getAttribute("data-key") || "";
+      var pickedPlat = btn.getAttribute("data-plat") || "";
+      if (pickedPlat) execPickByPlat[pickedPlat] = execPick;
       var n = btn.getAttribute("data-fail-n");
       execJumpN = n == null || n === "" ? null : n;
       if (execJumpN == null) openResultBody();
@@ -4463,6 +4538,11 @@ function renderTaskBoard(st) {
 function renderRunStatus(st) {
   lastStatusSnap = st;
   updatePackages(st);
+  var countsEl = $("live-counts");
+  if (countsEl) {
+    var counts = countOutcomes(taskListOf(st));
+    countsEl.textContent = st && st.id ? t("run.counts", counts) : "";
+  }
   var prev = lastRunState;
   if ((st.state === "running" || st.state === "paused") && prev !== "running" && prev !== "paused") {
     watchViewLocked = false;
@@ -4642,7 +4722,10 @@ function fitWatchPhone(plat) {
   var chrome = (label ? label.offsetHeight : 0) + (cap ? cap.offsetHeight : 0) + 12;
   var h = Math.max(160, (slot.clientHeight || 0) - chrome);
   if (!slot.clientHeight) return;
-  var maxW = Math.max(120, (slot.clientWidth || h) * 0.48);
+  var steps = wEl(plat, "watch-steps");
+  var hasSteps = !!(steps && steps.children.length);
+  var share = hasSteps ? 0.46 : 0.72;
+  var maxW = Math.max(120, (slot.clientWidth || h) * share);
   var w = h * ar;
   if (w > maxW) { w = maxW; h = w / ar; }
   phone.style.width = Math.round(w) + "px";
@@ -4651,7 +4734,6 @@ function fitWatchPhone(plat) {
   phone.style.maxHeight = "none";
   phone.style.flex = "0 0 auto";
   phone.style.aspectRatio = ratioText;
-  var steps = wEl(plat, "watch-steps");
   if (steps) {
     steps.style.height = Math.round(h) + "px";
     steps.style.maxHeight = Math.round(h) + "px";
@@ -4773,7 +4855,7 @@ function startWatchH264(plat, q) {
     var had = watchCtl[plat].frameN > 0;
     ctl.videoTimer = setTimeout(function () {
       if (watchCtl[plat].abort !== ac) return;
-      startWatchImg(plat, q);
+      startWatchImg(plat, q, 1000);
     }, had ? 1200 : 2000);
   }
   armVideoWatch();
@@ -4843,12 +4925,14 @@ function startWatchH264(plat, q) {
     if (err && err.name === "AbortError") return;
     if (watchCtl[plat].abort !== ac) return;
     if (watchCtl[plat].frameN > 0) stopWatch(plat);
-    else startWatchImg(plat, q);
+    else startWatchImg(plat, q, 1000);
   });
 }
-function startWatchImg(plat, q) {
+function startWatchImg(plat, q, gapMs) {
   var ctl = watchCtl[plat];
   if (!ctl) return;
+  var wait = gapMs == null ? 1000 : gapMs;
+  if (String(ctl.streamKey || "").indexOf("idle:") !== 0) ctl.streamKey = "still:" + q;
   if (ctl.videoTimer) { clearTimeout(ctl.videoTimer); ctl.videoTimer = null; }
   if (ctl.abort) { ctl.abort.abort(); ctl.abort = null; }
   var img = wEl(plat, "watch-img");
@@ -4886,12 +4970,12 @@ function startWatchImg(plat, q) {
       });
       watchCaption(plat);
       paintTouch(lastStatusSnap);
-      nextFrame();
+      setTimeout(nextFrame, wait);
     };
     img.onerror = function () {
       if (ctl.imgToken !== token) return;
       ctl.miss = (ctl.miss || 0) + 1;
-      if (ctl.miss < 4) { setTimeout(nextFrame, 250); return; }
+      if (ctl.miss < 4) { setTimeout(nextFrame, Math.max(wait, 250)); return; }
       ctl.failReason = "stream";
       ctl.imgToken = "";
       stopWatch(plat);
@@ -5139,6 +5223,35 @@ function statusUrl() {
   if (pinnedRunId) return "/api/status?id=" + encodeURIComponent(pinnedRunId);
   return "/api/status";
 }
+function pageWatching() {
+  return document.visibilityState !== "hidden" && document.body.classList.contains("view-run");
+}
+function slotShown(plat) {
+  var el = document.querySelector('.watch-slot[data-plat="' + plat + '"]');
+  return !!(el && !el.hidden);
+}
+function cardWantsLive(plat) {
+  if (plat === "desktop" || !pageWatching() || !slotShown(plat)) return false;
+  var st = lastStatusSnap;
+  if (!st || (st.state !== "running" && st.state !== "paused")) return false;
+  var task = focusedTaskFor(st, plat);
+  return !!(task && (task.state === "running" || task.state === "paused"));
+}
+function cardWantsIdle(plat) {
+  if (plat === "desktop" || !pageWatching() || !slotShown(plat)) return false;
+  var st = lastStatusSnap;
+  if (st && (st.state === "running" || st.state === "paused")) return false;
+  if (st && st.id) return false;
+  return !!watchSlot(plat);
+}
+function startWatchIdle(plat) {
+  var q = watchQuery(plat) + "&idle=1";
+  var ctl = watchCtl[plat];
+  var key = "idle:" + q;
+  if (!ctl || (ctl.streamKey === key && ctl.imgToken)) return;
+  ctl.streamKey = key;
+  startWatchImg(plat, q, 2000);
+}
 function bindWatchStream() {
   if (isFileOpen()) return;
   syncWatchChrome(lastStatusSnap);
@@ -5146,31 +5259,35 @@ function bindWatchStream() {
     setTimeout(bindWatchStream, 2000);
     return;
   }
-  if (watchHoldReplay) {
-    setTimeout(bindWatchStream, 1000);
-    return;
-  }
   WATCH_PLATS.forEach(function (plat) {
-    var slot = watchSlot(plat);
-    var live = plat !== "desktop" && slot && slot.device && (!slot.platform || slot.platform === plat);
-    if (!live) {
-      stopWatch(plat);
-      fitWatchPhone(plat);
-      return;
-    }
-    var q = watchQuery(plat);
-    var key = "live:" + q;
     var ctl = watchCtl[plat];
-    if (key === ctl.streamKey) {
-      fitWatchPhone(plat);
+    if (!ctl) return;
+    if (cardWantsLive(plat)) {
+      var q = watchQuery(plat);
+      var liveKey = "live:" + q;
+      var stillKey = "still:" + q;
+      if (ctl.streamKey === stillKey && ctl.imgToken) {
+        fitWatchPhone(plat);
+        return;
+      }
+      if (ctl.streamKey === liveKey && ctl.abort) {
+        fitWatchPhone(plat);
+        return;
+      }
+      ctl.streamKey = liveKey;
+      ctl.frameN = 0;
+      ctl.natW = 0;
+      ctl.natH = 0;
+      ctl.pending = null;
+      startWatchH264(plat, q);
       return;
     }
-    ctl.streamKey = key;
-    ctl.frameN = 0;
-    ctl.natW = 0;
-    ctl.natH = 0;
-    ctl.pending = null;
-    startWatchImg(plat, q);
+    if (cardWantsIdle(plat)) {
+      startWatchIdle(plat);
+      return;
+    }
+    if (/^(live:|idle:|still:)/.test(String(ctl.streamKey || ""))) stopWatch(plat);
+    else fitWatchPhone(plat);
   });
   setTimeout(bindWatchStream, 1000);
 }
@@ -5246,6 +5363,16 @@ function bootConsole() {
     if (state.selected) confirmEdge(state.selected);
   };
   bindWatchStream();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") {
+      WATCH_PLATS.forEach(function (plat) {
+        var ctl = watchCtl[plat];
+        if (!ctl) return;
+        if (String(ctl.streamKey || "").indexOf("replay:") === 0) return;
+        stopWatch(plat);
+      });
+    }
+  });
   window.addEventListener("resize", fitWatchPhone);
   var liveFrame = $("live-frame");
   if (liveFrame) {
