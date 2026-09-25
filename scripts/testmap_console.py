@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import secrets
 import signal
 import socket
 import sys
@@ -106,6 +107,28 @@ def _watch_preferred(snap: object, plat: str | None) -> dict | None:
     return None
 
 
+_CONFIRM_TOKEN = ""
+_CONFIRM_LOCK = threading.Lock()
+
+
+def _issue_confirm_token() -> str:
+    global _CONFIRM_TOKEN
+    token = secrets.token_urlsafe(24)
+    with _CONFIRM_LOCK:
+        _CONFIRM_TOKEN = token
+    return token
+
+
+def _confirm_token_ok(token: object) -> bool:
+    if not isinstance(token, str) or not token:
+        return False
+    with _CONFIRM_LOCK:
+        current = _CONFIRM_TOKEN
+    if not current:
+        return False
+    return secrets.compare_digest(token, current)
+
+
 class Handler(BaseHTTPRequestHandler):
     # HTTP/1.0: one request per connection. HTTP/1.1 keep-alive plus a full
     # stderr pipe (agent wrapper) produced empty replies after the process sat.
@@ -155,7 +178,14 @@ class Handler(BaseHTTPRequestHandler):
             if not MAP_HTML.is_file():
                 self._json(500, {"error": "missing docs/testmap/map.html; run generate_testmap.py"})
                 return
-            self._send(200, MAP_HTML.read_bytes(), "text/html; charset=utf-8")
+            html = MAP_HTML.read_text(encoding="utf-8")
+            token = _issue_confirm_token()
+            meta = '<meta name="ewm-confirm-token" content="' + token + '">'
+            if "</head>" in html:
+                html = html.replace("</head>", meta + "</head>", 1)
+            else:
+                html = meta + html
+            self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
             return
         if path == "/api/map":
             try:
@@ -427,6 +457,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, MANAGER.stop())
                 return
             if path == "/api/confirm":
+                if not _confirm_token_ok(body.get("token") or self.headers.get("X-EWM-Confirm-Token")):
+                    self._json(403, {"error": "confirm requires the page-issued token"})
+                    return
                 edge_id = body.get("edge_id")
                 if not isinstance(edge_id, str) or not edge_id.strip():
                     raise ValueError("edge_id is required")
@@ -457,6 +490,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": str(exc)})
             return
         if path == "/api/confirm":
+            if not _confirm_token_ok(body.get("token") or self.headers.get("X-EWM-Confirm-Token")):
+                self._json(403, {"error": "confirm requires the page-issued token"})
+                return
             edge_id = body.get("edge_id")
             if not isinstance(edge_id, str) or not edge_id.strip():
                 self._json(400, {"error": "edge_id is required"})
