@@ -123,8 +123,10 @@ Edge detail shows a Screenshots section (lazy thumbs in served mode). `file://` 
 
 **Confirmed** means a human viewed the latest screenshots for an edge and signed off:
 
-- `POST /api/confirm` `{edge_id}` writes `{edge_id, run_id, confirmed_at}` into `docs/testmap/runs/confirmations.json` (gitignored, local only). Confirming again overwrites. `DELETE` or `{revoke: true}` clears one.
-- `GET /api/map` includes `confirmations` so the canvas, list, and detail can badge ✓.
-- A later run that covers the same edge (different `run_id`) marks the badge stale (**re-confirm**).
+- Confirm: `POST /api/confirm` `{token, edge_id, run_id}`. The run must already be finished (`running` / `paused` / `pending` are rejected). The edge result in that run must be `passed` or `review_required` (worst task state among tasks whose `task.edge` or `task_edge_id(task.id)` equals the edge). One failed platform blocks confirm. Failures return 400 with a reason such as `run <id> result for <edge> is failed`. Confirming again overwrites `{edge_id, run_id, confirmed_at}` in `docs/testmap/runs/confirmations.json` (gitignored, local only).
+- Revoke: `POST /api/confirm` `{token, edge_id, revoke: true}` or `DELETE /api/confirm` `{token, edge_id}`. Revoke does not check the run result.
+- `token` is the one-time value issued when the page loads. Agents must not call this endpoint.
+- `GET /api/map` includes `confirmations` so the canvas, list, and detail can badge ✓, and `latest_runs` `{edge_id: run_id}` for the newest run that has a result for that edge.
+- A later run that has a result for the same edge (different `run_id`) marks the badge stale (**re-confirm**). An L1-desktop-only run with no edge tasks does not stale a confirmation.
 
 This is an operator aid, not a CI gate. Do not commit confirmations or witness PNGs.
