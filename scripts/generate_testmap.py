@@ -2839,6 +2839,9 @@ html[data-mode="file"] .live-only { display: none !important; }
   body.view-history .shell {
     grid-template-rows: minmax(0, 1fr);
   }
+  body.view-map .shell {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
   .map-col {
     border-right: 0;
     border-bottom: 1px solid var(--border);
@@ -4342,9 +4345,16 @@ function zoomToCursor(p, nextK) {
 }
 function fitTarget() {
   var L = DATA.layout;
-  var pad = 28;
-  var k = clampK(Math.min((wellRect.w - pad * 2) / L.width, (wellRect.h - pad * 2) / L.height));
-  return { k: k, x: (wellRect.w - L.width * k) / 2, y: (wellRect.h - L.height * k) / 2 };
+  var padX = 28;
+  var padTop = 28;
+  var padBottom = 48;
+  var tb = document.querySelector(".canvas-toolbar");
+  if (tb && wellRect.h) {
+    var br = tb.getBoundingClientRect();
+    padTop = Math.max(padTop, br.bottom - wellRect.top + 12);
+  }
+  var k = clampK(Math.min((wellRect.w - padX * 2) / L.width, (wellRect.h - padTop - padBottom) / L.height));
+  return { k: k, x: (wellRect.w - L.width * k) / 2, y: padTop + (wellRect.h - padTop - padBottom - L.height * k) / 2 };
 }
 function applyCamInstant(next) {
   cam.x = next.x;
