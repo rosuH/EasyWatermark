@@ -123,10 +123,10 @@ Edge detail shows a Screenshots section (lazy thumbs in served mode). `file://` 
 
 **Confirmed** means a human viewed the latest screenshots for an edge and signed off:
 
-- Confirm: `POST /api/confirm` `{token, edge_id, run_id}`. The run must already be finished (`running` / `paused` / `pending` are rejected). The edge result in that run must be `passed` or `review_required` (worst task state among tasks whose `task.edge` or `task_edge_id(task.id)` equals the edge). One failed platform blocks confirm. Failures return 400 with a reason such as `run <id> result for <edge> is failed`. Confirming again overwrites `{edge_id, run_id, confirmed_at}` in `docs/testmap/runs/confirmations.json` (gitignored, local only).
+- Confirm: `POST /api/confirm` `{token, edge_id, run_id}`. The run must already be finished (`running` / `paused` / `pending` / `interrupted` are rejected). The edge result in that run must be `passed` or `review_required` (worst task state among tasks whose `task.edge` or `task_edge_id(task.id)` equals the edge). One failed platform, an `interrupted` task, or a still-`pending` task on that edge blocks confirm. Failures return 400 with a reason such as `run <id> result for <edge> is failed`. Confirming again overwrites `{edge_id, run_id, confirmed_at}` in `docs/testmap/runs/confirmations.json` (gitignored, local only).
 - Revoke: `POST /api/confirm` `{token, edge_id, revoke: true}` or `DELETE /api/confirm` `{token, edge_id}`. Revoke does not check the run result.
-- `token` is the one-time value issued when the page loads. Agents must not call this endpoint.
-- `GET /api/map` includes `confirmations` so the canvas, list, and detail can badge ✓, and `latest_runs` `{edge_id: run_id}` for the newest run that has a result for that edge.
-- A later run that has a result for the same edge (different `run_id`) marks the badge stale (**re-confirm**). An L1-desktop-only run with no edge tasks does not stale a confirmation.
+- `token` is issued when the page loads. Multiple tokens stay valid for 12 hours (a later GET does not revoke earlier pages). Agents must not call this endpoint.
+- `GET /api/map` includes `confirmations` so the canvas, list, and detail can badge ✓, and `result_runs` `{edge_id: run_id}` for the newest non-interrupted run that has a result for that edge. `result_runs` is computed with `results`; it is not the singular `latest_run` (the newest run overall).
+- A later run that has a result for the same edge (different `run_id`) marks the badge stale (**re-confirm**). An L1-desktop-only run with no edge tasks, and an `interrupted` run, do not stale a confirmation. `stopped` runs still count as covering results; they cannot be confirmed.
 
 This is an operator aid, not a CI gate. Do not commit confirmations or witness PNGs.
