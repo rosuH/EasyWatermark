@@ -43,6 +43,10 @@
   --fs-lg: 15px;
   --fs-xl: 18px;
   --dur: 160ms;
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --font: system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -309,34 +313,36 @@ button { letter-spacing: inherit; }
 #graph .node.nst-running .nst-dot { fill: var(--accent); opacity: 1; }
 #graph .node.nst-passed .nst-dot { fill: var(--success); opacity: 1; }
 #graph .node.nst-failed .nst-dot { fill: var(--error); opacity: 1; }
-#graph .edge.path-current .edge-vis {
-  stroke: var(--accent);
-  stroke-width: 2.6;
-  filter: url(#sel-glow);
-}
+#graph .edge.path-current .edge-vis { stroke: var(--accent); }
 #graph .edge.path-current,
 #graph .node.nst-running { animation: pulse 1.4s ease-in-out infinite; }
 .graph-well.is-paused #graph .edge.path-current,
 .graph-well.is-paused #graph .node.nst-running { animation: none; }
+body.view-map #graph .edge.path-current,
+body.view-map #graph .node.nst-running { animation: none; }
 #graph g.edge { display: inline; width: auto; padding: 0; border: 0; background: none; }
-#graph .edge-vis { fill: none; stroke-width: 1.7; stroke-linecap: round; }
+#graph .edge-vis {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: none;
+  filter: none;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
 #graph .edge-hit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; }
-#graph .edge.real .edge-vis { stroke: var(--drive-real); }
-#graph .edge.seam .edge-vis { stroke: var(--drive-seam); }
-#graph .edge.none .edge-vis { stroke: var(--drive-none); stroke-dasharray: 5 4; }
-#graph .edge.sel .edge-vis {
-  stroke: var(--accent);
-  stroke-width: 2.4;
-  filter: url(#sel-glow);
-}
-#graph .edge.hi .edge-vis { stroke-width: 2.2; }
-#graph .edge.dim { opacity: 0.38; }
+#graph .edge.real .edge-vis,
+#graph .edge.seam .edge-vis,
+#graph .edge.none .edge-vis { stroke: var(--text-3); stroke-dasharray: none; }
+#graph .edge.sel .edge-vis,
+#graph .edge.hi .edge-vis,
+#graph .edge.path-current .edge-vis { stroke: var(--accent); }
+#graph .edge.dim { opacity: 0.22; }
 #graph .edge.sel.dim { opacity: 0.55; }
-#graph .edge.sel-out .edge-vis {
-  stroke: var(--accent);
-  stroke-width: 2.4;
-  stroke-dasharray: 4 3;
-}
+#graph .edge.sel-out .edge-vis { stroke: var(--accent); stroke-dasharray: 4 3; }
+#graph .node { transition: opacity var(--dur-2) var(--ease-out); }
+#graph .node.dim { opacity: 0.28; }
+#graph .edge.in-draft .edge-vis { stroke: var(--accent); }
 .graph-tools {
   position: absolute;
   top: auto;
@@ -400,7 +406,6 @@ button { letter-spacing: inherit; }
 #graph .edot.passed, #graph .edot.review_required { fill: var(--success); }
 #graph .edot.failed, #graph .edot.blocked { fill: var(--error); }
 #graph .edot.running, #graph .edot.paused { fill: var(--accent); }
-#graph .edge.in-draft .edge-vis { stroke: #ffde32; stroke-width: 3.2; }
 #graph .edge-result { font: 600 10px/1 var(--sans); fill: var(--text-2); pointer-events: none; }
 #graph .edge-result.failed, #graph .edge-result.blocked { fill: #e55; }
 #graph .edge-result.passed, #graph .edge-result.review_required { fill: var(--success); }
@@ -1148,9 +1153,11 @@ button { letter-spacing: inherit; }
 .progress i {
   display: block;
   height: 100%;
-  width: 0;
+  width: 100%;
   background: var(--accent);
-  transition: width var(--dur) ease;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-3) var(--ease-out);
 }
 .progress-meta { margin-top: 6px; color: var(--text-2); font-size: var(--fs-xs); }
 .stepper { display: grid; gap: 6px; margin: 0 0 12px; }
@@ -1380,12 +1387,63 @@ html[data-mode="file"] .live-only { display: none !important; }
     grid-template-rows: minmax(0, 1fr) minmax(220px, 38vh);
     overflow: hidden;
   }
+  body.view-run .shell,
+  body.view-history .shell {
+    grid-template-rows: minmax(0, 1fr);
+  }
   .map-col {
     border-right: 0;
     border-bottom: 1px solid var(--border);
     min-height: 0;
     overflow: hidden;
   }
+}
+@keyframes pane-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.btn, .view-switch button, .chip, .sha, .lang-switch button, .pill, .legend-chip, .graph-tools button {
+  transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
+}
+.btn:hover, .view-switch button:hover, .chip:hover, .legend-chip:hover, .graph-tools button:hover {
+  transform: translateY(-1px);
+}
+.btn:active, .view-switch button:active, .chip:active, .legend-chip:active, .graph-tools button:active {
+  transform: scale(0.98);
+}
+.btn:focus-visible, .view-switch button:focus-visible, .chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+body.view-map .map-col,
+body.view-run .watch-pane,
+body.view-history .history-pane {
+  animation: pane-in var(--dur-3) var(--ease-out);
+}
+body.view-run #task-rows.is-first .task-row,
+#draft-rows li,
+.hist-row,
+.wstep {
+  animation: row-in var(--dur-2) var(--ease-out);
+}
+.hist-row { transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out); }
+.hist-row:hover { transform: translateX(2px); }
+.task-row { transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out); }
+.wstep { transition: opacity var(--dur-2) var(--ease-out); }
+#tooltip {
+  transition: opacity var(--dur-1) var(--ease-out);
+}
+.empty, .watch-empty {
+  animation: pane-in var(--dur-3) var(--ease-out);
+}
+body.view-run .watch-phone img,
+body.view-run .watch-phone canvas {
+  transition: none;
+  animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1499,17 +1557,25 @@ body.view-run .map-col,
 body.view-run .history-pane,
 body.view-map .history-pane,
 body.view-catalog .history-pane { display: none !important; }
-body.view-run .shell { grid-template-columns: 1fr; height: 100%; min-height: 0; }
+body.view-run .shell { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; }
 body.view-run #run-path { display: flex; }
 body.view-run .inspector { grid-template-rows: minmax(0, 1fr); height: 100%; }
 body.view-run .watch-pane {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 8px 16px;
   min-height: 0;
-  padding: 8px 12px 8px 16px;
+  min-width: 0;
+  padding: 8px 16px 8px 16px;
+}
+body.view-run #run-path,
+body.view-run .task-head,
+body.view-run #task-board,
+body.view-run #task-rows {
+  margin-left: 0;
+  padding-left: 0;
 }
 body.view-run #run-path { grid-column: 1 / -1; padding: 4px 0 0; }
 body.view-run #task-board {
@@ -1518,6 +1584,7 @@ body.view-run #task-board {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
   margin: 0;
   padding: 0;
@@ -1526,13 +1593,22 @@ body.view-run #task-rows {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
+  min-width: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-body.view-run #task-rows > li { margin: 0; padding: 0; width: 100%; list-style: none; }
+body.view-run #task-rows > li {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  list-style: none;
+}
 body.view-run .task-row {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr);
@@ -1540,9 +1616,12 @@ body.view-run .task-row {
   gap: 2px 8px;
   align-items: center;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
   height: auto;
   padding: 6px 0;
+  overflow: hidden;
   border: 0;
   border-radius: 6px;
   text-align: left;
@@ -1598,7 +1677,15 @@ body.view-run .task-meter-track {
   background: color-mix(in srgb, var(--accent) 20%, var(--bg-2));
   overflow: hidden;
 }
-body.view-run .task-meter-track i { display: block; height: 100%; width: 0; background: var(--accent); }
+body.view-run .task-meter-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-3) var(--ease-out);
+}
 body.view-run #task-progress { grid-column: 1; font: 500 12px/1.3 var(--sans); color: var(--text); font-variant-numeric: tabular-nums; }
 body.view-run .task-head .btn { grid-column: 2; grid-row: 2; flex: 0 0 auto; }
 .st-ico-wrap { display: grid; place-items: center; width: 16px; height: 16px; color: var(--text-3); }
@@ -2092,7 +2179,7 @@ const I18N = {
     "run.n.android": "Run {n} Android cases",
     "run.agent": "Run Agent Device",
     "run.agentBlocked": "Agent Device is not available on this OS",
-    "run.agentNote": "Replay or SDK completed is not a pass. Human confirm is a separate button. CLI still accepts deprecated #artemis.",
+    "run.agentNote": "Replay or SDK completed is not a pass. CLI still accepts deprecated #artemis.",
     "run.honestyPicker": "Drive label stays seam even if the agent used the system picker.",
     "live.agent": "Latest available screenshot or recording index — not a live video.",
     "live.artemis": "Latest available screenshot or recording index — not a live video.",
@@ -2282,7 +2369,7 @@ const I18N = {
     "run.n.android": "运行 {n} 个 Android 用例",
     "run.agent": "跑 Agent Device",
     "run.agentBlocked": "这条链路在该系统上不可跑 Agent Device",
-    "run.agentNote": "回放或 SDK completed 不等于通过。人工确认是另一个按钮。CLI 仍接受已弃用的 #artemis。",
+    "run.agentNote": "回放或 SDK completed 不等于通过。CLI 仍接受已弃用的 #artemis。",
     "run.honestyPicker": "即便 agent 走了系统相册，地图上的 drive 仍是「跳过系统框」。",
     "live.agent": "当前能拿到的最新截图或录像索引，不是直播。",
     "live.artemis": "当前能拿到的最新截图或录像索引，不是直播。",
@@ -2857,8 +2944,9 @@ function hitFromEvent(ev) {
 }
 function handleCanvasClick(ev) {
   var hit = hitFromEvent(ev);
-  if (hit.edge) { addEdgeDraft(hit.edge.getAttribute("data-edge")); return; }
+  if (hit.edge) { selectEdge(hit.edge.getAttribute("data-edge")); return; }
   if (hit.node) {
+    state.selected = null;
     state.node = hit.node.getAttribute("data-node");
     syncAll();
     return;
@@ -2975,6 +3063,7 @@ function onGraphHover(ev) {
   var edge = ev.target.closest && ev.target.closest("[data-edge]");
   var node = ev.target.closest && ev.target.closest("[data-node]");
   var tip = $("tooltip");
+  setGraphHover(edge ? edge.getAttribute("data-edge") : null, node && !edge ? node.getAttribute("data-node") : null);
   if (edge) {
     var e = DATA.edges.find(function (x) { return x.id === edge.getAttribute("data-edge"); });
     if (!e) return;
@@ -3001,7 +3090,49 @@ function onGraphHover(ev) {
   }
   hideTip();
 }
-function hideTip() { $("tooltip").hidden = true; }
+function hideTip() {
+  var tip = $("tooltip");
+  if (tip) tip.hidden = true;
+  setGraphHover(null, null);
+}
+var graphHover = {edge: null, node: null};
+function setGraphHover(edgeId, nodeId) {
+  var e = edgeId || null;
+  var n = nodeId || null;
+  if (graphHover.edge === e && graphHover.node === n) return;
+  graphHover.edge = e;
+  graphHover.node = n;
+  if (graphBuilt) syncGraph();
+  if (treeBuilt) syncTree();
+}
+function catalogFocus() {
+  return {
+    edge: state.selected || graphHover.edge || null,
+    node: state.node || graphHover.node || null
+  };
+}
+function edgeRelatedToFocus(e, focus) {
+  if (!e || !focus) return false;
+  if (focus.edge && e.id === focus.edge) return true;
+  if (focus.node && (e.from === focus.node || e.to === focus.node)) return true;
+  if (focus.edge) {
+    var se = DATA.edges.find(function (x) { return x.id === focus.edge; });
+    if (se && (e.from === se.from || e.from === se.to || e.to === se.from || e.to === se.to) && e.id === focus.edge) return true;
+  }
+  return false;
+}
+function nodeRelatedToFocus(nid, focus) {
+  if (!nid || !focus) return false;
+  if (focus.node && nid === focus.node) return true;
+  if (focus.edge) {
+    var se = DATA.edges.find(function (x) { return x.id === focus.edge; });
+    if (se && (se.from === nid || se.to === nid)) return true;
+  }
+  return false;
+}
+function runPathVisible() {
+  return document.body.classList.contains("view-run");
+}
 
 function taskEdgeId(taskId) {
   var raw = String(taskId || "");
@@ -3018,6 +3149,7 @@ function rankRunState(s) {
   return 0;
 }
 function runPathModel() {
+  if (!runPathVisible()) return null;
   if (isFileOpen() || !consoleOnline) return null;
   var st = lastStatusSnap;
   if (!st || !(st.queue || []).length) return null;
@@ -3079,8 +3211,14 @@ function applyView() {
   var graph = $("graph");
   var tree = $("tree-view");
   var tools = document.querySelector(".graph-tools");
-  if (graph) graph.style.display = isTree ? "none" : "";
-  if (tree) tree.hidden = !isTree;
+  if (graph) {
+    graph.style.display = isTree ? "none" : "";
+    if (!isTree) graph.style.animation = "pane-in var(--dur-3) var(--ease-out)";
+  }
+  if (tree) {
+    tree.hidden = !isTree;
+    if (isTree) tree.style.animation = "pane-in var(--dur-3) var(--ease-out)";
+  }
   if (tools) tools.hidden = isTree;
   var legend = $("legend-chip");
   if (legend) legend.hidden = isTree;
@@ -3113,25 +3251,25 @@ function syncGraph() {
   if (!graphBuilt) buildGraph();
   var svg = $("graph");
   var path = runPathModel();
+  var focus = catalogFocus();
+  var focusing = !!(focus.edge || focus.node);
   var well = document.querySelector(".graph-well");
   if (well) well.classList.toggle("is-paused", !!(path && path.paused));
   svg.querySelectorAll("[data-edge]").forEach(function (g) {
     var id = g.getAttribute("data-edge");
     var e = DATA.edges.find(function (x) { return x.id === id; });
     var vis = e && edgeVisible(e);
-    var hi = state.node && e && (e.from === state.node || e.to === state.node);
+    var related = edgeRelatedToFocus(e, focus);
     var runSt = path && path.edges[id];
     var isCurrent = !!(path && path.current[id] && !path.stopped);
-    var pathDim = !!(path && path.active && vis && !isCurrent && runSt !== "passed" && runSt !== "failed" && runSt !== "review_required");
-    g.classList.toggle("dim", !vis || pathDim);
-    g.classList.toggle("sel", id === state.selected || draftTouches(id));
+    g.classList.toggle("dim", !vis || (focusing && !related));
+    g.classList.toggle("sel", id === state.selected);
     g.classList.toggle("in-draft", draftTouches(id));
     g.classList.toggle("sel-out", id === state.selected && !vis);
-    g.classList.toggle("hi", !!hi && id !== state.selected);
+    g.classList.toggle("hi", related && focusing && id !== state.selected);
     g.classList.toggle("path-current", isCurrent);
     var visP = g.querySelector(".edge-vis");
-    var drive = (DATA.layout.edges.find(function (x) { return x.id === id; }) || {}).drive || "none";
-    visP.setAttribute("marker-end", "url(#arr-"+(draftTouches(id) || id === state.selected || isCurrent ? "accent" : drive)+")");
+    visP.setAttribute("marker-end", "url(#arr-"+(related && focusing || id === state.selected || isCurrent ? "accent" : "none")+")");
     var dot = g.querySelector(".edot");
     var badge = edgeResults[id] || edgeBadges[id];
     if (runSt === "failed" || runSt === "blocked") badge = runSt;
@@ -3159,13 +3297,10 @@ function syncGraph() {
   svg.querySelectorAll("[data-node]").forEach(function (g) {
     var nid = g.getAttribute("data-node");
     var nst = path && path.nodes[nid];
-    var pathDim = !!(path && path.active && nodeActive(nid) && !nst);
-    g.classList.toggle("dim", !nodeActive(nid) || pathDim);
+    var related = nodeRelatedToFocus(nid, focus);
+    g.classList.toggle("dim", !nodeActive(nid) || (focusing && !related));
     g.classList.toggle("sel", nid === state.node);
-    var hi = DATA.edges.some(function (e) {
-      return e.id === state.selected && (e.from === nid || e.to === nid);
-    });
-    g.classList.toggle("hi", hi);
+    g.classList.toggle("hi", related && focusing && nid !== state.node);
     g.classList.toggle("nst-running", nst === "running");
     g.classList.toggle("nst-passed", nst === "passed");
     g.classList.toggle("nst-failed", nst === "failed");
@@ -3385,14 +3520,26 @@ function syncTree() {
   var box = $("tree-view");
   if (!box) return;
   if (!treeBuilt) buildTree();
+  if (!box.dataset.hoverBound) {
+    box.dataset.hoverBound = "1";
+    box.addEventListener("mouseover", function (ev) {
+      var row = ev.target.closest(".trow.edge, .trow.node");
+      if (!row) { setGraphHover(null, null); return; }
+      if (row.classList.contains("edge")) setGraphHover(row.getAttribute("data-id"), null);
+      else setGraphHover(null, row.getAttribute("data-node"));
+    });
+    box.addEventListener("mouseleave", function () { setGraphHover(null, null); });
+  }
   var path = runPathModel();
+  var focus = catalogFocus();
+  var focusing = !!(focus.edge || focus.node);
   box.querySelectorAll(".trow.node").forEach(function (row) {
     var nid = row.getAttribute("data-node");
     var nst = path && path.nodes[nid];
     var vis = nodeActive(nid);
-    var pathDim = !!(path && path.active && vis && !nst);
+    var related = nodeRelatedToFocus(nid, focus);
     var nodeDraft = nodeCases(nid).some(function (c) { return draftHas(c.id); });
-    row.classList.toggle("dim", (!vis || pathDim) && !nodeDraft);
+    row.classList.toggle("dim", (!vis || (focusing && !related)) && !nodeDraft);
     row.classList.toggle("sel", nid === state.node || nodeDraft);
     row.classList.toggle("nst-running", nst === "running");
     row.classList.toggle("nst-passed", nst === "passed");
@@ -3406,9 +3553,9 @@ function syncTree() {
     var vis = !!(e && edgeVisible(e));
     var runSt = path && path.edges[id];
     var isCurrent = !!(path && path.current[id] && !path.stopped);
-    var pathDim = !!(path && path.active && vis && !isCurrent && runSt !== "passed" && runSt !== "failed" && runSt !== "review_required");
+    var related = edgeRelatedToFocus(e, focus);
     var drafted = draftTouches(id);
-    row.classList.toggle("dim", (!vis || pathDim) && !drafted);
+    row.classList.toggle("dim", (!vis || (focusing && !related)) && !drafted);
     row.classList.toggle("sel", id === state.selected || drafted);
     var chip = row.querySelector(".t-chip");
     var shown = runSt || edgeResults[id] || "";
@@ -3681,23 +3828,6 @@ function closeLightbox() {
   if (!box) return;
   box.hidden = true;
   $("lightbox-img").removeAttribute("src");
-}
-function confirmEdge(id) {
-  var confirmBtn = $("btn-confirm");
-  var runId = (confirmBtn && confirmBtn.getAttribute("data-run-id")) || displayedRunId || "";
-  if (!runId) {
-    toast(t("confirm.needRun"), "error");
-    return;
-  }
-  post("/api/confirm", {edge_id: id, run_id: runId}).then(function (res) {
-    if (!res.ok) {
-      toast((res.body && res.body.error) || "confirm failed", "error");
-      return;
-    }
-    toast("edge:"+id+" confirmed against "+runId);
-    lastConfirmJson = "";
-    poll();
-  }).catch(function () {});
 }
 function syncRunChip() {
   var chip = $("canvas-run-chip");
@@ -4376,6 +4506,8 @@ function setSection(mode) {
   document.body.classList.toggle("view-catalog", catalog);
   document.body.classList.toggle("view-run", run);
   document.body.classList.toggle("view-history", history);
+  if (graphBuilt) syncGraph();
+  if (treeBuilt) syncTree();
   var mapBtn = $("view-map");
   var runBtn = $("view-run");
   var histBtn = $("view-history");
@@ -4769,7 +4901,7 @@ function renderTaskBoard(st) {
   var counts = countOutcomes(tasks);
   if (progress) progress.textContent = done + "/" + total + " · " + t("run.counts", counts);
   var fill = $("task-meter-fill");
-  if (fill) fill.style.width = (total ? Math.round(100 * done / total) : 0) + "%";
+  if (fill) fill.style.transform = "scaleX(" + (total ? (done / total) : 0) + ")";
   var focusKeys = {};
   platformsInRun(st).forEach(function (plat) {
     var focus = focusedTaskFor(st, plat);
@@ -4778,6 +4910,9 @@ function renderTaskBoard(st) {
     });
   });
   var y = list.scrollTop;
+  var firstPaint = list.dataset.seed !== (st.id || "");
+  list.dataset.seed = st.id || "";
+  list.classList.toggle("is-first", firstPaint);
   list.innerHTML = tasks.map(function (task, index) {
     var repeat = task.repeat || {};
     var kn = (repeat.k || 1) + "/" + (repeat.n || 1);
@@ -4861,7 +4996,7 @@ function renderRunStatus(st) {
     lastQueueSig = "";
   } else {
     wrap.hidden = false;
-    $("prog-bar").style.width = (q.length ? (100 * done / q.length) : 0) + "%";
+    $("prog-bar").style.transform = "scaleX(" + (q.length ? (done / q.length) : 0) + ")";
     $("prog-meta").textContent = t("run.progress", {done: done, total: q.length})
       + (st.current ? " · " + st.current.id + " " + st.current.elapsed_s + "s" : "")
       + (pause ? " · " + t("run.queuePaused") : "");
