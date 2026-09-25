@@ -57,8 +57,7 @@ from testmap_run import (  # noqa: E402
     git_info,
     confirmation_views,
     edge_badges,
-    latest_edge_results,
-    edge_result_runs,
+    _latest_edge_projection,
     enrich_run,
     latest_run,
     artifact_png,
@@ -210,15 +209,16 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._json(500, {"error": str(exc)})
                 return
+            results, result_runs = _latest_edge_projection(edges)
             self._json(
                 200,
                 {
                     "nodes": nodes,
                     "edges": edges,
                     "badges": edge_badges(edges),
-                    "results": latest_edge_results(edges),
-                    "result_runs": edge_result_runs(edges),
-                    "confirmations": confirmation_views(edges),
+                    "results": results,
+                    "result_runs": result_runs,
+                    "confirmations": confirmation_views(edges, (results, result_runs)),
                     "witnesses": list_witness_files(),
                     "latest_run": (latest_run() or {}).get("id"),
                     "head": git_info(),
