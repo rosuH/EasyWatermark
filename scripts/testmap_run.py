@@ -19,6 +19,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -1274,6 +1275,7 @@ _EDGE_RESULT_RANK = {
     "failed": 60,
     "blocked": 50,
     "stopped": 40,
+    "uncovered": 35,
     "review_required": 30,
     "passed": 20,
     "running": 15,
@@ -1281,7 +1283,62 @@ _EDGE_RESULT_RANK = {
     "skipped": 5,
     "pending": 0,
 }
-_edge_result_cache: tuple[float, dict[str, str]] | None = None
+_CONFIRMABLE_RESULTS = frozenset({"passed", "review_required"})
+_UNFINISHED_RUN_STATES = frozenset({"running", "paused", "pending"})
+_edge_result_cache: tuple[float, dict[str, str], dict[str, str]] | None = None
+
+
+def edge_results_in_run(rec: dict, wanted: set[str] | None = None) -> dict[str, str]:
+    """Worst task state per edge in one run. Same definition as /api/map results.
+
+    A task belongs to an edge when `task.edge` or `task_edge_id(task.id)` equals that id.
+    """
+    seen: dict[str, str] = {}
+    for task in rec.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        eid = str(task.get("edge") or task_edge_id(str(task.get("id") or "")) or "")
+        if not eid:
+            continue
+        if wanted is not None and eid not in wanted:
+            continue
+        state = str(task.get("state") or "")
+        if not state:
+            continue
+        prev = seen.get(eid, "")
+        if _EDGE_RESULT_RANK.get(state, 0) >= _EDGE_RESULT_RANK.get(prev, 0):
+            seen[eid] = state
+    return seen
+
+
+def edge_result_in_run(rec: dict, edge_id: str) -> str | None:
+    return edge_results_in_run(rec, {edge_id}).get(edge_id)
+
+
+def _latest_edge_projection(edges: list[dict]) -> tuple[dict[str, str], dict[str, str]]:
+    """Newest run that has a result for each edge: (results, latest_runs)."""
+    global _edge_result_cache
+    now = time.monotonic()
+    if _edge_result_cache and now - _edge_result_cache[0] < 8:
+        return _edge_result_cache[1], _edge_result_cache[2]
+    wanted = {str(edge.get("id") or "") for edge in edges if edge.get("id")}
+    found: dict[str, str] = {}
+    latest_runs: dict[str, str] = {}
+    for item in run_summaries():
+        if wanted <= found.keys():
+            break
+        rec = load_run(str(item.get("id") or ""))
+        if not rec:
+            continue
+        rid = str(rec.get("id") or item.get("id") or "")
+        remaining = {eid for eid in wanted if eid not in found}
+        seen = edge_results_in_run(rec, remaining)
+        for eid, state in seen.items():
+            if state:
+                found[eid] = state
+                latest_runs[eid] = rid
+    _edge_result_cache = (now, found, latest_runs)
+    return found, latest_runs
 
 
 def latest_edge_results(edges: list[dict]) -> dict[str, str]:
@@ -1289,34 +1346,12 @@ def latest_edge_results(edges: list[dict]) -> dict[str, str]:
 
     Does not write the run files. Cached briefly because the page polls /api/map.
     """
-    global _edge_result_cache
-    now = time.monotonic()
-    if _edge_result_cache and now - _edge_result_cache[0] < 8:
-        return _edge_result_cache[1]
-    wanted = {str(edge.get("id") or "") for edge in edges if edge.get("id")}
-    found: dict[str, str] = {}
-    for item in run_summaries():
-        if wanted <= found.keys():
-            break
-        rec = load_run(str(item.get("id") or ""))
-        if not rec:
-            continue
-        seen: dict[str, str] = {}
-        for task in rec.get("tasks") or []:
-            if not isinstance(task, dict):
-                continue
-            eid = str(task.get("edge") or task_edge_id(str(task.get("id") or "")) or "")
-            if not eid or eid not in wanted or eid in found:
-                continue
-            state = str(task.get("state") or "")
-            prev = seen.get(eid, "")
-            if _EDGE_RESULT_RANK.get(state, 0) >= _EDGE_RESULT_RANK.get(prev, 0):
-                seen[eid] = state
-        for eid, state in seen.items():
-            if state:
-                found[eid] = state
-    _edge_result_cache = (now, found)
-    return found
+    return _latest_edge_projection(edges)[0]
+
+
+def latest_edge_runs(edges: list[dict]) -> dict[str, str]:
+    """Newest run id per edge that has a result under `edge_results_in_run`."""
+    return _latest_edge_projection(edges)[1]
 
 
 def list_witness_files() -> list[str]:
@@ -1424,23 +1459,23 @@ def save_confirmations(data: dict[str, dict]) -> None:
 
 
 def run_covers_edge(rec: dict, edge_id: str, edges: list[dict] | None = None) -> bool:
-    if not rec:
+    """True when selection or a task names this edge by exact id.
+
+    `edges` is unused. L1 desktop selection no longer covers a map edge.
+    """
+    del edges
+    if not rec or not edge_id:
         return False
-    sel = rec.get("selection") or []
-    if edge_id in sel or f"edge:{edge_id}" in sel:
-        return True
-    suffix = f"{edge_id}@android#artemis"
-    if f"edge:{suffix}" in sel or any(str(item).endswith(suffix) for item in sel):
-        return True
-    for plat in ("android", "ios"):
-        agent_suffix = f"{edge_id}@{plat}#agent"
-        if f"edge:{agent_suffix}" in sel or any(
-            str(item).endswith(agent_suffix) for item in sel
-        ):
+    for item in rec.get("selection") or []:
+        raw = str(item or "")
+        if raw == edge_id or task_edge_id(raw) == edge_id:
             return True
     for task in rec.get("tasks") or []:
-        tid = str(task.get("id") or "")
-        if edge_id in tid or tid.startswith(f"edge:{edge_id}"):
+        if not isinstance(task, dict):
+            continue
+        if str(task.get("edge") or "") == edge_id:
+            return True
+        if task_edge_id(str(task.get("id") or "")) == edge_id:
             return True
         for case in task.get("cases") or []:
             if str(case.get("name") or "") == edge_id:
@@ -1448,32 +1483,15 @@ def run_covers_edge(rec: dict, edge_id: str, edges: list[dict] | None = None) ->
             ref = str(case.get("ref") or "")
             if ref == f"Artemis.{edge_id}" or ref == f"AgentDevice.{edge_id}":
                 return True
-    edge = None
-    if edges:
-        edge = next((e for e in edges if e.get("id") == edge_id), None)
-    has_l1 = bool(
-        edge and any(c.get("layer") == "L1" for c in (edge.get("cases") or []))
-    )
-    if has_l1 and ("l1-desktop" in sel or "l0l1-desktop-full" in sel):
-        return True
-    wanted: set[str] = set()
-    if edge:
-        for case in edge.get("cases") or []:
-            ref = str(case.get("ref") or "")
-            if case.get("layer") == "L1" or ref.startswith("TestMapGuardTest"):
-                wanted.add(ref)
-    if wanted:
-        for task in rec.get("tasks") or []:
-            for case in task.get("cases") or []:
-                if case.get("ref") in wanted:
-                    return True
     return False
 
 
 def latest_covering_run_id(edge_id: str, edges: list[dict] | None = None) -> str | None:
+    """Newest run that has an `edge_results_in_run` value for this edge."""
+    del edges
     for item in run_summaries():
-        rec = load_run(item["id"])
-        if rec and run_covers_edge(rec, edge_id, edges):
+        rec = load_run(str(item.get("id") or ""))
+        if rec and edge_result_in_run(rec, edge_id):
             return rec.get("id")
     return None
 
@@ -1511,8 +1529,14 @@ def record_confirmation(
     rec = load_run(run_id)
     if not rec:
         raise ValueError(f"unknown run_id: {run_id}")
-    if not run_covers_edge(rec, edge_id, edges):
-        raise ValueError(f"run {run_id} does not cover {edge_id}")
+    run_state = str(rec.get("state") or "pending")
+    if run_state in _UNFINISHED_RUN_STATES:
+        raise ValueError(f"run {run_id} is {run_state}")
+    result = edge_result_in_run(rec, edge_id)
+    if result is None:
+        raise ValueError(f"run {run_id} result for {edge_id} is missing")
+    if result not in _CONFIRMABLE_RESULTS:
+        raise ValueError(f"run {run_id} result for {edge_id} is {result}")
     row = {
         "edge_id": edge_id,
         "run_id": run_id,
@@ -3490,6 +3514,152 @@ def run_foreground(
     return code
 
 
+def _self_check_confirm_cover() -> list[str]:
+    """Function-level confirm/cover checks. Writes only under a temp RUNS_DIR."""
+    global RUNS_DIR, CONFIRMATIONS_PATH, _edge_result_cache, write_historical_projection
+    errors: list[str] = []
+    tmp = Path(tempfile.mkdtemp(prefix="ewm-confirm-"))
+    old_runs = RUNS_DIR
+    old_conf = CONFIRMATIONS_PATH
+    old_cache = _edge_result_cache
+    old_hist = write_historical_projection
+    synth = [{"id": "about"}, {"id": "about-x"}]
+
+    def write_run(
+        run_id: str,
+        state: str,
+        tasks: list[dict],
+        selection: list[str] | None = None,
+        pid: int | None = None,
+    ) -> None:
+        rec = {
+            "id": run_id,
+            "state": state,
+            "selection": list(selection or []),
+            "tasks": tasks,
+            "started": "2026-09-25T00:00:00Z",
+            "finished": None if state in _UNFINISHED_RUN_STATES else "2026-09-25T00:01:00Z",
+        }
+        if pid:
+            rec["pid"] = pid
+        (RUNS_DIR / f"{run_id}.json").write_text(json.dumps(rec) + "\n", encoding="utf-8")
+        global _edge_result_cache
+        _edge_result_cache = None
+
+    def task(edge: str, state: str, plat: str = "android") -> dict:
+        return {
+            "id": f"edge:{edge}@{plat}#agent",
+            "edge": edge,
+            "state": state,
+            "platform": plat,
+        }
+
+    def expect_reject(
+        run_id: str,
+        tasks: list[dict],
+        state: str,
+        needle: str,
+        pid: int | None = None,
+    ) -> None:
+        write_run(run_id, state, tasks, pid=pid)
+        try:
+            record_confirmation("about", run_id, edges=synth)
+            errors.append(f"{run_id} should reject")
+        except ValueError as exc:
+            if needle not in str(exc):
+                errors.append(f"{run_id} error {exc!r} missing {needle!r}")
+
+    try:
+        RUNS_DIR = tmp
+        CONFIRMATIONS_PATH = tmp / "confirmations.json"
+        _edge_result_cache = None
+        write_historical_projection = lambda: RUNS_DIR  # noqa: E731
+
+        write_run(
+            "20260925T010000-aaa0001",
+            "passed",
+            [task("about", "passed")],
+            ["edge:about@android#agent"],
+        )
+        row = record_confirmation("about", "20260925T010000-aaa0001", edges=synth)
+        if row.get("run_id") != "20260925T010000-aaa0001":
+            errors.append("passed run should confirm")
+
+        write_run("20260925T010100-aaa0002", "passed", [task("about", "review_required")])
+        record_confirmation("about", "20260925T010100-aaa0002", edges=synth)
+
+        expect_reject("20260925T010200-aaa0003", [task("about", "failed")], "failed", "is failed")
+        expect_reject("20260925T010300-aaa0004", [task("about", "uncovered")], "passed", "is uncovered")
+        expect_reject("20260925T010400-aaa0005", [task("about", "stopped")], "stopped", "is stopped")
+        expect_reject(
+            "20260925T010500-aaa0006",
+            [task("about", "running")],
+            "running",
+            "is running",
+            pid=os.getpid(),
+        )
+        expect_reject(
+            "20260925T010600-aaa0007",
+            [task("about", "passed")],
+            "paused",
+            "is paused",
+            pid=os.getpid(),
+        )
+        expect_reject("20260925T010700-aaa0008", [task("about", "pending")], "pending", "is pending")
+        expect_reject(
+            "20260925T010800-aaa0009",
+            [task("about", "passed", "android"), task("about", "failed", "ios")],
+            "failed",
+            "is failed",
+        )
+
+        write_run(
+            "20260925T010900-aaa0010",
+            "passed",
+            [task("about-x", "passed")],
+            ["edge:about-x@android#agent"],
+        )
+        rec_x = load_run("20260925T010900-aaa0010")
+        if rec_x and run_covers_edge(rec_x, "about"):
+            errors.append("about-x must not cover about")
+        if rec_x and not run_covers_edge(rec_x, "about-x"):
+            errors.append("about-x should cover about-x")
+        try:
+            record_confirmation("about", "20260925T010900-aaa0010", edges=synth)
+            errors.append("about-x run should not confirm about")
+        except ValueError as exc:
+            if "missing" not in str(exc):
+                errors.append(f"about-x confirm about: {exc}")
+
+        write_run("20260925T011000-aaa0011", "passed", [task("about", "passed")])
+        record_confirmation("about", "20260925T011000-aaa0011", edges=synth)
+        write_run(
+            "20260925T011100-aaa0012",
+            "passed",
+            [{"id": "l1-desktop", "state": "passed", "cases": [{"ref": "TestMapGuardTest.foo"}]}],
+            ["l1-desktop"],
+        )
+        views = confirmation_views(synth)
+        about = views.get("about") or {}
+        if about.get("stale"):
+            errors.append("L1 desktop run must not stale about confirmation")
+        if about.get("latest_run") != "20260925T011000-aaa0011":
+            errors.append(f"latest_run for about is {about.get('latest_run')}")
+        if tmp.resolve() != Path(CONFIRMATIONS_PATH).resolve().parent:
+            errors.append("confirmations escaped the temp dir")
+        if "docs/testmap/runs/confirmations.json" in str(CONFIRMATIONS_PATH):
+            errors.append("CONFIRMATIONS_PATH still points at the real file")
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"confirm self-check crashed: {exc}")
+    finally:
+        RUNS_DIR = old_runs
+        CONFIRMATIONS_PATH = old_conf
+        _edge_result_cache = old_cache
+        write_historical_projection = old_hist
+        shutil.rmtree(tmp, ignore_errors=True)
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Foreground testmap runner (informational; not a CI gate)."
@@ -3533,6 +3703,7 @@ def main(argv: list[str] | None = None) -> int:
             errors.append("artifact_png leaked live traversal")
         if artifact_png("keyframes", "../secret.png") is not None:
             errors.append("artifact_png leaked keyframe traversal")
+        errors.extend(_self_check_confirm_cover())
         if errors:
             print("spawn command errors:", file=sys.stderr)
             for item in errors:
