@@ -1008,6 +1008,16 @@ def finalize_record(rec: dict) -> None:
     write_record(rec)
 
 
+def cli_exit_code(rec: dict, prior: int = 0) -> int:
+    """CLI exit after finalize_record. Interrupted or failed tasks are non-zero."""
+    states = [str(t.get("state") or "") for t in rec.get("tasks") or [] if isinstance(t, dict)]
+    if any(state in {"failed", "interrupted", "blocked"} for state in states):
+        return prior if prior else 1
+    if rec.get("state") == "stopped" or any(state == "stopped" for state in states):
+        return prior if prior else 130
+    return prior
+
+
 def write_historical_projection() -> Path:
     rec = historical_projection()
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
@@ -2651,7 +2661,12 @@ def stop_recorded_run() -> dict:
         raise ValueError("no active run")
     pid = rec.get("pid")
     if isinstance(pid, int) and _pid_alive(pid):
-        os.kill(pid, signal.SIGTERM)
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except PermissionError as exc:
+            raise StopForbiddenError(
+                f"cannot signal pid {pid}: {exc}"
+            ) from exc
         return {"id": rec.get("id"), "state": "stopping", "pid": pid}
     rec = reap_stale_run(rec)
     return {"id": rec.get("id"), "state": rec.get("state") or "interrupted", "pid": pid}
@@ -2661,6 +2676,10 @@ class BusyError(Exception):
     def __init__(self, run_id: str):
         super().__init__(f"a run is already active ({run_id})")
         self.run_id = run_id
+
+
+class StopForbiddenError(Exception):
+    """Stop was refused (for example PermissionError on os.kill)."""
 
 
 class RunManager:
@@ -3012,6 +3031,10 @@ class RunManager:
                 if task.get("duration_s") is None:
                     task["duration_s"] = round(time.monotonic() - t0, 2)
                 task["error"] = f"{type(exc).__name__}: {exc}"
+                _unbind_lane_proc(self, task)
+                plat_m = re.search(r"@(android|ios|desktop)", str(task.get("id") or ""))
+                if plat_m:
+                    self._finish_steps(plat_m.group(1), False)
 
     def _worker(self, rec: dict, log_path: Path) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3354,6 +3377,35 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
     active.flush()
 
 
+def _unbind_lane_proc(holder, task: dict) -> None:
+    lanes: list[str] = []
+    try:
+        lanes.append(_task_lane(task_run_spec(task)))
+    except Exception:  # noqa: BLE001
+        pass
+    plat = str(task.get("platform") or "")
+    if plat and plat not in lanes:
+        lanes.append(plat)
+    if not lanes:
+        lanes.append("host")
+    lock = getattr(holder, "lock", None)
+    procs = getattr(holder, "procs", None)
+    if not isinstance(procs, dict):
+        return
+
+    def _drop() -> None:
+        for lane in lanes:
+            procs.pop(lane, None)
+        if getattr(holder, "proc", None) is not None and holder.proc not in procs.values():
+            holder.proc = next(iter(procs.values()), None)
+
+    if lock is None:
+        _drop()
+        return
+    with lock:
+        _drop()
+
+
 def _safe_execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
     t0 = time.monotonic()
     try:
@@ -3363,6 +3415,9 @@ def _safe_execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
         if task.get("duration_s") is None:
             task["duration_s"] = round(time.monotonic() - t0, 2)
         task["error"] = f"{type(exc).__name__}: {exc}"
+        _unbind_lane_proc(active, task)
+        active.finish_task_rows(task, False)
+        active.flush()
 
 
 def _task_platforms(rec: dict) -> list[str]:
@@ -3482,6 +3537,7 @@ def run_record(rec: dict) -> int:
                 elif task.get("exit_code") not in (0, None) and exit_code == 0 and task["state"] == "failed":
                     exit_code = int(task["exit_code"])
         finalize_record(rec)
+        exit_code = cli_exit_code(rec, exit_code)
         active.flush()
         print(f"state={rec['state']}", flush=True)
         return exit_code
@@ -3784,16 +3840,36 @@ def _self_check_confirm_cover() -> list[str]:
         try:
             class _Active:
                 stop_requested = False
+                proc = object()
+                procs = {"android": object()}
+                lock = threading.Lock()
+                flushed = False
+                finished = None
 
                 def flush(self):
-                    return None
+                    self.flushed = True
 
-            boom_task = {"id": "edge:about@android#agent", "edge": "about", "state": "running"}
-            _safe_execute_task(_Active(), {"id": "x", "state": "running"}, boom_task, io.StringIO())
+                def finish_task_rows(self, task, ok):
+                    self.finished = (task, ok)
+
+            boom_task = {
+                "id": "edge:about@android#agent",
+                "edge": "about",
+                "state": "running",
+                "platform": "android",
+            }
+            holder = _Active()
+            _safe_execute_task(holder, {"id": "x", "state": "running"}, boom_task, io.StringIO())
             if boom_task.get("state") != "failed":
                 errors.append("lane exception should mark task failed")
             if boom_task.get("duration_s") is None:
                 errors.append("lane exception should set duration_s")
+            if not holder.flushed:
+                errors.append("lane exception should flush")
+            if holder.finished != (boom_task, False):
+                errors.append("lane exception should finish_task_rows(task, False)")
+            if "android" in holder.procs:
+                errors.append("lane exception should unbind active.procs")
         finally:
             _execute_task = old_exec
 
@@ -3815,6 +3891,54 @@ def _self_check_confirm_cover() -> list[str]:
         dead_rec = json.loads((RUNS_DIR / f"{dead_id}.json").read_text(encoding="utf-8"))
         if dead_rec.get("state") != "interrupted":
             errors.append(f"dead-pid record state is {dead_rec.get('state')}")
+
+        live_id = "20260925T012500-aaa0025"
+        write_run(
+            live_id,
+            "running",
+            [task("about", "running", duration_s=0.2), task("about", "passed", "ios")],
+            pid=os.getpid(),
+        )
+        old_kill = os.kill
+
+        def deny_kill(pid, sig):
+            raise PermissionError("Operation not permitted")
+
+        def fake_live(run_id=None):
+            path = RUNS_DIR / f"{live_id}.json"
+            return json.loads(path.read_text(encoding="utf-8"))
+
+        load_status_record = fake_live
+        os.kill = deny_kill
+        try:
+            stop_recorded_run()
+            errors.append("PermissionError on os.kill should raise StopForbiddenError")
+        except StopForbiddenError as exc:
+            if "cannot signal pid" not in str(exc):
+                errors.append(f"StopForbiddenError message is {exc}")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"PermissionError path raised {type(exc).__name__}: {exc}")
+        finally:
+            os.kill = old_kill
+            load_status_record = old_load
+
+        rec = {
+            "id": "20260925T012600-aaa0026",
+            "state": "running",
+            "started": "2026-09-25T00:00:00Z",
+            "tasks": [
+                task("about", "running", duration_s=0.2),
+                task("about", "passed", "ios"),
+            ],
+        }
+        finalize_record(rec)
+        code = cli_exit_code(rec, 0)
+        if rec["tasks"][0]["state"] != "interrupted":
+            errors.append("finalize should mark leftover running as interrupted")
+        if rec.get("state") != "failed":
+            errors.append(f"finalize state is {rec.get('state')}")
+        if code == 0:
+            errors.append("interrupted/failed record must have non-zero CLI exit")
 
         if tmp.resolve() != Path(CONFIRMATIONS_PATH).resolve().parent:
             errors.append("confirmations escaped the temp dir")
