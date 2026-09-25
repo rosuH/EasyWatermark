@@ -58,7 +58,7 @@ from testmap_run import (  # noqa: E402
     confirmation_views,
     edge_badges,
     latest_edge_results,
-    latest_edge_runs,
+    edge_result_runs,
     enrich_run,
     latest_run,
     artifact_png,
@@ -108,26 +108,36 @@ def _watch_preferred(snap: object, plat: str | None) -> dict | None:
     return None
 
 
-_CONFIRM_TOKEN = ""
+_CONFIRM_TOKENS: dict[str, float] = {}
 _CONFIRM_LOCK = threading.Lock()
+_CONFIRM_TOKEN_TTL_S = 12 * 3600
+
+
+def _prune_confirm_tokens(now: float) -> None:
+    expired = [tok for tok, issued in _CONFIRM_TOKENS.items() if now - issued > _CONFIRM_TOKEN_TTL_S]
+    for tok in expired:
+        del _CONFIRM_TOKENS[tok]
 
 
 def _issue_confirm_token() -> str:
-    global _CONFIRM_TOKEN
     token = secrets.token_urlsafe(24)
+    now = time.monotonic()
     with _CONFIRM_LOCK:
-        _CONFIRM_TOKEN = token
+        _prune_confirm_tokens(now)
+        _CONFIRM_TOKENS[token] = now
     return token
 
 
 def _confirm_token_ok(token: object) -> bool:
     if not isinstance(token, str) or not token:
         return False
+    now = time.monotonic()
     with _CONFIRM_LOCK:
-        current = _CONFIRM_TOKEN
-    if not current:
-        return False
-    return secrets.compare_digest(token, current)
+        _prune_confirm_tokens(now)
+        issued = _CONFIRM_TOKENS.get(token)
+        if issued is None:
+            return False
+        return True
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -201,7 +211,7 @@ class Handler(BaseHTTPRequestHandler):
                     "edges": edges,
                     "badges": edge_badges(edges),
                     "results": latest_edge_results(edges),
-                    "latest_runs": latest_edge_runs(edges),
+                    "result_runs": edge_result_runs(edges),
                     "confirmations": confirmation_views(edges),
                     "witnesses": list_witness_files(),
                     "latest_run": (latest_run() or {}).get("id"),

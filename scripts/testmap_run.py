@@ -1275,16 +1275,18 @@ _EDGE_RESULT_RANK = {
     "failed": 60,
     "blocked": 50,
     "stopped": 40,
+    "interrupted": 40,
+    "pending": 40,
     "uncovered": 35,
     "review_required": 30,
     "passed": 20,
     "running": 15,
     "paused": 15,
     "skipped": 5,
-    "pending": 0,
 }
 _CONFIRMABLE_RESULTS = frozenset({"passed", "review_required"})
 _UNFINISHED_RUN_STATES = frozenset({"running", "paused", "pending"})
+_REJECT_RUN_STATES = frozenset({"running", "paused", "pending", "interrupted"})
 _edge_result_cache: tuple[float, dict[str, str], dict[str, str]] | None = None
 
 
@@ -1316,19 +1318,19 @@ def edge_result_in_run(rec: dict, edge_id: str) -> str | None:
 
 
 def _latest_edge_projection(edges: list[dict]) -> tuple[dict[str, str], dict[str, str]]:
-    """Newest run that has a result for each edge: (results, latest_runs)."""
+    """Newest non-interrupted run that has a result for each edge: (results, result_runs)."""
     global _edge_result_cache
     now = time.monotonic()
     if _edge_result_cache and now - _edge_result_cache[0] < 8:
         return _edge_result_cache[1], _edge_result_cache[2]
     wanted = {str(edge.get("id") or "") for edge in edges if edge.get("id")}
     found: dict[str, str] = {}
-    latest_runs: dict[str, str] = {}
+    result_runs: dict[str, str] = {}
     for item in run_summaries():
         if wanted <= found.keys():
             break
         rec = load_run(str(item.get("id") or ""))
-        if not rec:
+        if not rec or rec.get("state") == "interrupted":
             continue
         rid = str(rec.get("id") or item.get("id") or "")
         remaining = {eid for eid in wanted if eid not in found}
@@ -1336,9 +1338,9 @@ def _latest_edge_projection(edges: list[dict]) -> tuple[dict[str, str], dict[str
         for eid, state in seen.items():
             if state:
                 found[eid] = state
-                latest_runs[eid] = rid
-    _edge_result_cache = (now, found, latest_runs)
-    return found, latest_runs
+                result_runs[eid] = rid
+    _edge_result_cache = (now, found, result_runs)
+    return found, result_runs
 
 
 def latest_edge_results(edges: list[dict]) -> dict[str, str]:
@@ -1349,7 +1351,7 @@ def latest_edge_results(edges: list[dict]) -> dict[str, str]:
     return _latest_edge_projection(edges)[0]
 
 
-def latest_edge_runs(edges: list[dict]) -> dict[str, str]:
+def edge_result_runs(edges: list[dict]) -> dict[str, str]:
     """Newest run id per edge that has a result under `edge_results_in_run`."""
     return _latest_edge_projection(edges)[1]
 
@@ -1458,48 +1460,11 @@ def save_confirmations(data: dict[str, dict]) -> None:
     CONFIRMATIONS_PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
-def run_covers_edge(rec: dict, edge_id: str, edges: list[dict] | None = None) -> bool:
-    """True when selection or a task names this edge by exact id.
-
-    `edges` is unused. L1 desktop selection no longer covers a map edge.
-    """
-    del edges
-    if not rec or not edge_id:
-        return False
-    for item in rec.get("selection") or []:
-        raw = str(item or "")
-        if raw == edge_id or task_edge_id(raw) == edge_id:
-            return True
-    for task in rec.get("tasks") or []:
-        if not isinstance(task, dict):
-            continue
-        if str(task.get("edge") or "") == edge_id:
-            return True
-        if task_edge_id(str(task.get("id") or "")) == edge_id:
-            return True
-        for case in task.get("cases") or []:
-            if str(case.get("name") or "") == edge_id:
-                return True
-            ref = str(case.get("ref") or "")
-            if ref == f"Artemis.{edge_id}" or ref == f"AgentDevice.{edge_id}":
-                return True
-    return False
-
-
-def latest_covering_run_id(edge_id: str, edges: list[dict] | None = None) -> str | None:
-    """Newest run that has an `edge_results_in_run` value for this edge."""
-    del edges
-    for item in run_summaries():
-        rec = load_run(str(item.get("id") or ""))
-        if rec and edge_result_in_run(rec, edge_id):
-            return rec.get("id")
-    return None
-
-
 def confirmation_views(edges: list[dict]) -> dict[str, dict]:
+    _results, result_runs = _latest_edge_projection(edges)
     out: dict[str, dict] = {}
     for eid, rec in load_confirmations().items():
-        cover = latest_covering_run_id(eid, edges)
+        cover = result_runs.get(eid)
         confirmed_run = rec.get("run_id")
         stale = bool(cover and cover != confirmed_run)
         out[eid] = {
@@ -1530,7 +1495,7 @@ def record_confirmation(
     if not rec:
         raise ValueError(f"unknown run_id: {run_id}")
     run_state = str(rec.get("state") or "pending")
-    if run_state in _UNFINISHED_RUN_STATES:
+    if run_state in _REJECT_RUN_STATES:
         raise ValueError(f"run {run_id} is {run_state}")
     result = edge_result_in_run(rec, edge_id)
     if result is None:
@@ -3531,7 +3496,9 @@ def _self_check_confirm_cover() -> list[str]:
         tasks: list[dict],
         selection: list[str] | None = None,
         pid: int | None = None,
+        bust_cache: bool = True,
     ) -> None:
+        global _edge_result_cache
         rec = {
             "id": run_id,
             "state": state,
@@ -3543,8 +3510,8 @@ def _self_check_confirm_cover() -> list[str]:
         if pid:
             rec["pid"] = pid
         (RUNS_DIR / f"{run_id}.json").write_text(json.dumps(rec) + "\n", encoding="utf-8")
-        global _edge_result_cache
-        _edge_result_cache = None
+        if bust_cache:
+            _edge_result_cache = None
 
     def task(edge: str, state: str, plat: str = "android") -> dict:
         return {
@@ -3620,10 +3587,10 @@ def _self_check_confirm_cover() -> list[str]:
             ["edge:about-x@android#agent"],
         )
         rec_x = load_run("20260925T010900-aaa0010")
-        if rec_x and run_covers_edge(rec_x, "about"):
-            errors.append("about-x must not cover about")
-        if rec_x and not run_covers_edge(rec_x, "about-x"):
-            errors.append("about-x should cover about-x")
+        if rec_x and edge_result_in_run(rec_x, "about"):
+            errors.append("about-x must not yield a result for about")
+        if rec_x and not edge_result_in_run(rec_x, "about-x"):
+            errors.append("about-x should yield a result for about-x")
         try:
             record_confirmation("about", "20260925T010900-aaa0010", edges=synth)
             errors.append("about-x run should not confirm about")
@@ -3645,6 +3612,76 @@ def _self_check_confirm_cover() -> list[str]:
             errors.append("L1 desktop run must not stale about confirmation")
         if about.get("latest_run") != "20260925T011000-aaa0011":
             errors.append(f"latest_run for about is {about.get('latest_run')}")
+
+        expect_reject(
+            "20260925T011200-aaa0013",
+            [task("about", "passed", "android"), task("about", "interrupted", "ios")],
+            "passed",
+            "is interrupted",
+        )
+        expect_reject(
+            "20260925T011300-aaa0014",
+            [task("about", "passed", "android"), task("about", "pending", "ios")],
+            "passed",
+            "is pending",
+        )
+
+        write_run("20260925T011400-aaa0015", "passed", [task("about", "passed")])
+        record_confirmation("about", "20260925T011400-aaa0015", edges=synth)
+        write_run(
+            "20260925T011500-aaa0016",
+            "interrupted",
+            [task("about", "interrupted")],
+        )
+        views = confirmation_views(synth)
+        about = views.get("about") or {}
+        if about.get("stale"):
+            errors.append("interrupted run must not stale about confirmation")
+        if about.get("latest_run") != "20260925T011400-aaa0015":
+            errors.append(f"interrupted run became latest_run {about.get('latest_run')}")
+        latest = edge_result_runs(synth)
+        if latest.get("about") == "20260925T011500-aaa0016":
+            errors.append("interrupted run appeared in result_runs")
+
+        views = confirmation_views(synth)
+        runs = edge_result_runs(synth)
+        for eid, row in views.items():
+            if row.get("latest_run") != runs.get(eid):
+                errors.append(
+                    f"{eid} confirmation latest_run {row.get('latest_run')} != result_runs {runs.get(eid)}"
+                )
+
+        _ = latest_edge_results(synth)
+        old_results = dict(latest_edge_results(synth))
+        old_runs = dict(edge_result_runs(synth))
+        old_cover = (confirmation_views(synth).get("about") or {}).get("latest_run")
+        write_run(
+            "20260925T011700-aaa0017",
+            "passed",
+            [task("about", "failed")],
+            bust_cache=False,
+        )
+        if latest_edge_results(synth) != old_results:
+            errors.append("results changed while cache is warm")
+        if edge_result_runs(synth) != old_runs:
+            errors.append("result_runs changed while cache is warm")
+        if (confirmation_views(synth).get("about") or {}).get("latest_run") != old_cover:
+            errors.append("confirmation latest_run changed while cache is warm")
+        _edge_result_cache = None
+        if latest_edge_results(synth).get("about") != "failed":
+            errors.append("results did not update after cache expired")
+        if edge_result_runs(synth).get("about") != "20260925T011700-aaa0017":
+            errors.append("result_runs did not update after cache expired")
+        if (confirmation_views(synth).get("about") or {}).get("latest_run") != "20260925T011700-aaa0017":
+            errors.append("confirmation latest_run did not update after cache expired")
+
+        import testmap_console as console
+
+        tok_a = console._issue_confirm_token()
+        tok_b = console._issue_confirm_token()
+        if not console._confirm_token_ok(tok_a) or not console._confirm_token_ok(tok_b):
+            errors.append("two issued tokens should both be valid")
+
         if tmp.resolve() != Path(CONFIRMATIONS_PATH).resolve().parent:
             errors.append("confirmations escaped the temp dir")
         if "docs/testmap/runs/confirmations.json" in str(CONFIRMATIONS_PATH):
