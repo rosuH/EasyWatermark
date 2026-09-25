@@ -111,11 +111,17 @@ def _watch_preferred(snap: object, plat: str | None) -> dict | None:
 _CONFIRM_TOKENS: dict[str, float] = {}
 _CONFIRM_LOCK = threading.Lock()
 _CONFIRM_TOKEN_TTL_S = 12 * 3600
+_CONFIRM_TOKEN_MAX = 64
 
 
 def _prune_confirm_tokens(now: float) -> None:
     expired = [tok for tok, issued in _CONFIRM_TOKENS.items() if now - issued > _CONFIRM_TOKEN_TTL_S]
     for tok in expired:
+        del _CONFIRM_TOKENS[tok]
+    extra = len(_CONFIRM_TOKENS) - _CONFIRM_TOKEN_MAX
+    if extra <= 0:
+        return
+    for tok, _issued in sorted(_CONFIRM_TOKENS.items(), key=lambda kv: kv[1])[:extra]:
         del _CONFIRM_TOKENS[tok]
 
 
