@@ -979,6 +979,8 @@ def finalize_record(rec: dict) -> None:
     rec["finished"] = iso(utc_now())
     skip_n = 0
     for task in rec["tasks"]:
+        if task.get("state") in {"running", "paused"}:
+            task["state"] = "interrupted"
         for case in task.get("cases") or []:
             if case.get("status") == "skipped":
                 skip_n += 1
@@ -993,7 +995,7 @@ def finalize_record(rec: dict) -> None:
         rec["duration_s"] = round(finished_ts - started_ts, 2)
     if any(t["state"] == "stopped" for t in rec["tasks"]) or rec["state"] == "paused":
         rec["state"] = "stopped"
-    elif any(t["state"] in {"failed", "uncovered"} for t in rec["tasks"]):
+    elif any(t["state"] in {"failed", "uncovered", "interrupted"} for t in rec["tasks"]):
         rec["state"] = "failed"
     elif any(t["state"] == "blocked" for t in rec["tasks"]):
         rec["state"] = "blocked"
@@ -1280,8 +1282,8 @@ _EDGE_RESULT_RANK = {
     "uncovered": 35,
     "review_required": 30,
     "passed": 20,
-    "running": 15,
-    "paused": 15,
+    "running": 40,
+    "paused": 40,
     "skipped": 5,
 }
 _CONFIRMABLE_RESULTS = frozenset({"passed", "review_required"})
@@ -1462,8 +1464,14 @@ def save_confirmations(data: dict[str, dict]) -> None:
     CONFIRMATIONS_PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
-def confirmation_views(edges: list[dict]) -> dict[str, dict]:
-    _results, result_runs = _latest_edge_projection(edges)
+def confirmation_views(
+    edges: list[dict],
+    projection: tuple[dict[str, str], dict[str, str]] | None = None,
+) -> dict[str, dict]:
+    if projection is None:
+        _results, result_runs = _latest_edge_projection(edges)
+    else:
+        _results, result_runs = projection
     out: dict[str, dict] = {}
     for eid, rec in load_confirmations().items():
         cover = result_runs.get(eid)
@@ -1499,11 +1507,23 @@ def record_confirmation(
     run_state = str(rec.get("state") or "pending")
     if run_state in _REJECT_RUN_STATES:
         raise ValueError(f"run {run_id} is {run_state}")
-    result = edge_result_in_run(rec, edge_id)
-    if result is None:
+    counted = 0
+    for task in rec.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        eid = str(task.get("edge") or task_edge_id(str(task.get("id") or "")) or "")
+        if eid != edge_id:
+            continue
+        state = str(task.get("state") or "")
+        if not state:
+            continue
+        if state == "stopped" and task.get("duration_s") is None:
+            continue
+        counted += 1
+        if state not in _CONFIRMABLE_RESULTS:
+            raise ValueError(f"run {run_id} result for {edge_id} is {state}")
+    if not counted:
         raise ValueError(f"run {run_id} result for {edge_id} is missing")
-    if result not in _CONFIRMABLE_RESULTS:
-        raise ValueError(f"run {run_id} result for {edge_id} is {result}")
     row = {
         "edge_id": edge_id,
         "run_id": run_id,
@@ -2633,12 +2653,8 @@ def stop_recorded_run() -> dict:
     if isinstance(pid, int) and _pid_alive(pid):
         os.kill(pid, signal.SIGTERM)
         return {"id": rec.get("id"), "state": "stopping", "pid": pid}
-    rec["state"] = "stopped"
-    for task in rec.get("tasks") or []:
-        if isinstance(task, dict) and task.get("state") in {"pending", "running", "paused"}:
-            task["state"] = "stopped"
-    write_record(rec)
-    return {"id": rec.get("id"), "state": "stopped", "pid": pid}
+    rec = reap_stale_run(rec)
+    return {"id": rec.get("id"), "state": rec.get("state") or "interrupted", "pid": pid}
 
 
 class BusyError(Exception):
@@ -2988,7 +3004,14 @@ class RunManager:
 
     def _run_lane(self, rec: dict, tasks: list[dict], logf) -> None:
         for task in tasks:
-            self._execute_one_task(rec, task, logf)
+            t0 = time.monotonic()
+            try:
+                self._execute_one_task(rec, task, logf)
+            except Exception as exc:  # noqa: BLE001
+                task["state"] = "failed"
+                if task.get("duration_s") is None:
+                    task["duration_s"] = round(time.monotonic() - t0, 2)
+                task["error"] = f"{type(exc).__name__}: {exc}"
 
     def _worker(self, rec: dict, log_path: Path) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3331,6 +3354,17 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
     active.flush()
 
 
+def _safe_execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
+    t0 = time.monotonic()
+    try:
+        _execute_task(active, rec, task, logf)
+    except Exception as exc:  # noqa: BLE001
+        task["state"] = "failed"
+        if task.get("duration_s") is None:
+            task["duration_s"] = round(time.monotonic() - t0, 2)
+        task["error"] = f"{type(exc).__name__}: {exc}"
+
+
 def _task_platforms(rec: dict) -> list[str]:
     found: list[str] = []
     for task in rec.get("tasks") or []:
@@ -3429,7 +3463,7 @@ def run_record(rec: dict) -> int:
                             task["state"] = "stopped"
                             active.flush()
                             continue
-                        _execute_task(active, rec, task, logf)
+                        _safe_execute_task(active, rec, task, logf)
 
                 thread = threading.Thread(target=_lane, daemon=True, name=f"testmap-lane-{name}")
                 threads.append(thread)
@@ -3484,6 +3518,7 @@ def run_foreground(
 def _self_check_confirm_cover() -> list[str]:
     """Function-level confirm/cover checks. Writes only under a temp RUNS_DIR."""
     global RUNS_DIR, CONFIRMATIONS_PATH, _edge_result_cache, write_historical_projection
+    global _execute_task, load_status_record
     errors: list[str] = []
     tmp = Path(tempfile.mkdtemp(prefix="ewm-confirm-"))
     old_runs = RUNS_DIR
@@ -3726,6 +3761,60 @@ def _self_check_confirm_cover() -> list[str]:
         )
         if edge_result_in_run(load_run("20260925T012100-aaa0021"), "about") != "stopped":
             errors.append("started-then-stopped task should count as stopped")
+
+        expect_reject(
+            "20260925T012200-aaa0022",
+            [task("about", "passed"), task("about", "running", "ios", duration_s=0.3)],
+            "passed",
+            "is running",
+        )
+        expect_reject(
+            "20260925T012300-aaa0023",
+            [task("about", "passed"), task("about", "paused", "ios", duration_s=0.3)],
+            "passed",
+            "is paused",
+        )
+
+        old_exec = _execute_task
+
+        def boom(active, rec, task, logf):
+            raise KeyError("lane-boom")
+
+        _execute_task = boom
+        try:
+            class _Active:
+                stop_requested = False
+
+                def flush(self):
+                    return None
+
+            boom_task = {"id": "edge:about@android#agent", "edge": "about", "state": "running"}
+            _safe_execute_task(_Active(), {"id": "x", "state": "running"}, boom_task, io.StringIO())
+            if boom_task.get("state") != "failed":
+                errors.append("lane exception should mark task failed")
+            if boom_task.get("duration_s") is None:
+                errors.append("lane exception should set duration_s")
+        finally:
+            _execute_task = old_exec
+
+        dead_id = "20260925T012400-aaa0024"
+        write_run(dead_id, "running", [task("about", "running", duration_s=0.2)], pid=999999999)
+        old_load = load_status_record
+
+        def fake_load(run_id=None):
+            path = RUNS_DIR / f"{dead_id}.json"
+            return json.loads(path.read_text(encoding="utf-8"))
+
+        load_status_record = fake_load
+        try:
+            out = stop_recorded_run()
+        finally:
+            load_status_record = old_load
+        if out.get("state") != "interrupted":
+            errors.append(f"dead-pid stop_recorded_run state is {out.get('state')}")
+        dead_rec = json.loads((RUNS_DIR / f"{dead_id}.json").read_text(encoding="utf-8"))
+        if dead_rec.get("state") != "interrupted":
+            errors.append(f"dead-pid record state is {dead_rec.get('state')}")
 
         if tmp.resolve() != Path(CONFIRMATIONS_PATH).resolve().parent:
             errors.append("confirmations escaped the temp dir")
