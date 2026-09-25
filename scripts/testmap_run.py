@@ -1307,8 +1307,10 @@ def edge_results_in_run(rec: dict, wanted: set[str] | None = None) -> dict[str, 
         state = str(task.get("state") or "")
         if not state:
             continue
+        if state == "stopped" and task.get("duration_s") is None:
+            continue
         prev = seen.get(eid, "")
-        if _EDGE_RESULT_RANK.get(state, 0) >= _EDGE_RESULT_RANK.get(prev, 0):
+        if _EDGE_RESULT_RANK.get(state, 100) >= _EDGE_RESULT_RANK.get(prev, 100 if prev else 0):
             seen[eid] = state
     return seen
 
@@ -3513,13 +3515,16 @@ def _self_check_confirm_cover() -> list[str]:
         if bust_cache:
             _edge_result_cache = None
 
-    def task(edge: str, state: str, plat: str = "android") -> dict:
-        return {
+    def task(edge: str, state: str, plat: str = "android", duration_s: float | None = None) -> dict:
+        row = {
             "id": f"edge:{edge}@{plat}#agent",
             "edge": edge,
             "state": state,
             "platform": plat,
         }
+        if duration_s is not None:
+            row["duration_s"] = duration_s
+        return row
 
     def expect_reject(
         run_id: str,
@@ -3557,7 +3562,12 @@ def _self_check_confirm_cover() -> list[str]:
 
         expect_reject("20260925T010200-aaa0003", [task("about", "failed")], "failed", "is failed")
         expect_reject("20260925T010300-aaa0004", [task("about", "uncovered")], "passed", "is uncovered")
-        expect_reject("20260925T010400-aaa0005", [task("about", "stopped")], "stopped", "is stopped")
+        expect_reject(
+            "20260925T010400-aaa0005",
+            [task("about", "stopped", duration_s=0.2)],
+            "stopped",
+            "is stopped",
+        )
         expect_reject(
             "20260925T010500-aaa0006",
             [task("about", "running")],
@@ -3681,6 +3691,41 @@ def _self_check_confirm_cover() -> list[str]:
         tok_b = console._issue_confirm_token()
         if not console._confirm_token_ok(tok_a) or not console._confirm_token_ok(tok_b):
             errors.append("two issued tokens should both be valid")
+        issued = [console._issue_confirm_token() for _ in range(65)]
+        if console._confirm_token_ok(issued[0]):
+            errors.append("oldest token should drop after 64 new ones")
+        if not all(console._confirm_token_ok(tok) for tok in issued[-64:]):
+            errors.append("newest 64 tokens should stay valid")
+
+        expect_reject(
+            "20260925T011800-aaa0018",
+            [task("about", "passed"), task("about", "ghost", "ios")],
+            "passed",
+            "is ghost",
+        )
+
+        write_run("20260925T011900-aaa0019", "passed", [task("about", "passed")])
+        record_confirmation("about", "20260925T011900-aaa0019", edges=synth)
+        write_run(
+            "20260925T012000-aaa0020",
+            "stopped",
+            [task("about", "stopped")],
+        )
+        views = confirmation_views(synth)
+        about = views.get("about") or {}
+        if about.get("stale"):
+            errors.append("never-started stopped task must not stale confirmation")
+        if about.get("latest_run") != "20260925T011900-aaa0019":
+            errors.append(f"never-started stopped became latest_run {about.get('latest_run')}")
+        if edge_result_runs(synth).get("about") == "20260925T012000-aaa0020":
+            errors.append("never-started stopped appeared in result_runs")
+        write_run(
+            "20260925T012100-aaa0021",
+            "stopped",
+            [task("about", "stopped", duration_s=0.4)],
+        )
+        if edge_result_in_run(load_run("20260925T012100-aaa0021"), "about") != "stopped":
+            errors.append("started-then-stopped task should count as stopped")
 
         if tmp.resolve() != Path(CONFIRMATIONS_PATH).resolve().parent:
             errors.append("confirmations escaped the temp dir")
