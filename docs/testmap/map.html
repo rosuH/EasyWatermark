@@ -96,6 +96,7 @@ button { letter-spacing: inherit; }
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: 0 0 auto;
   min-width: 0;
 }
 .mark { width: 22px; height: 22px; flex: 0 0 auto; display: block; }
@@ -105,6 +106,8 @@ button { letter-spacing: inherit; }
   font-weight: 650;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 .sha {
   color: var(--text-2);
@@ -142,8 +145,9 @@ button { letter-spacing: inherit; }
   align-items: center;
   flex-wrap: nowrap;
   gap: var(--space-2);
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
+  justify-content: flex-end;
 }
 .pill {
   display: inline-flex;
@@ -179,7 +183,10 @@ button { letter-spacing: inherit; }
   50% { box-shadow: 0 0 0 6px rgba(255, 222, 50, 0); }
 }
 #q {
-  width: min(280px, 36vw);
+  width: auto;
+  flex: 1 1 120px;
+  min-width: 72px;
+  max-width: 220px;
   height: 32px;
   padding: 0 10px;
   border: 1px solid var(--border);
@@ -298,7 +305,7 @@ button { letter-spacing: inherit; }
   user-select: none;
 }
 #graph .node-card { fill: var(--bg-2); stroke: var(--border-strong); stroke-width: 1; }
-#graph .node.hub .node-card { fill: var(--surface); stroke: var(--accent); stroke-width: 1.6; }
+#graph .node.hub .node-card { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1; }
 #graph .node-label { fill: var(--text); font: 600 12px/1.2 var(--mono); }
 #graph .node-icon { color: var(--accent); }
 #graph .node { cursor: pointer; }
@@ -2894,11 +2901,9 @@ function zoomToCursor(p, nextK) {
 }
 function fitTarget() {
   var L = DATA.layout;
-  var padX = 36;
-  var top = 84;
-  var bottom = 56;
-  var k = clampK(Math.min((wellRect.w - padX * 2) / L.width, (wellRect.h - top - bottom) / L.height));
-  return { k: k, x: (wellRect.w - L.width * k) / 2, y: top };
+  var pad = 28;
+  var k = clampK(Math.min((wellRect.w - pad * 2) / L.width, (wellRect.h - pad * 2) / L.height));
+  return { k: k, x: (wellRect.w - L.width * k) / 2, y: (wellRect.h - L.height * k) / 2 };
 }
 function applyCamInstant(next) {
   cam.x = next.x;
@@ -3049,15 +3054,17 @@ function bindGraphNav(well) {
   });
   if (typeof ResizeObserver !== "undefined") {
     new ResizeObserver(function () {
-      var prevW = wellRect.w;
       cacheWellRect();
-      if (!camFitted || prevW < 2) {
+      if (wellRect.w >= 2 && wellRect.h >= 2) {
         applyCamInstant(fitTarget());
-        camFitted = wellRect.w >= 2;
+        camFitted = true;
       }
     }).observe(well);
   }
-  window.addEventListener("resize", cacheWellRect);
+  window.addEventListener("resize", function () {
+    cacheWellRect();
+    if (wellRect.w >= 2 && wellRect.h >= 2) applyCamInstant(fitTarget());
+  });
 }
 function onGraphHover(ev) {
   var edge = ev.target.closest && ev.target.closest("[data-edge]");
@@ -4155,8 +4162,10 @@ function pkgLabel(plat, info, withHash) {
 function topbarOverflows() {
   var bar = document.querySelector(".topbar");
   var meta = document.querySelector(".topbar-meta");
+  var title = document.querySelector(".brand h1");
   if (bar && (bar.scrollWidth > bar.clientWidth + 1 || bar.scrollHeight > bar.clientHeight + 1)) return true;
   if (meta && meta.scrollWidth > meta.clientWidth + 1) return true;
+  if (title && !title.hidden && title.scrollWidth > title.clientWidth + 1) return true;
   var ids = ["git-sha", "pkg-android", "pkg-ios", "pkg-line"];
   for (var i = 0; i < ids.length; i++) {
     var el = $(ids[i]);
@@ -4213,11 +4222,15 @@ function layoutPackages() {
       a.classList.add("dirty");
       return;
     }
+    var title = document.querySelector(".brand h1");
+    if (title) title.hidden = false;
     paintTwo(true);
     if (!topbarOverflows()) return;
     paintTwo(false);
     if (!topbarOverflows()) return;
     paintMerged();
+    if (!topbarOverflows()) return;
+    if (title) title.hidden = true;
   } finally {
     packingPkgs = false;
   }
