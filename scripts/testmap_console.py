@@ -53,6 +53,7 @@ from testmap_run import (  # noqa: E402
     SEMANTICS,
     TASK_SPECS,
     BusyError,
+    StopForbiddenError,
     RunManager,
     git_info,
     confirmation_views,
@@ -494,6 +495,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
         except BusyError as exc:
             self._json(409, {"error": str(exc), "id": exc.run_id})
+            return
+        except StopForbiddenError as exc:
+            self._json(403, {"error": str(exc)})
             return
         except ValueError as exc:
             self._json(400, {"error": str(exc)})
