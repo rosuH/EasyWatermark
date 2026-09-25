@@ -20,6 +20,9 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +38,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.ui.theme.EwmTheme
@@ -50,6 +55,16 @@ import me.rosuh.easywatermark.ui.theme.motionDurationMs
  * Offscreen in those windows (dual-layer hitch).
  */
 val LocalShellObscured = staticCompositionLocalOf { false }
+
+/** No-op binder when About is composed outside [ProductShellHost] (witnesses). */
+internal val UnhostedAboutBackBinder: ((() -> Unit)?) -> Unit = {}
+
+/**
+ * AboutScreen registers [onBack] here so the shell can keep a rest-positioned
+ * `aboutBack` hit target. Enter/exit use graphicsLayer, so layout (and XCUITest)
+ * stays top-start while the painted back is still sliding in.
+ */
+internal val LocalAboutBackBinder = staticCompositionLocalOf { UnhostedAboutBackBinder }
 
 /**
  * Shared product-shell navigator for Launch / Editor / About.
@@ -81,6 +96,10 @@ fun ProductShellHost(
     content: @Composable (route: ProductShellNav.Route) -> Unit,
 ) {
     StartupTrace.markOnce("shell_composed")
+    var aboutBackHandler by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val bindAboutBack = remember<((() -> Unit)?) -> Unit> {
+        { handler -> aboutBackHandler = handler }
+    }
     val motionPolicy = currentMotionPolicy()
     // Outer Box owns the product chrome fill. About enter/exit uses scaleIn/Out; the letterbox
     // around scaled pages must never show Compose/Desktop default white (owner recording
@@ -171,6 +190,7 @@ fun ProductShellHost(
             .background(chrome)
             .ewmTestTagsAsResourceId(),
     ) {
+        CompositionLocalProvider(LocalAboutBackBinder provides bindAboutBack) {
         CompositionLocalProvider(LocalShellObscured provides (aboutPresent || baseBusy)) {
             Box(
                 modifier = Modifier
@@ -209,6 +229,23 @@ fun ProductShellHost(
                 },
         ) {
             content(ProductShellNav.Route.About)
+        }
+        if (aboutPresent) {
+            // Rest-positioned hit target. AV enter/exit transforms the painted About
+            // tree; this sibling stays at layout top-start so id=aboutBack hits during
+            // the slide. Empty IconButton: no second glyph, same 48.dp target.
+            Box(Modifier.fillMaxSize()) {
+                IconButton(
+                    onClick = { aboutBackHandler?.invoke() },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .safeDrawingPadding()
+                        .testTag("aboutBack"),
+                ) {
+                    Box(Modifier.size(24.dp))
+                }
+            }
+        }
         }
     }
 }
