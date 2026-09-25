@@ -248,6 +248,7 @@ class MainActivity : ComponentActivity() {
                                     sharedString(Res.string.recovery_mode_closed),
                                     Toast.LENGTH_SHORT
                                 ).show()
+                                recreate()
                             }
                         )
                     }

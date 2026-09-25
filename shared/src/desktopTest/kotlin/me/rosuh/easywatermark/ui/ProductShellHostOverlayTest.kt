@@ -46,6 +46,21 @@ class ProductShellHostOverlayTest {
             !src.contains("event.changes.forEach { it.consume() }"),
             "must not consume-all on a sibling Box in front of About",
         )
+        assertTrue(src.contains("LocalAboutBackBinder"), "About must register onBack with the shell")
+        assertTrue(
+            src.contains(".testTag(\"aboutBack\")"),
+            "rest-positioned aboutBack hit target must keep the test tag",
+        )
+    }
+
+    @Test
+    fun android_recovery_close_recreates_activity() {
+        val src = readFirst("app/src/main/java/me/rosuh/easywatermark/ui/MainActivity.kt")
+        assertTrue(src.contains("onCloseRecovery"))
+        assertTrue(
+            src.contains("recreate()"),
+            "closing recovery must leave the recovery setContent branch",
+        )
     }
 
     @Test
