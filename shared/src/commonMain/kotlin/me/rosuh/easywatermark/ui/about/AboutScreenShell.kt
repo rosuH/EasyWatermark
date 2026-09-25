@@ -31,6 +31,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.ui.ABOUT_CONTENT_MAX_WIDTH_DP
+import me.rosuh.easywatermark.ui.LocalAboutBackBinder
+import me.rosuh.easywatermark.ui.UnhostedAboutBackBinder
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
@@ -133,6 +136,12 @@ fun AboutScreen(
     contentPadding: PaddingValues = PaddingValues(),
     logo: @Composable (modifier: Modifier) -> Unit,
 ) {
+    val bindAboutBack = LocalAboutBackBinder.current
+    val hostedBack = bindAboutBack !== UnhostedAboutBackBinder
+    DisposableEffect(onBack, hostedBack) {
+        if (hostedBack) bindAboutBack(onBack)
+        onDispose { if (hostedBack) bindAboutBack(null) }
+    }
     val infoTitle = stringResource(Res.string.about_title_info)
     val versionTitle = stringResource(Res.string.about_title_version)
     val ratingTitle = stringResource(Res.string.about_title_rating)
@@ -263,7 +272,7 @@ fun AboutScreen(
                 onClick = onBack,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .testTag("aboutBack"),
+                    .then(if (hostedBack) Modifier else Modifier.testTag("aboutBack")),
             ) {
                 Icon(
                     painter = icons.back,
