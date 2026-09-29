@@ -30,6 +30,10 @@ When maintaining project-owned skills, keep descriptions short and specific abou
 
 For upstream Google Android skills, use `android update` and `android skills update --all --project=.` when refreshing them (`add --all` is the same overlay on a first install). Preserve upstream `SKILL.md` / `references/` and mirrors rather than hand-editing them. The CLI overlay does not delete files removed upstream; drop those leftovers after a refresh. Keep project-owned skills such as `e2e-testmap` and Compose / HotSwan skills.
 
+## Jugg compile overlay — 2026-09-19
+
+Android incremental compile follows `docs/agents/jugg-compile-scheme.md`. Do not vendor `jugg-android-dev-loop` into `skills/` mirrors; the Multica workspace imports it from GitHub and refreshes with `multica skill refresh`. The overlay in this repo wins on EasyWatermark-specific gates (`--max-workers=8`, Room/KSP → Gradle, Isolated Projects, smoke-test latch). Jugg is not the default compiler until that smoke test is marked passed.
+
 ## Official Android skills — 2026-09-16
 
 Refreshed from [android/skills v1.0.12](https://github.com/android/skills/releases/tag/v1.0.12) with Android CLI `1.0.16261425`. Catalog additions: `navigation-event`, `ml-kit-genai-prompt-api`. `AGENTS.md` routes Predictive Back / `BackHandler` to `navigation-event`. Do not route `ml-kit-genai-prompt-api` unless the owner asks — the product stays fully offline.
