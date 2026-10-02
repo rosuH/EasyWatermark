@@ -24,7 +24,6 @@ class DesktopWaterMarkStoreRoundtripTest {
                 dataStore = createWaterMarkDataStore(dir),
                 defaultTextProvider = { "EasyWatermark 水印" },
                 tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-                logError = {},
             )
             val editor = WatermarkConfigEditor(repo)
 

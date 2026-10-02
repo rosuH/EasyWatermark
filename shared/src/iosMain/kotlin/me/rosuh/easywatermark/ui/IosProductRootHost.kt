@@ -48,7 +48,6 @@ import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.data.model.toUiProjection
 import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import me.rosuh.easywatermark.data.repo.TemplateRepository
-import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import androidx.compose.ui.graphics.ImageBitmap
 import me.rosuh.easywatermark.render.IosByteArrayInterop
@@ -165,7 +164,6 @@ class IosProductRootHost(
         )
     }
     private val templateEditor by lazy { TemplateEditor(templateRepo) }
-    private val outputEditor by lazy { OutputPrefsEditor(services.userConfigRepo) }
     /**
      * Host-owned scope for background stage/preview work (not GlobalScope).
      * SupervisorJob alone does **not** swallow child failures: without a
@@ -1742,13 +1740,13 @@ class IosProductRootHost(
                     },
                     onFormatClick = { fmt ->
                         scope.launch {
-                            outputEditor.save(fmt, outputQuality)
+                            services.userConfigRepo.updateFormat(fmt)
                             outputFormat = fmt
                         }
                     },
                     onQualityChange = { q ->
                         scope.launch {
-                            outputEditor.save(outputFormat, q)
+                            services.userConfigRepo.updateCompressLevel(q)
                             outputQuality = q
                         }
                     },
@@ -2299,15 +2297,6 @@ class IosProductRootHost(
                 "offsetY" to oy,
             ),
         )
-    }
-
-    /**
-     * Symbol kept for filmstrip-switch diagnosis tests. ADR-0033: never paint a baked
-     * Watermarked frame onto the editor slot.
-     */
-    private fun paintWatermarkedCacheHitIfPresent(path: String): Boolean {
-        if (path.isBlank() || disposed) return false
-        return false
     }
 
     private fun hasLiveLayers(): Boolean =

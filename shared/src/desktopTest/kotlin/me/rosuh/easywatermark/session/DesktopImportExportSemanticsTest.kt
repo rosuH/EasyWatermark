@@ -93,7 +93,6 @@ class DesktopImportExportSemanticsTest {
             dataStore = createWaterMarkDataStore(File(dir, "wm-store")),
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userRepo = UserConfigRepository(createUserConfigDataStore(File(dir, "user-store")))
         val session = WatermarkSessionViewModel(

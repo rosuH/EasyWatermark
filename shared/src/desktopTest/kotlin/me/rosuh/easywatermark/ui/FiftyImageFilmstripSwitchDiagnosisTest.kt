@@ -125,7 +125,6 @@ class FiftyImageFilmstripSwitchDiagnosisTest {
     @Test
     fun iosHost_switchPath_awaitsSelectAndRastersOnMiss_withNeighborOnlyPrefetch() {
         val host = readIos("IosProductRootHost.kt")
-        assertTrue(host.contains("paintWatermarkedCacheHitIfPresent"))
         assertTrue(host.contains("AppIntent.SelectCurrent"))
         assertTrue(host.contains("renderPreviewForCurrentSelection"))
         assertTrue(host.contains("prefetchNeighborWatermarkedPreviews"))

@@ -36,7 +36,6 @@ import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.repo.TemplateRepository
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
-import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.platform.AndroidIconPersistence
 import me.rosuh.easywatermark.platform.AndroidIconSelectionCoordinator
@@ -71,9 +70,6 @@ class MainViewModel (
     waterMarkRepo = waterMarkRepo,
     userConfigRepo = userRepo,
 ) {
-
-    // output-preference write use-case (still Android-hosted launch wrapper).
-    private val outputPrefsEditor = OutputPrefsEditor(userRepo)
 
     // template add/update/delete business logic lives in a commonMain use-case; the VM keeps
     // UiState mapping (the null-DAO -> UiState.DatabaseError branch stays here). Built from the
@@ -231,12 +227,16 @@ class MainViewModel (
 
     fun updateOffset(info: ImageInfo) = applyOffset(info)
 
-    fun saveOutput(
-        format: ImageFormat = _userPreferences.value.outputFormat,
-        level: Int = _userPreferences.value.compressLevel
-    ) {
+    fun updateOutputFormat(format: ImageFormat) {
         viewModelScope.launch {
-            outputPrefsEditor.save(format, level)
+            userRepo.updateFormat(format)
+        }
+        resetJobStatus()
+    }
+
+    fun updateOutputQuality(level: Int) {
+        viewModelScope.launch {
+            userRepo.updateCompressLevel(level)
         }
         resetJobStatus()
     }

@@ -283,7 +283,6 @@ private object IosAppServicesHolder {
             dataStore = createWaterMarkDataStore(),
             defaultTextProvider = { defaultWatermarkText() },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = { message -> println("IosAppServices/WaterMarkRepository: $message") },
         )
         val userConfigRepo = UserConfigRepository(createUserConfigDataStore())
         val session = WatermarkSessionViewModel(

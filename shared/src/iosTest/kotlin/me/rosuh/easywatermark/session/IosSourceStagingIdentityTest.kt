@@ -92,7 +92,6 @@ class IosSourceStagingIdentityTest {
             dataStore = createWaterMarkDataStore(name = "c44rs1_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "c44rs1_uc_$id"),
