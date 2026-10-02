@@ -100,7 +100,7 @@ Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; r
 | Create or change a test harness | `testing-setup` |
 | Emulator, screenshot, docs KB | `android-cli` |
 | R8 / keep rules | `r8-analyzer` |
-| Jank / startup / traces | `android-profiler` → `perfetto-trace-analysis` |
+| Jank / startup / traces | `android-profiler` |
 | Play Data Safety | `play-policy-insights` |
 | Recompose / stability | `auditing-compose-performance` |
 
