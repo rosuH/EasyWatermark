@@ -548,6 +548,7 @@ class MainActivity : ComponentActivity() {
                                     route = productRoute,
                                     aboutReturn = aboutReturn,
                                     playProcessFirstReveal = false,
+                                    openSourceOpen = showOpenSource,
                                 ) { route ->
                                     when (route) {
                                         ProductShellNav.Route.Launch -> {

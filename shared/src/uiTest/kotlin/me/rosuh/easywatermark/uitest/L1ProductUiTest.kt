@@ -1,13 +1,19 @@
 package me.rosuh.easywatermark.uitest
 
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertContentDescriptionContains
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -15,7 +21,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -26,6 +34,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -41,9 +50,15 @@ import me.rosuh.easywatermark.shared.generated.resources.about_prefer_in_app_gal
 import me.rosuh.easywatermark.shared.generated.resources.about_show_bounds
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
 import me.rosuh.easywatermark.shared.generated.resources.about_title_open_source
+import me.rosuh.easywatermark.shared.generated.resources.cd_back
 import me.rosuh.easywatermark.shared.generated.resources.tips_choose_color_dialog
 import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
 import me.rosuh.easywatermark.ui.ProductShellNav
+import me.rosuh.easywatermark.ui.ProductShellHost
+import me.rosuh.easywatermark.ui.LocalShellObscured
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.MotionPolicy
+import me.rosuh.easywatermark.ui.theme.ProvideMotionPolicy
 import me.rosuh.easywatermark.ui.compose.formatArgbHexColor
 import me.rosuh.easywatermark.ui.compose.parseArgbHexColor
 import org.jetbrains.compose.resources.getString
@@ -735,6 +750,237 @@ class L1ProductUiTest {
         onNodeWithTag("sharedComposeEditorScreen", useUnmergedTree = true).assertIsDisplayed()
         onNodeWithTag("sharedComposeSaveButton", useUnmergedTree = true).assertIsDisplayed()
         captureL1Witness("editorAboutOverlayRoundTrip")
+    }
+
+    @Test
+    fun aboutPage_hasSingleBackNode() = runComposeUiTest {
+        L1Live.activeTest = "aboutPage_hasSingleBackNode"
+        val session = L1Session()
+        setContent { L1ProductTree(session) }
+        waitForTag("sharedComposeLaunchScreen")
+        onNodeWithTag("launchAboutButton", useUnmergedTree = true).performClick()
+        waitForTag("aboutBack")
+        val backCd = l1String(Res.string.cd_back)
+        onAllNodesWithContentDescription(backCd).assertCountEquals(1)
+        onNodeWithTag("aboutBack", useUnmergedTree = true).assertIsDisplayed()
+        captureL1Witness("aboutPage_hasSingleBackNode", "aboutBack")
+    }
+
+    @Test
+    fun aboutExit_secondBackStaysOnEditor() = runComposeUiTest {
+        L1Live.activeTest = "aboutExit_secondBackStaysOnEditor"
+        val session = L1Session()
+        session.seamFeedImage()
+        setContent { L1ProductTree(session, motionPolicy = MotionPolicy.Full) }
+        waitForTag("sharedComposeEditorScreen")
+        val aboutCd = l1String(Res.string.about_title_about)
+        waitUntil(timeoutMillis = 5_000) {
+            onAllNodesWithContentDescription(aboutCd, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        onAllNodesWithContentDescription(aboutCd, useUnmergedTree = true)[0].performClick()
+        waitForTag("aboutBack")
+        assertEquals(ProductShellNav.Route.About, session.route)
+        mainClock.autoAdvance = false
+        onNodeWithTag("aboutBack", useUnmergedTree = true).performClick()
+        mainClock.advanceTimeByFrame()
+        assertEquals(ProductShellNav.Route.Editor, session.route)
+        assertEquals(session.fixtureImage.uri, session.selected?.uri)
+        onNodeWithTag("aboutBack", useUnmergedTree = true).performTouchInput { click() }
+        assertEquals(ProductShellNav.Route.Editor, session.route)
+        assertEquals(session.fixtureImage.uri, session.selected?.uri)
+        mainClock.autoAdvance = true
+        awaitIdle()
+        assertEquals(ProductShellNav.Route.Editor, session.route)
+        waitForTag("sharedComposeEditorScreen")
+        captureL1Witness("aboutExit_secondBackStaysOnEditor")
+    }
+
+    @Test
+    fun openSource_pausesCoveredAboutDecoration() = runComposeUiTest {
+        val openSourceOpen = mutableStateOf(false)
+        var aboutObscured: Boolean? = null
+        setContent {
+            ProvideMotionPolicy(MotionPolicy.Off) {
+                ProductShellHost(
+                    route = ProductShellNav.Route.About,
+                    openSourceOpen = openSourceOpen.value,
+                ) { route ->
+                    if (route == ProductShellNav.Route.About) {
+                        val obscured = LocalShellObscured.current
+                        SideEffect { aboutObscured = obscured }
+                    }
+                }
+            }
+        }
+        awaitIdle()
+        assertEquals(false, aboutObscured)
+        runOnIdle { openSourceOpen.value = true }
+        awaitIdle()
+        assertEquals(true, aboutObscured)
+        runOnIdle { openSourceOpen.value = false }
+        awaitIdle()
+        assertEquals(false, aboutObscured)
+    }
+
+    @Test
+    fun openSource_topLeftClosesOnlyOpenSource() = runComposeUiTest {
+        L1Live.activeTest = "openSource_topLeftClosesOnlyOpenSource"
+        val session = L1Session()
+        setContent { L1ProductTree(session) }
+        waitForTag("sharedComposeLaunchScreen")
+        onNodeWithTag("launchAboutButton", useUnmergedTree = true).performClick()
+        waitForTag("aboutBack")
+        val openSource = l1String(Res.string.about_title_open_source)
+        onNodeWithText(openSource, useUnmergedTree = true)
+            .performScrollTo()
+            .performClick()
+        awaitIdle()
+        waitForTag("openSourceBack")
+        assertTrue(session.showOpenSource)
+        val backCd = l1String(Res.string.cd_back)
+        onAllNodesWithContentDescription(backCd).assertCountEquals(1)
+        onNodeWithTag("openSourceBack", useUnmergedTree = true).assertIsDisplayed()
+        onRoot().performTouchInput { click(Offset(2f, 2f)) }
+        awaitIdle()
+        assertTrue(session.showOpenSource)
+        assertEquals(ProductShellNav.Route.About, session.route)
+        onNodeWithTag("openSourceBack", useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 5_000) { !session.showOpenSource }
+        assertEquals(ProductShellNav.Route.About, session.route)
+        waitForTag("aboutBack")
+        onNodeWithTag("sharedComposeLaunchScreen", useUnmergedTree = true).assertIsDisplayed()
+        captureL1Witness("openSource_topLeftClosesOnlyOpenSource", "aboutBack")
+    }
+
+    @Test
+    fun aboutEnter_midAnimationBackReturns() = runComposeUiTest {
+        L1Live.activeTest = "aboutEnter_midAnimationBackReturns"
+        val session = L1Session()
+        setContent { L1ProductTree(session, motionPolicy = MotionPolicy.Full) }
+        waitForTag("sharedComposeLaunchScreen")
+        mainClock.autoAdvance = false
+        onNodeWithTag("launchAboutButton", useUnmergedTree = true).performClick()
+        repeat(2) { mainClock.advanceTimeByFrame() }
+        mainClock.advanceTimeBy(EwmTheme.motion.shellMediumMs / 2L)
+        assertEquals(ProductShellNav.Route.About, session.route)
+        val back = onNodeWithTag("aboutBack", useUnmergedTree = true)
+        back.assertIsEnabled()
+        val bounds = back.fetchSemanticsNode().boundsInRoot
+        onRoot().performTouchInput { click(bounds.center) }
+        repeat(2) { mainClock.advanceTimeByFrame() }
+        assertEquals(
+            ProductShellNav.Route.Launch,
+            session.route,
+            "mid-enter click on the visible arrow must pop About",
+        )
+        mainClock.autoAdvance = true
+        awaitIdle()
+        waitForTag("sharedComposeLaunchScreen")
+        onNodeWithTag("launchPickImageButton", useUnmergedTree = true).assertIsDisplayed()
+        captureL1Witness("aboutEnter_midAnimationBackReturns", "sharedComposeLaunchScreen")
+    }
+
+    @Test
+    fun aboutEnter_visibleBackClickReturns() = runComposeUiTest {
+        L1Live.activeTest = "aboutEnter_visibleBackClickReturns"
+        val session = L1Session()
+        setContent { L1ProductTree(session, motionPolicy = MotionPolicy.Full) }
+        waitForTag("sharedComposeLaunchScreen")
+        mainClock.autoAdvance = false
+        onNodeWithTag("launchAboutButton", useUnmergedTree = true).performClick()
+        repeat(2) { mainClock.advanceTimeByFrame() }
+        mainClock.advanceTimeBy(EwmTheme.motion.shellMediumMs / 4L)
+        assertEquals(ProductShellNav.Route.About, session.route)
+        val back = onNodeWithTag("aboutBack", useUnmergedTree = true).fetchSemanticsNode()
+        // boundsInRoot includes the page's scale and translation; size is unscaled.
+        // Checking both prevents a draw-only scale from disguising the wrong hit box.
+        val bounds = back.boundsInRoot
+        val scale = bounds.width / back.size.width
+        assertTrue(scale in 0.75f..0.99f, "back must still be visibly scaled: $scale")
+        val paintedCenter = bounds.center
+        assertTrue(onRoot().fetchSemanticsNode().boundsInRoot.contains(paintedCenter))
+        // Keep down/up on this frozen frame. click() advances the input clock
+        // and can move the arrow out from under the pointer before up.
+        onRoot().performTouchInput {
+            down(paintedCenter)
+            up()
+        }
+        repeat(2) { mainClock.advanceTimeByFrame() }
+        assertEquals(
+            ProductShellNav.Route.Launch,
+            session.route,
+            "click on the visible arrow must pop About during enter (scale=$scale)",
+        )
+        mainClock.autoAdvance = true
+        awaitIdle()
+        captureL1Witness("aboutEnter_visibleBackClickReturns", "sharedComposeLaunchScreen")
+    }
+
+    @Test
+    fun openSource_jitteredCardClickStillOpensLink() = runComposeUiTest {
+        L1Live.activeTest = "openSource_jitteredCardClickStillOpensLink"
+        val session = L1Session()
+        setContent { L1ProductTree(session) }
+        waitForTag("sharedComposeLaunchScreen")
+        onNodeWithTag("launchAboutButton", useUnmergedTree = true).performClick()
+        waitForTag("aboutBack")
+        val openSource = l1String(Res.string.about_title_open_source)
+        onNodeWithText(openSource, useUnmergedTree = true)
+            .performScrollTo()
+            .performClick()
+        awaitIdle()
+        waitForTag("openSourceBack")
+        onNodeWithText("Coil", useUnmergedTree = true).performTouchInput {
+            down(center)
+            moveBy(Offset(2f, 2f))
+            up()
+        }
+        awaitIdle()
+        assertEquals("https://github.com/coil-kt/coil", session.lastOpenSourceLink)
+        assertTrue(session.showOpenSource)
+        captureL1Witness("openSource_jitteredCardClickStillOpensLink", "openSourceBack")
+    }
+
+    @Test
+    fun openSource_hasNoFullscreenClickableNode() = runComposeUiTest {
+        L1Live.activeTest = "openSource_hasNoFullscreenClickableNode"
+        val session = L1Session()
+        setContent { L1ProductTree(session) }
+        waitForTag("sharedComposeLaunchScreen")
+        onNodeWithTag("launchAboutButton", useUnmergedTree = true).performClick()
+        waitForTag("aboutBack")
+        val openSource = l1String(Res.string.about_title_open_source)
+        onNodeWithText(openSource, useUnmergedTree = true)
+            .performScrollTo()
+            .performClick()
+        awaitIdle()
+        waitForTag("openSourceBack")
+        val root = onRoot().fetchSemanticsNode()
+        val rootArea = root.size.width.toLong() * root.size.height.toLong()
+        val fullscreenClickables = onAllNodes(hasClickAction())
+            .fetchSemanticsNodes()
+            .filter { node ->
+                node.size.width.toLong() * node.size.height.toLong() >= (rootArea * 9 / 10)
+            }
+        assertTrue(
+            fullscreenClickables.isEmpty(),
+            "open source has fullscreen clickable nodes: " +
+                fullscreenClickables.map { it.boundsInRoot },
+        )
+        val titleNodes = onAllNodesWithText(openSource).fetchSemanticsNodes()
+        val headerTitle = titleNodes.minBy { it.boundsInRoot.top }
+        assertFalse(
+            headerTitle.config.contains(SemanticsActions.OnClick),
+            "merged-tree open source title must not have OnClick",
+        )
+        val titleArea = headerTitle.size.width.toLong() * headerTitle.size.height.toLong()
+        assertTrue(
+            titleArea * 10 < rootArea,
+            "merged-tree title area $titleArea must be far smaller than root $rootArea",
+        )
+        captureL1Witness("openSource_hasNoFullscreenClickableNode", "openSourceBack")
     }
 
     private fun ComposeUiTest.waitForTag(
