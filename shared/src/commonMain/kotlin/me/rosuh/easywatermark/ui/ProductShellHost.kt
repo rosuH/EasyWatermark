@@ -20,13 +20,12 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,9 +37,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import me.rosuh.easywatermark.ui.theme.EwmTheme
@@ -56,15 +55,12 @@ import me.rosuh.easywatermark.ui.theme.motionDurationMs
  */
 val LocalShellObscured = staticCompositionLocalOf { false }
 
-/** No-op binder when About is composed outside [ProductShellHost] (witnesses). */
-internal val UnhostedAboutBackBinder: ((() -> Unit)?) -> Unit = {}
-
 /**
- * AboutScreen registers [onBack] here so the shell can keep a rest-positioned
- * `aboutBack` hit target. Enter/exit use graphicsLayer, so layout (and XCUITest)
- * stays top-start while the painted back is still sliding in.
+ * True while About is the current route and Open Source is closed. About's
+ * single `aboutBack` node pops only then, so an exit-animation tap cannot
+ * leave Editor for Launch.
  */
-internal val LocalAboutBackBinder = staticCompositionLocalOf { UnhostedAboutBackBinder }
+internal val LocalAboutBackArmed = staticCompositionLocalOf { true }
 
 /**
  * Shared product-shell navigator for Launch / Editor / About.
@@ -85,6 +81,7 @@ internal val LocalAboutBackBinder = staticCompositionLocalOf { UnhostedAboutBack
  * share one source under content editor theme (ADR-0027 option B). Null → [editorChromeColor].
  * @param playProcessFirstReveal When true (iOS / Desktop), the first Launch in this process
  * fades in. Android passes false so the first frame is opaque (2.x; no splash handshake).
+ * @param openSourceOpen When true, About's back is disarmed so Open Source owns the top-start back.
  */
 @Composable
 fun ProductShellHost(
@@ -93,13 +90,10 @@ fun ProductShellHost(
     chromeColor: Color? = null,
     aboutReturn: ProductShellNav.Route = ProductShellNav.Route.Launch,
     playProcessFirstReveal: Boolean = true,
+    openSourceOpen: Boolean = false,
     content: @Composable (route: ProductShellNav.Route) -> Unit,
 ) {
     StartupTrace.markOnce("shell_composed")
-    var aboutBackHandler by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val bindAboutBack = remember<((() -> Unit)?) -> Unit> {
-        { handler -> aboutBackHandler = handler }
-    }
     val motionPolicy = currentMotionPolicy()
     // Outer Box owns the product chrome fill. About enter/exit uses scaleIn/Out; the letterbox
     // around scaled pages must never show Compose/Desktop default white (owner recording
@@ -146,6 +140,7 @@ fun ProductShellHost(
     val showAbout = route == ProductShellNav.Route.About
     val aboutCover = updateTransition(showAbout, label = "aboutOverlay")
     val aboutPresent = aboutCover.currentState || aboutCover.targetState
+    val aboutBackArmed = showAbout && !openSourceOpen
     // One transition drives both the swap and [LocalShellObscured]. A parent
     // graphicsLayer around this tree is About-only: Launch↔Editor already has
     // its own slide layers, and a full-screen parent layer forces both pages
@@ -165,6 +160,16 @@ fun ProductShellHost(
     ) { covered ->
         if (covered) ProductShellTransitions.UnderCoveredSlideFraction else 0f
     }
+    // Layout translation and layer scale keep drawing, pointer hits and a11y
+    // coordinates together throughout the transition.
+    val aboutLayoutSlide = aboutCover.animateFloat(
+        transitionSpec = { ProductShellTransitions.mediumFloatSpec(motionPolicy) },
+        label = "aboutLayoutSlide",
+    ) { visible -> if (visible) 0f else 1f }
+    val aboutScale = aboutCover.animateFloat(
+        transitionSpec = { ProductShellTransitions.mediumFloatSpec(motionPolicy) },
+        label = "aboutScale",
+    ) { visible -> if (visible) 1f else 0.75f }
     val underLayer = if (aboutPresent) {
         Modifier.graphicsLayer {
             val scale = underScale.value
@@ -190,7 +195,7 @@ fun ProductShellHost(
             .background(chrome)
             .ewmTestTagsAsResourceId(),
     ) {
-        CompositionLocalProvider(LocalAboutBackBinder provides bindAboutBack) {
+        CompositionLocalProvider(LocalAboutBackArmed provides aboutBackArmed) {
         CompositionLocalProvider(LocalShellObscured provides (aboutPresent || baseBusy)) {
             Box(
                 modifier = Modifier
@@ -209,40 +214,42 @@ fun ProductShellHost(
                 }
             }
         }
-        // Consume leftover pointers on the About overlay itself (Final pass, after
-        // children). A prior sibling consume-all Box ate About/OpenSource clicks on iOS.
+        // Leftover Final-pass consume is a sibling behind About, not a parent
+        // pointerInput on this AnimatedVisibility. A parent consume swallowed
+        // mid-enter taps whenever scale made the layout hit miss the button.
+        var aboutOverlayWidthPx by remember { mutableIntStateOf(0) }
         aboutCover.AnimatedVisibility(
             visible = { it },
-            enter = ProductShellTransitions.aboutEnter(motionPolicy),
-            exit = ProductShellTransitions.aboutExit(motionPolicy),
+            enter = EnterTransition.None,
+            exit = ExitTransition.None,
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Final)
-                            event.changes.forEach { change ->
-                                if (!change.isConsumed) change.consume()
-                            }
-                        }
-                    }
+                .onSizeChanged { aboutOverlayWidthPx = it.width }
+                .offset {
+                    IntOffset((aboutLayoutSlide.value * aboutOverlayWidthPx).roundToInt(), 0)
+                }
+                .graphicsLayer {
+                    scaleX = aboutScale.value
+                    scaleY = aboutScale.value
                 },
         ) {
-            content(ProductShellNav.Route.About)
-        }
-        if (aboutPresent) {
-            // Rest-positioned hit target. AV enter/exit transforms the painted About
-            // tree; this sibling stays at layout top-start so id=aboutBack hits during
-            // the slide. Empty IconButton: no second glyph, same 48.dp target.
             Box(Modifier.fillMaxSize()) {
-                IconButton(
-                    onClick = { aboutBackHandler?.invoke() },
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .safeDrawingPadding()
-                        .testTag("aboutBack"),
-                ) {
-                    Box(Modifier.size(24.dp))
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Final)
+                                    event.changes.forEach { change ->
+                                        if (!change.isConsumed) change.consume()
+                                    }
+                                }
+                            }
+                        },
+                )
+                CompositionLocalProvider(LocalShellObscured provides openSourceOpen) {
+                    content(ProductShellNav.Route.About)
                 }
             }
         }
@@ -251,11 +258,10 @@ fun ProductShellHost(
 }
 
 /**
- * About enter/exit mirrors production Activity transitions
- * (`activity_open_in/out`, `activity_close_in/out`).
- *
- * About is drawn in a sibling overlay, so z-index on [ContentTransform] is no longer
- * load-bearing for About. Launch↔Editor still uses [transform].
+ * Launch↔Editor still uses [transform]. Product About is a sibling overlay:
+ * layout offset for the full-page slide, graphicsLayer scale 0.75 around center.
+ * [aboutEnter] / [aboutExit] are fallbacks for About inside the
+ * base [AnimatedContent] (tests / accidental); they are not the overlay path.
  */
 object ProductShellTransitions {
     /** Covered Launch/Editor rest scale (production `activity_open_out`). */
@@ -274,16 +280,19 @@ object ProductShellTransitions {
         easing = FastOutSlowInEasing,
     )
 
-    private fun shortFloat(policy: MotionPolicy) = tween<Float>(
+    internal fun shortFloatSpec(policy: MotionPolicy) = tween<Float>(
         durationMillis = motionDurationMs(policy, EwmTheme.motion.shellShortMs),
         easing = FastOutSlowInEasing,
     )
+
+    private fun shortFloat(policy: MotionPolicy) = shortFloatSpec(policy)
 
     private fun shortOffset(policy: MotionPolicy) = tween<IntOffset>(
         durationMillis = motionDurationMs(policy, EwmTheme.motion.shellShortMs),
         easing = FastOutSlowInEasing,
     )
 
+    /** Used by [transform] if About is in the base AnimatedContent. */
     fun aboutEnter(policy: MotionPolicy = MotionPolicy.Full): EnterTransition =
         slideInHorizontally(animationSpec = mediumOffset(policy)) { full -> full } +
             scaleIn(initialScale = 0.75f, animationSpec = mediumFloatSpec(policy))
@@ -297,12 +306,10 @@ object ProductShellTransitions {
      * Enter from the trailing edge; exit reverses. About stays live underneath (no under-cover).
      */
     fun openSourceEnter(policy: MotionPolicy = MotionPolicy.Full): EnterTransition =
-        fadeIn(animationSpec = shortFloat(policy)) +
-            slideInHorizontally(animationSpec = shortOffset(policy)) { full -> full }
+        fadeIn(animationSpec = shortFloat(policy))
 
     fun openSourceExit(policy: MotionPolicy = MotionPolicy.Full): ExitTransition =
-        fadeOut(animationSpec = shortFloat(policy)) +
-            slideOutHorizontally(animationSpec = shortOffset(policy)) { full -> full }
+        fadeOut(animationSpec = shortFloat(policy))
 
     fun transform(
         initialState: ProductShellNav.Route,

@@ -152,6 +152,23 @@ internal class L1Session {
     var libraryReadDenied by mutableStateOf(false)
     var openGalleryClicks by mutableStateOf(0)
     var recoveryClosed by mutableStateOf(false)
+    var lastOpenSourceLink by mutableStateOf<String?>(null)
+
+    /**
+     * Host-style back: About returns to [aboutReturn]; Editor back leaves to Launch
+     * and drops the selection (Session [AppIntent.NavigateBack]).
+     */
+    fun navigateBackLikeHost() {
+        when (route) {
+            ProductShellNav.Route.About -> route = aboutReturn
+            ProductShellNav.Route.Editor -> {
+                route = ProductShellNav.Route.Launch
+                images = emptyList()
+                selected = null
+            }
+            ProductShellNav.Route.Launch -> Unit
+        }
+    }
     var exportRecovery by mutableStateOf(
         ExportRecoveryUi.fromJob(
             isSaving = false,
@@ -392,9 +409,10 @@ internal class EmptyMediaLibraryPort : MediaLibraryPort {
 internal fun L1ProductTree(
     session: L1Session,
     modifier: Modifier = Modifier.size(L1CompactWidthDp.dp, L1CompactHeightDp.dp),
+    motionPolicy: MotionPolicy = MotionPolicy.Off,
 ) {
     val previewBitmap = remember(session.waterMark) { composeL1Preview(session.waterMark) }
-    ProvideMotionPolicy(MotionPolicy.Off) {
+    ProvideMotionPolicy(motionPolicy) {
         AppTheme(darkTheme = true) {
             BoxWithConstraints(modifier) {
                 val layoutClass = editorLayoutClass(maxWidth.value, maxHeight.value)
@@ -402,6 +420,7 @@ internal fun L1ProductTree(
                     ProductShellHost(
                         route = session.route,
                         aboutReturn = session.aboutReturn,
+                        openSourceOpen = session.showOpenSource,
                     ) { page ->
                         when (page) {
                             ProductShellNav.Route.Launch -> LaunchScreen(
@@ -443,7 +462,7 @@ internal fun L1ProductTree(
                     OpenSourceOverlayHost(
                         visible = session.showOpenSource,
                         onBack = { session.showOpenSource = false },
-                        onOpenLink = {},
+                        onOpenLink = { session.lastOpenSourceLink = it },
                         backIcon = SharedProductDrawables.backPainter(),
                     )
                     if (session.showLibraryReadUpsell) {
@@ -582,7 +601,7 @@ private fun L1About(session: L1Session) {
             description = "L1",
             avatar = SharedProductDrawables.avatarToviPainter(),
         ),
-        onBack = { session.route = session.aboutReturn },
+        onBack = { session.navigateBackLikeHost() },
         onVersion = {},
         onRate = {},
         onFeedback = {},

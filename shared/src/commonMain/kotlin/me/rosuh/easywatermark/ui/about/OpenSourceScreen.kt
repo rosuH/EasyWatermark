@@ -24,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.ui.LONG_TEXT_MAX_WIDTH_DP
@@ -75,11 +77,13 @@ fun OpenSourceScreen(
             ) {
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier.testTag("openSourceBack"),
+                    modifier = Modifier
+                        .testTag("openSourceBack")
+                        .semantics { contentDescription = backCd },
                 ) {
                     Icon(
                         painter = backIcon,
-                        contentDescription = backCd,
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }

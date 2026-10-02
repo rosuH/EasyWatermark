@@ -31,7 +31,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,13 +43,15 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.ui.ABOUT_CONTENT_MAX_WIDTH_DP
-import me.rosuh.easywatermark.ui.LocalAboutBackBinder
-import me.rosuh.easywatermark.ui.UnhostedAboutBackBinder
+import me.rosuh.easywatermark.ui.LocalAboutBackArmed
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
@@ -136,12 +137,7 @@ fun AboutScreen(
     contentPadding: PaddingValues = PaddingValues(),
     logo: @Composable (modifier: Modifier) -> Unit,
 ) {
-    val bindAboutBack = LocalAboutBackBinder.current
-    val hostedBack = bindAboutBack !== UnhostedAboutBackBinder
-    DisposableEffect(onBack, hostedBack) {
-        if (hostedBack) bindAboutBack(onBack)
-        onDispose { if (hostedBack) bindAboutBack(null) }
-    }
+    val aboutBackArmed = LocalAboutBackArmed.current
     val infoTitle = stringResource(Res.string.about_title_info)
     val versionTitle = stringResource(Res.string.about_title_version)
     val ratingTitle = stringResource(Res.string.about_title_rating)
@@ -182,8 +178,8 @@ fun AboutScreen(
                 )
             },
     ) {
-        // Back at top-start (production About / Material convention). Launch keeps its
-        // info entry at BottomCenter; About does not mirror that thumb target.
+        // Back at top-start (production About / Material convention). The whole
+        // page — background, halo, glyph — slides via the shell overlay offset.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -269,14 +265,22 @@ fun AboutScreen(
             }
 
             IconButton(
-                onClick = onBack,
+                onClick = { if (aboutBackArmed) onBack() },
+                enabled = aboutBackArmed,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .then(if (hostedBack) Modifier else Modifier.testTag("aboutBack")),
+                    .testTag("aboutBack")
+                    .semantics {
+                        if (aboutBackArmed) {
+                            contentDescription = backCd
+                        } else {
+                            hideFromAccessibility()
+                        }
+                    },
             ) {
                 Icon(
                     painter = icons.back,
-                    contentDescription = backCd,
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
