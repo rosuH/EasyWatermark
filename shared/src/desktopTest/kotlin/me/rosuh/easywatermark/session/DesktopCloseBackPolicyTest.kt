@@ -30,7 +30,6 @@ class DesktopCloseBackPolicyTest {
             dataStore = createWaterMarkDataStore(dir),
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val user = UserConfigRepository(createUserConfigDataStore(dir))
         val session = WatermarkSessionViewModel(

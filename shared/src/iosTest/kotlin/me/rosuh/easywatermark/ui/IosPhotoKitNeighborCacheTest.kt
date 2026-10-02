@@ -126,7 +126,6 @@ class IosPhotoKitNeighborCacheTest {
             dataStore = createWaterMarkDataStore(name = "p4_nb_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "p4_nb_uc_$id"),

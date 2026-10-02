@@ -7,7 +7,6 @@ import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
-import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
@@ -24,11 +23,11 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
- * Offset→export ordering, pure CAS merge pin, effect-order (awaited), and repo identity.
+ * Offset→export ordering, pure CAS merge pin, awaited selection, and Session identity.
  * Production APIs + capturing [ExportPipelinePort]; 5s timeout.
  *
  * Does **not** claim fire-and-forget [WatermarkSessionViewModel.dispatch] FIFO:
- * [Mutex] only serializes reduce+effects of one intent vs another; tests await each intent.
+ * The session mutex serializes publication; tests await each intent.
  */
 class OffsetExportOrderingTest {
 
@@ -56,12 +55,11 @@ class OffsetExportOrderingTest {
     private fun newSession(
         dir: File,
         port: CapturingExportPort = CapturingExportPort(),
-    ): Triple<WatermarkSessionViewModel, CapturingExportPort, WaterMarkRepository> {
+    ): Pair<WatermarkSessionViewModel, CapturingExportPort> {
         val waterRepo = WaterMarkRepository(
             dataStore = createWaterMarkDataStore(dir),
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userRepo = UserConfigRepository(createUserConfigDataStore(dir))
         val session = WatermarkSessionViewModel(
@@ -69,14 +67,14 @@ class OffsetExportOrderingTest {
             userConfigRepo = userRepo,
             exportPipeline = port,
         )
-        return Triple(session, port, waterRepo)
+        return session to port
     }
 
     @Test
-    fun applyOffset_lateStaleSync_thenExport_keepsNewOffsetsAndResult() = runBlocking {
+    fun applyOffset_configSync_thenExportFromStaleList_keepsNewOffsetsAndResult() = runBlocking {
         val dir = File(System.getProperty("java.io.tmpdir"), "offset-export-${System.nanoTime()}")
         try {
-            val (session, port, waterRepo) = newSession(dir)
+            val (session, port) = newSession(dir)
             val original = ImageInfo(
                 uri = MediaRef("file:///photo-a.jpg"),
                 offsetX = 0.5f,
@@ -84,22 +82,21 @@ class OffsetExportOrderingTest {
             )
             session.dispatchAndAwait(AppIntent.EnterEditor(selected = listOf(original)))
             val staleHostList = session.launchScreenUiStateFlow.value.selectedImageList
-            val oldSnapshot = original.copy(offsetX = 0.5f, offsetY = 0.5f)
             val dragged = original.copy(offsetX = 0.12f, offsetY = 0.88f)
 
             session.applyOffset(dragged)
             assertEquals(0.12f, session.launchScreenUiStateFlow.value.selectedImageList.single().offsetX)
-            // E1: Session is offset truth (list + cur share identity). Repo residual may lag.
+            // Session is offset truth (list + cur share identity).
             val sessionCommitted = session.launchScreenUiStateFlow.value.selectedImageList.single()
             assertEquals(0.12f, sessionCommitted.offsetX)
             assertSame(sessionCommitted, session.launchScreenUiStateFlow.value.curImageInfo)
 
-            // Late stale SyncCurrentImage must not clobber Session offsets (repo rebind prefers list entry).
-            session.dispatchAndAwait(AppIntent.SyncCurrentImage(oldSnapshot))
+            // Config publication must preserve the latest Session offsets.
+            session.dispatchAndAwait(AppIntent.SyncWaterMark(WaterMark.default.copy(text = "changed")))
             assertEquals(0.12f, session.launchScreenUiStateFlow.value.curImageInfo?.offsetX)
             assertEquals(0.12f, session.launchScreenUiStateFlow.value.selectedImageList.single().offsetX)
 
-            // Export freezes Session snapshot — not repo list.
+            // Export resolves the stale host list against the current Session snapshot.
             session.requestExport(staleHostList)
             withTimeout(5_000) {
                 while (!session.exportJobState.value.isFinished) {
@@ -149,30 +146,65 @@ class OffsetExportOrderingTest {
     }
 
     /**
- * Production UI enters editor, then selects current. Await each intent so reduce+effects
- * Complete; do not rely on fire-and-forget dispatch FIFO (Mutex is not a queue).     */
+     * Production UI awaits editor entry and selection before immediately exporting focus.
+     */
     @Test
-    fun enterEditor_thenSelectCurrent_finalIsB() = runBlocking {
+    fun enterEditor_thenSelectCurrent_immediateExportUsesB() = runBlocking {
         val dir = File(System.getProperty("java.io.tmpdir"), "offset-fx-${System.nanoTime()}")
         try {
-            val (session, _, waterRepo) = newSession(dir)
+            val (session, port) = newSession(dir)
             val a = ImageInfo(uri = MediaRef("file:///a.jpg"), offsetX = 0.5f, offsetY = 0.5f)
             val b = ImageInfo(uri = MediaRef("file:///b.jpg"), offsetX = 0.5f, offsetY = 0.5f)
 
+            session.nextSelectedPos = 1
             session.dispatchAndAwait(AppIntent.EnterEditor(selected = listOf(a, b)))
-            // After EnterEditor: list installed first, selected is list first entry (same identity).
-            assertSame(waterRepo.imageInfoList.first(), waterRepo.selectedImage.value)
-            assertEquals(a.uri, waterRepo.selectedImage.value.uri)
+            val entered = session.launchScreenUiStateFlow.value
+            assertSame(entered.selectedImageList.first(), entered.curImageInfo)
+            assertEquals(a.uri, entered.curImageInfo?.uri)
+            assertEquals(0, session.nextSelectedPos)
 
             session.dispatchAndAwait(AppIntent.SelectCurrent(b.uri))
+            val selected = session.launchScreenUiStateFlow.value
+            assertSame(selected.selectedImageList.last(), selected.curImageInfo)
+            assertEquals(b.uri, selected.curImageInfo?.uri)
+            assertEquals(2, selected.selectedImageList.size)
+            session.exportAndAwait(listOf(requireNotNull(selected.curImageInfo)))
+            assertEquals(b.uri, port.received.single().uri)
 
-            assertEquals(b.uri, session.launchScreenUiStateFlow.value.curImageInfo?.uri)
-            assertEquals(b.uri, waterRepo.selectedImage.value.uri)
-            assertSame(
-                waterRepo.imageInfoList.first { it.uri == b.uri },
-                waterRepo.selectedImage.value,
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun selectionPublication_resetsPositionOnlyForAcceptedBatch() = runBlocking {
+        val dir = File(System.getProperty("java.io.tmpdir"), "selection-pos-${System.nanoTime()}")
+        try {
+            val (session, _) = newSession(dir)
+            val image = ImageInfo(MediaRef("file:///picked.jpg"))
+            session.nextSelectedPos = 7
+            session.dispatchAndAwait(AppIntent.EnterEditor(emptyList()))
+            assertEquals(7, session.nextSelectedPos)
+            assertTrue(!session.publishEditorSelectionIf({ false }, listOf(image), WaterMark.default))
+            assertEquals(7, session.nextSelectedPos)
+            assertTrue(session.launchScreenUiStateFlow.value.selectedImageList.isEmpty())
+
+            assertTrue(session.publishEditorSelectionIf({ true }, listOf(image), WaterMark.default))
+            assertEquals(0, session.nextSelectedPos)
+            assertSame(image, session.launchScreenUiStateFlow.value.curImageInfo)
+
+            val gallery = me.rosuh.easywatermark.ui.Image(
+                id = 1, uri = image.uri, name = "picked", size = 1, date = 0, check = false,
             )
-            assertEquals(2, session.launchScreenUiStateFlow.value.selectedImageList.size)
+            session.nextSelectedPos = 7
+            session.dispatchAndAwait(AppIntent.GalleryLoaded(listOf(gallery)))
+            session.dispatchAndAwait(AppIntent.DismissGallery(selected = true))
+            assertEquals(7, session.nextSelectedPos)
+            session.dispatchAndAwait(AppIntent.ToggleGalleryItem(gallery, index = 0, checked = true))
+            session.dispatchAndAwait(AppIntent.DismissGallery(selected = true))
+            assertEquals(0, session.nextSelectedPos)
+            val launch = session.launchScreenUiStateFlow.value
+            assertSame(launch.selectedImageList.single(), launch.curImageInfo)
         } finally {
             dir.deleteRecursively()
         }
@@ -182,7 +214,7 @@ class OffsetExportOrderingTest {
     fun applyOffset_missingUri_doesNotInstallCallerAsCur() = runBlocking {
         val dir = File(System.getProperty("java.io.tmpdir"), "offset-miss-${System.nanoTime()}")
         try {
-            val (session, _, _) = newSession(dir)
+            val (session, _) = newSession(dir)
             val a = ImageInfo(uri = MediaRef("file:///keep.jpg"), offsetX = 0.5f, offsetY = 0.5f)
             session.dispatchAndAwait(AppIntent.EnterEditor(selected = listOf(a)))
             session.applyOffset(

@@ -51,7 +51,6 @@ class G3LifecycleFaultMatrixTest {
             dataStore = createWaterMarkDataStore(File(dir, "wm-store")),
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userRepo = UserConfigRepository(createUserConfigDataStore(File(dir, "user-store")))
         return WatermarkSessionViewModel(

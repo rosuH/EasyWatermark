@@ -46,7 +46,6 @@ class IosReadySelectionTransactionTest {
                 createWaterMarkDataStore(name = "ready_tx_wm_$id"),
                 defaultTextProvider = { "watermark" },
                 tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-                logError = {},
             )
             val session = WatermarkSessionViewModel(
                 waterMarkRepo = watermarks,

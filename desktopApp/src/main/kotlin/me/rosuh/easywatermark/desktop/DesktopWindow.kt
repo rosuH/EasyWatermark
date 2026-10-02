@@ -78,7 +78,6 @@ import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.DesktopIconPersistence
 import me.rosuh.easywatermark.data.repo.TemplateRepository
-import me.rosuh.easywatermark.domain.OutputPrefsEditor
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.domain.WatermarkConfigEditor
 import me.rosuh.easywatermark.render.CommonWatermarkPipeline
@@ -369,8 +368,6 @@ fun launchDesktopWindow() = application {
     }
     me.rosuh.easywatermark.ui.StartupTrace.markOnce("app_create_end")
     val exportJobState by session.exportJobState.collectAsState()
-    // the shared output-prefs write use-case over the SAME store the save flow reads.
-    val outputEditor = remember { OutputPrefsEditor(userConfigRepo) }
     // ///: the Desktop templates Room DB (commonMain Room via the desktopMain
     // BundledSQLiteDriver builder), now under the stable app-data dir and seeded from the shared desktopMain
     // seed resource on first creation (Chinese for `zh` locales, English otherwise). Room is
@@ -1744,13 +1741,13 @@ fun launchDesktopWindow() = application {
                     },
                     onFormatClick = { fmt ->
                         scope.launch {
-                            outputEditor.save(fmt, outputQuality)
+                            userConfigRepo.updateFormat(fmt)
                             outputFormat = fmt
                         }
                     },
                     onQualityChange = { q ->
                         scope.launch {
-                            outputEditor.save(outputFormat, q)
+                            userConfigRepo.updateCompressLevel(q)
                             outputQuality = q
                         }
                     },

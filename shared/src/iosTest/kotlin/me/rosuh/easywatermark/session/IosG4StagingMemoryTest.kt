@@ -82,7 +82,6 @@ class IosG4StagingMemoryTest {
             dataStore = createWaterMarkDataStore(name = "g4_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "g4_uc_$id"),

@@ -36,6 +36,17 @@ class UserConfigDataStoreRoundtripTest {
             assertEquals(60, updated.compressLevel)
             assertEquals(true, updated.preferInAppGallery)
 
+            // Each control writes only its own field, preserving the other control's latest edit.
+            repo.updateFormat(ImageFormat.JPEG)
+            val formatOnly = repo.userPreferences.first()
+            assertEquals(ImageFormat.JPEG, formatOnly.outputFormat)
+            assertEquals(60, formatOnly.compressLevel)
+
+            repo.updateCompressLevel(100)
+            val qualityOnly = repo.userPreferences.first()
+            assertEquals(ImageFormat.JPEG, qualityOnly.outputFormat)
+            assertEquals(100, qualityOnly.compressLevel)
+
             // saveVersionCode write path must not throw on the desktop store.
             repo.saveVersionCode(123)
         } finally {

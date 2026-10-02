@@ -67,7 +67,6 @@ class IosSourceOwnershipTransactionTest {
             dataStore = createWaterMarkDataStore(name = "l1_own_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "l1_own_uc_$id"),

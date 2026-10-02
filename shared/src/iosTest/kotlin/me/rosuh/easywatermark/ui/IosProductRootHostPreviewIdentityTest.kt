@@ -123,7 +123,6 @@ class IosProductRootHostPreviewIdentityTest {
             dataStore = createWaterMarkDataStore(name = "c44rs1_host_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "c44rs1_host_uc_$id"),

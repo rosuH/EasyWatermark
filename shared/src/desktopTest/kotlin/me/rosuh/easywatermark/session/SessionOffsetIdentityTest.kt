@@ -19,12 +19,12 @@ import kotlin.test.assertTrue
 /**
  * E1 S1: Session owns list / current / offset identity.
  *
- * Matrix migrated from the product path of [me.rosuh.easywatermark.data.repo.WaterMarkOffsetUpdateTest]:
+ * Matrix:
  * select + applyOffset share list/cur identity; same-offset no-op; missing URI no-op;
  * stale offset on non-current URI does not flip cur.
  *
  * Driven only by Session APIs ([WatermarkSessionViewModel.applyOffset], [AppIntent.EnterEditor],
- * [AppIntent.SelectCurrent]) — not [WaterMarkRepository.updateOffset].
+ * [AppIntent.SelectCurrent]).
  */
 class SessionOffsetIdentityTest {
 
@@ -33,7 +33,6 @@ class SessionOffsetIdentityTest {
             dataStore = createWaterMarkDataStore(dir),
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userRepo = UserConfigRepository(createUserConfigDataStore(dir))
         return WatermarkSessionViewModel(

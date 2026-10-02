@@ -35,8 +35,8 @@ import me.rosuh.easywatermark.ui.UiState
  *
  * Offset→export (narrow, KMP-safe) — E1:
  * - [applyOffset] is the **sole** offset entry: pure Session CAS on list+cur (same identity).
- * Call from UI/Main (or single-threaded hosts). No repo [updateOffset] product path.
- * - Non-export intents: [sessionMutex] serializes one intent's **reduceAndPublish + executeEffect**
+ * Call from UI/Main (or single-threaded hosts).
+ * - Non-export intents: [sessionMutex] serializes one intent's **reduceAndPublish**
  * So they do not interleave with another intent's critical section. Mutex is mutual exclusion * only — it does **not** guarantee fire-and-forget [dispatch] FIFO across concurrent launchers.
  * - Reducer publish writes launch via [MutableStateFlow.update] + pure [mergeLaunchPreservingLiveImages]
  * so a concurrent [applyOffset] is not lost on final write.
@@ -70,7 +70,7 @@ open class WatermarkSessionViewModel(
     protected var mediaLibrary: MediaLibraryPort? = null
 
     /**
- * Serializes non-export reduce + effects (coroutine Mutex — not JVM synchronized).
+ * Serializes non-export publication (coroutine Mutex — not JVM synchronized).
  * Mutual exclusion only; not a FIFO queue for independent [dispatch] launchers.
      */
     private val sessionMutex = Mutex()
@@ -89,11 +89,6 @@ open class WatermarkSessionViewModel(
                 }
                 hasSyncedInitialWatermark = true
                 applyIntent(AppIntent.SyncWaterMark(wm))
-            }
-        }
-        viewModelScope.launch(Dispatchers.Default) {
-            waterMarkRepo.selectedImage.collect {
-                applyIntent(AppIntent.SyncCurrentImage(waterMarkRepo.selectedImage.value))
             }
         }
     }
@@ -120,13 +115,9 @@ open class WatermarkSessionViewModel(
                 configEditor.updateTextStyle(intent.style)
             }
             else -> {
-                // Full non-export critical section: reduce+publish then effects of one intent
-                // do not interleave with another. Production UI awaits editor entry before select.
+                // Production UI awaits editor entry before select.
                 sessionMutex.withLock {
-                    val effects = reduceAndPublish(intent)
-                    for (effect in effects) {
-                        executeEffect(effect)
-                    }
+                    reduceAndPublish(intent)
                 }
             }
         }
@@ -136,43 +127,25 @@ open class WatermarkSessionViewModel(
  * Snapshot read → reduce → write on [Dispatchers.Main.immediate] with no suspend between.
  * Launch is published with CAS [MutableStateFlow.update] so concurrent [applyOffset] is merged.
      */
-    private suspend fun reduceAndPublish(intent: AppIntent): List<SessionEffect> {
-        var effects: List<SessionEffect> = emptyList()
+    private suspend fun reduceAndPublish(intent: AppIntent) {
         withContext(Dispatchers.Main.immediate) {
             val before = currentSnapshot()
-            val effective = when (intent) {
-                is AppIntent.SyncCurrentImage -> {
-                    // E1: Session owns list/offset. Repo selection only rebinds cur to the
-                    // Session list entry when the URI is present — never clobber Session offsets
-                    // with a stale repo ImageInfo.
-                    //
-                    // When the Session list is empty (progressive last-remove / leave-editor), do
-                    // **not** re-inject repository.selectedImage into curImageInfo — that URI may
-                    // already have been deleted as an owned ewm_src and must not reappear.
-                    val list = before.launch.selectedImageList
-                    if (list.isEmpty()) {
-                        AppIntent.SyncCurrentImage(null)
-                    } else {
-                        val repoInfo = waterMarkRepo.selectedImage.value
-                        val match = list.firstOrNull { it.uri == repoInfo.uri }
-                        AppIntent.SyncCurrentImage(match ?: repoInfo)
-                    }
-                }
-                else -> intent
+            val result = reduceSessionUi(before, intent)
+            if (result !== before &&
+                (intent is AppIntent.EnterEditor || intent is AppIntent.DismissGallery && intent.selected)
+            ) {
+                nextSelectedPos = 0
             }
-            val result = reduceSessionUi(before, effective)
-            effects = result.effects
             _launchScreenUiStateFlow.update { current ->
                 mergeLaunchPreservingLiveImages(
-                    reduced = result.snapshot.launch,
+                    reduced = result.launch,
                     live = current,
                     before = before.launch,
                 )
             }
-            _galleryPickedImageList.value = result.snapshot.galleryPicked
-            _uiState.value = result.snapshot.dialogUi
+            _galleryPickedImageList.value = result.galleryPicked
+            _uiState.value = result.dialogUi
         }
-        return effects
     }
 
     private fun currentSnapshot(): SessionUiSnapshot = SessionUiSnapshot(
@@ -210,32 +183,9 @@ open class WatermarkSessionViewModel(
         }
     }
 
-    private suspend fun executeEffect(effect: SessionEffect) {
-        when (effect) {
-            is SessionEffect.CommitImageSelection -> commitImageSelection(effect.list)
-            is SessionEffect.SelectImage -> {
-                if (waterMarkRepo.selectedImage.value.uri != effect.ref) {
-                    waterMarkRepo.select(effect.ref)
-                }
-            }
-        }
-    }
-
-    private suspend fun commitImageSelection(list: List<ImageInfo>) {
-        if (list.isEmpty()) return
-        // Install list first so select(first) resolves to the same list entry (not a temp ImageInfo).
-        waterMarkRepo.updateImageList(list)
-        nextSelectedPos = 0
-        waterMarkRepo.select(list.first().uri)
-    }
-
     fun resetJobStatus() {
         // E1: product export path owns job flags on Session list entries.
         _launchScreenUiStateFlow.value.selectedImageList.forEach {
-            it.jobState = JobState.Ready
-        }
-        // Residual: keep repo mirror in sync for any non-product residual consumers.
-        waterMarkRepo.imageInfoList.forEach {
             it.jobState = JobState.Ready
         }
         _exportJobState.value = ExportJobState()
@@ -292,15 +242,9 @@ open class WatermarkSessionViewModel(
     /**
      * Generation-scoped EnterEditor (+ optional SelectCurrent) publication (F12/F16).
      *
-     * Under [sessionMutex], a single [stillValid] check gates **both** repository selection
-     * effects and launch StateFlow writes on [Dispatchers.Main.immediate]. Repo commits
-     * ([SessionEffect.CommitImageSelection] / [SessionEffect.SelectImage]) run in the same
-     * Main.immediate window as StateFlow updates — they use Main.immediate themselves and do
-     * not yield when already on Main — so there is no post-StateFlow suspending effect window
-     * where a newer generation can still install A into the repository.
-     *
-     * When [stillValid] is false, **neither** StateFlow nor repository selection is written.
-     * No publish-then-rollback.
+     * Under [sessionMutex], a single [stillValid] check gates all selection StateFlow writes
+     * on [Dispatchers.Main.immediate], with no suspension between the check and publication.
+     * When [stillValid] is false, nothing is written. No publish-then-rollback.
      *
      * @return true if published; false if skipped.
      */
@@ -314,7 +258,7 @@ open class WatermarkSessionViewModel(
         return sessionMutex.withLock {
             var published = false
             withContext(Dispatchers.Main.immediate) {
-                // Single validity check immediately before any repo or StateFlow write.
+                // Single validity check immediately before any StateFlow write.
                 if (!stillValid()) return@withContext
                 // Same selection-boundary reset as [enterEditor] (iOS progressive import path).
                 if (!_exportJobState.value.isSaving) {
@@ -329,8 +273,7 @@ open class WatermarkSessionViewModel(
                         waterMark = waterMark,
                     ),
                 )
-                var mid = enter.snapshot
-                val effects = enter.effects.toMutableList()
+                var mid = enter
 
                 if (
                     focusUriIfNotFirst != null &&
@@ -340,28 +283,11 @@ open class WatermarkSessionViewModel(
                         mid,
                         AppIntent.SelectCurrent(focusUriIfNotFirst),
                     )
-                    effects += select.effects
-                    mid = select.snapshot
+                    mid = select
                 }
 
-                // Repo selection first (same Main.immediate frame — no interleaving suspend).
-                for (effect in effects) {
-                    when (effect) {
-                        is SessionEffect.CommitImageSelection -> {
-                            if (effect.list.isEmpty()) continue
-                            waterMarkRepo.updateImageList(effect.list)
-                            nextSelectedPos = 0
-                            waterMarkRepo.select(effect.list.first().uri)
-                        }
-                        is SessionEffect.SelectImage -> {
-                            if (waterMarkRepo.selectedImage.value.uri != effect.ref) {
-                                waterMarkRepo.select(effect.ref)
-                            }
-                        }
-                    }
-                }
+                if (selected.isNotEmpty()) nextSelectedPos = 0
 
-                // Launch StateFlow only after repo selection is installed in the same window.
                 _launchScreenUiStateFlow.update { current ->
                     mergeLaunchPreservingLiveImages(
                         reduced = mid.launch,
@@ -575,7 +501,6 @@ open class WatermarkSessionViewModel(
      * E1: pure Session CAS on [launchScreenUiStateFlow]. List entry and cur share the same
      * committed object when URI matches. Offset-only: preserves dims/job flags from the
      * existing list entry; does not mutate the caller object. Missing URI is a no-op.
-     * Does **not** write [WaterMarkRepository.updateOffset] (repo residual only).
      * Do not invent a second async [AppIntent] path or cross-thread fire-and-forget dual write.
      */
     fun applyOffset(info: ImageInfo) {

@@ -6,7 +6,7 @@ import me.rosuh.easywatermark.ui.LaunchScreenUiState
 import me.rosuh.easywatermark.ui.UiState
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class SessionReducerTest {
@@ -23,9 +23,8 @@ class SessionReducerTest {
     @Test
     fun galleryLoaded_opensDialog() {
         val r = reduceSessionUi(SessionUiSnapshot(), AppIntent.GalleryLoaded(listOf(img(1))))
-        assertEquals(LaunchScreenUiState.GalleryDialog, r.snapshot.launch.uiState)
-        assertEquals(1, r.snapshot.galleryPicked?.size)
-        assertTrue(r.effects.isEmpty())
+        assertEquals(LaunchScreenUiState.GalleryDialog, r.launch.uiState)
+        assertEquals(1, r.galleryPicked?.size)
     }
 
     @Test
@@ -41,7 +40,7 @@ class SessionReducerTest {
             base,
             AppIntent.ToggleGalleryItem(img(1), index = 0, checked = true),
         )
-        val picked = r.snapshot.galleryPicked.orEmpty()
+        val picked = r.galleryPicked.orEmpty()
         assertEquals(true, picked[0].check)
         assertEquals(false, picked[1].check)
     }
@@ -52,9 +51,9 @@ class SessionReducerTest {
             galleryPicked = listOf(img(1, checked = true), img(2, checked = false)),
         )
         val r = reduceSessionUi(base, AppIntent.DismissGallery(selected = true))
-        assertEquals(LaunchScreenUiState.Editor, r.snapshot.launch.uiState)
-        assertEquals(1, r.snapshot.launch.selectedImageList.size)
-        assertIs<SessionEffect.CommitImageSelection>(r.effects.single())
+        assertEquals(LaunchScreenUiState.Editor, r.launch.uiState)
+        assertEquals(1, r.launch.selectedImageList.size)
+        assertSame(r.launch.selectedImageList.single(), r.launch.curImageInfo)
     }
 
     @Test
@@ -66,9 +65,8 @@ class SessionReducerTest {
             ),
         )
         val r = reduceSessionUi(base, AppIntent.DismissGallery(selected = false))
-        assertEquals(LaunchScreenUiState.Launch, r.snapshot.launch.uiState)
-        assertTrue(r.snapshot.galleryPicked!!.isEmpty())
-        assertTrue(r.effects.isEmpty())
+        assertEquals(LaunchScreenUiState.Launch, r.launch.uiState)
+        assertTrue(r.galleryPicked!!.isEmpty())
     }
 
     @Test
@@ -85,11 +83,11 @@ class SessionReducerTest {
             ),
         )
         val r = reduceSessionUi(base, AppIntent.NavigateBack)
-        assertEquals(LaunchScreenUiState.Launch, r.snapshot.launch.uiState)
-        assertTrue(r.snapshot.launch.imageList.isEmpty())
+        assertEquals(LaunchScreenUiState.Launch, r.launch.uiState)
+        assertTrue(r.launch.imageList.isEmpty())
         // E2: discard transient batch selection on leave-editor.
-        assertTrue(r.snapshot.launch.selectedImageList.isEmpty())
-        assertEquals(null, r.snapshot.launch.curImageInfo)
+        assertTrue(r.launch.selectedImageList.isEmpty())
+        assertEquals(null, r.launch.curImageInfo)
     }
 
     @Test
@@ -101,8 +99,8 @@ class SessionReducerTest {
             ),
         )
         val r = reduceSessionUi(base, AppIntent.NavigateBack)
-        assertEquals(LaunchScreenUiState.Launch, r.snapshot.launch.uiState)
-        assertTrue(r.snapshot.galleryPicked!!.isEmpty())
+        assertEquals(LaunchScreenUiState.Launch, r.launch.uiState)
+        assertTrue(r.galleryPicked!!.isEmpty())
     }
 
     /** E0 R1 — About from Launch returns to Launch. */
@@ -112,10 +110,10 @@ class SessionReducerTest {
             SessionUiSnapshot(),
             AppIntent.OpenAbout(returnTo = LaunchScreenUiState.Launch),
         )
-        assertEquals(LaunchScreenUiState.About, opened.snapshot.launch.uiState)
-        assertEquals(LaunchScreenUiState.Launch, opened.snapshot.launch.aboutReturnUiState)
-        val back = reduceSessionUi(opened.snapshot, AppIntent.NavigateBack)
-        assertEquals(LaunchScreenUiState.Launch, back.snapshot.launch.uiState)
+        assertEquals(LaunchScreenUiState.About, opened.launch.uiState)
+        assertEquals(LaunchScreenUiState.Launch, opened.launch.aboutReturnUiState)
+        val back = reduceSessionUi(opened, AppIntent.NavigateBack)
+        assertEquals(LaunchScreenUiState.Launch, back.launch.uiState)
     }
 
     /** E0 R2 — About from Editor returns to Editor; selection preserved. */
@@ -135,13 +133,13 @@ class SessionReducerTest {
             editor,
             AppIntent.OpenAbout(returnTo = LaunchScreenUiState.Editor),
         )
-        assertEquals(LaunchScreenUiState.About, opened.snapshot.launch.uiState)
-        assertEquals(LaunchScreenUiState.Editor, opened.snapshot.launch.aboutReturnUiState)
-        assertEquals(1, opened.snapshot.launch.selectedImageList.size)
-        val back = reduceSessionUi(opened.snapshot, AppIntent.NavigateBack)
-        assertEquals(LaunchScreenUiState.Editor, back.snapshot.launch.uiState)
-        assertEquals(1, back.snapshot.launch.selectedImageList.size)
-        assertEquals(MediaRef("content://sel/1"), back.snapshot.launch.selectedImageList.first().uri)
+        assertEquals(LaunchScreenUiState.About, opened.launch.uiState)
+        assertEquals(LaunchScreenUiState.Editor, opened.launch.aboutReturnUiState)
+        assertEquals(1, opened.launch.selectedImageList.size)
+        val back = reduceSessionUi(opened, AppIntent.NavigateBack)
+        assertEquals(LaunchScreenUiState.Editor, back.launch.uiState)
+        assertEquals(1, back.launch.selectedImageList.size)
+        assertEquals(MediaRef("content://sel/1"), back.launch.selectedImageList.first().uri)
     }
 
     /** E0 R3 — EnterEditor then NavigateBack → Launch. */
@@ -154,25 +152,25 @@ class SessionReducerTest {
             SessionUiSnapshot(),
             AppIntent.EnterEditor(selected = selected),
         )
-        assertEquals(LaunchScreenUiState.Editor, entered.snapshot.launch.uiState)
-        val back = reduceSessionUi(entered.snapshot, AppIntent.NavigateBack)
-        assertEquals(LaunchScreenUiState.Launch, back.snapshot.launch.uiState)
-        assertTrue(back.snapshot.launch.selectedImageList.isEmpty())
-        assertEquals(null, back.snapshot.launch.curImageInfo)
+        assertEquals(LaunchScreenUiState.Editor, entered.launch.uiState)
+        val back = reduceSessionUi(entered, AppIntent.NavigateBack)
+        assertEquals(LaunchScreenUiState.Launch, back.launch.uiState)
+        assertTrue(back.launch.selectedImageList.isEmpty())
+        assertEquals(null, back.launch.curImageInfo)
     }
 
     @Test
     fun templateDialogs_updateUiState() {
         assertEquals(
             UiState.GoTemplate,
-            reduceSessionUi(SessionUiSnapshot(), AppIntent.GoTemplate).snapshot.dialogUi,
+            reduceSessionUi(SessionUiSnapshot(), AppIntent.GoTemplate).dialogUi,
         )
         assertEquals(
             UiState.None,
             reduceSessionUi(
                 SessionUiSnapshot(dialogUi = UiState.GoTemplate),
                 AppIntent.ResetEditDialog,
-            ).snapshot.dialogUi,
+            ).dialogUi,
         )
     }
 
@@ -182,13 +180,12 @@ class SessionReducerTest {
             SessionUiSnapshot(),
             AppIntent.ApplyConfig(me.rosuh.easywatermark.data.model.WatermarkConfigChange.Text("x")),
         )
-        assertEquals(LaunchScreenUiState.Launch, r.snapshot.launch.uiState)
-        assertTrue(r.effects.isEmpty())
+        assertEquals(LaunchScreenUiState.Launch, r.launch.uiState)
     }
 
-    /** U0/E06 filmstrip: selection updates curImageInfo immediately + SelectImage effect. */
+    /** U0/E06 filmstrip: selection updates curImageInfo immediately. */
     @Test
-    fun selectCurrent_emitsSelectImageEffect() {
+    fun selectCurrent_updatesFocusImmediately() {
         val a = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///a.jpg"))
         val b = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///b.jpg"))
         val base = SessionUiSnapshot(
@@ -199,11 +196,8 @@ class SessionReducerTest {
             ),
         )
         val r = reduceSessionUi(base, AppIntent.SelectCurrent(b.uri))
-        val effect = r.effects.single()
-        assertIs<SessionEffect.SelectImage>(effect)
-        assertEquals(b.uri, effect.ref)
-        // Critical for iOS: curImageInfo must flip in the same reduce (not async SyncCurrentImage).
-        assertEquals(b.uri, r.snapshot.launch.curImageInfo?.uri)
+        assertSame(b, r.launch.curImageInfo)
+        assertEquals(b.uri, r.launch.curImageInfo?.uri)
     }
 
     @Test
@@ -217,53 +211,11 @@ class SessionReducerTest {
             ),
         )
         val r = reduceSessionUi(base, AppIntent.SelectCurrent(a.uri))
-        assertTrue(r.effects.isEmpty())
-    }
-
-    /**
- * CLAMP drag → [AppIntent.SyncCurrentImage] must update **both** curImageInfo and the
- * Matching selectedImageList entry. Export uses selectedImageList (not only cur).     */
-    @Test
-    fun syncCurrentImage_replacesMatchingSelectedListOffsets() {
-        val a = me.rosuh.easywatermark.data.model.ImageInfo(
-            MediaRef("file:///a.jpg"),
-            offsetX = 0.5f,
-            offsetY = 0.5f,
-        )
-        val b = me.rosuh.easywatermark.data.model.ImageInfo(
-            MediaRef("file:///b.jpg"),
-            offsetX = 0.5f,
-            offsetY = 0.5f,
-        )
-        val base = SessionUiSnapshot(
-            launch = me.rosuh.easywatermark.ui.LaunchScreenState(
-                uiState = LaunchScreenUiState.Editor,
-                selectedImageList = listOf(a, b),
-                curImageInfo = a,
-            ),
-        )
-        val draggedA = a.copy(offsetX = 0.12f, offsetY = 0.88f)
-        val r = reduceSessionUi(base, AppIntent.SyncCurrentImage(draggedA))
-
-        val cur = r.snapshot.launch.curImageInfo
-        assertEquals(a.uri, cur?.uri)
-        assertEquals(0.12f, cur?.offsetX)
-        assertEquals(0.88f, cur?.offsetY)
-
-        // List entry for A must carry new offsets (export input for hosts that read selectedImageList).
-        val exportList = r.snapshot.launch.selectedImageList
-        assertEquals(2, exportList.size)
-        val exportA = exportList.first { it.uri == a.uri }
-        val exportB = exportList.first { it.uri == b.uri }
-        assertEquals(0.12f, exportA.offsetX)
-        assertEquals(0.88f, exportA.offsetY)
-        assertEquals(0.5f, exportB.offsetX)
-        assertEquals(0.5f, exportB.offsetY)
-        assertEquals(draggedA.offsetX, exportList[0].offsetX)
+        assertSame(base, r)
     }
 
     @Test
-    fun syncCurrentImage_null_clearsCurOnly() {
+    fun selectCurrent_missingRef_keepsSelection() {
         val a = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///a.jpg"))
         val base = SessionUiSnapshot(
             launch = me.rosuh.easywatermark.ui.LaunchScreenState(
@@ -272,9 +224,16 @@ class SessionReducerTest {
                 curImageInfo = a,
             ),
         )
-        val r = reduceSessionUi(base, AppIntent.SyncCurrentImage(null))
-        assertEquals(null, r.snapshot.launch.curImageInfo)
-        assertEquals(1, r.snapshot.launch.selectedImageList.size)
-        assertEquals(a.uri, r.snapshot.launch.selectedImageList.single().uri)
+        assertSame(base, reduceSessionUi(base, AppIntent.SelectCurrent(MediaRef("file:///missing.jpg"))))
+    }
+
+    @Test
+    fun navigateBack_thenSelectOldRef_doesNotRestoreDiscardedSelection() {
+        val a = me.rosuh.easywatermark.data.model.ImageInfo(MediaRef("file:///a.jpg"))
+        val entered = reduceSessionUi(SessionUiSnapshot(), AppIntent.EnterEditor(listOf(a)))
+        val left = reduceSessionUi(entered, AppIntent.NavigateBack)
+        val after = reduceSessionUi(left, AppIntent.SelectCurrent(a.uri))
+        assertTrue(after.launch.selectedImageList.isEmpty())
+        assertEquals(null, after.launch.curImageInfo)
     }
 }

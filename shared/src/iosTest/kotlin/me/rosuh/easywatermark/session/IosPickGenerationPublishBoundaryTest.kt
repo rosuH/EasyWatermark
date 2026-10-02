@@ -41,7 +41,7 @@ import kotlin.test.assertTrue
 
 /**
  * Issue 26 / C4.4R.S1 **F12/F16** — generation validity across the real publication chain:
- * Session StateFlow + repository selection + host preview/cache + icon config.
+ * Session selection + host preview/cache + icon config.
  *
  * Each case pauses G1 at a production probe, begins empty/failed G2, resumes G1, and proves
  * A never appears on that boundary after G2 began.
@@ -82,7 +82,6 @@ class IosPickGenerationPublishBoundaryTest {
             dataStore = createWaterMarkDataStore(name = "c44rs1_f16_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "c44rs1_f16_uc_$id"),
@@ -122,18 +121,11 @@ class IosPickGenerationPublishBoundaryTest {
             .map { it.uri.value }
             .filter { it.contains("ewm_src_") }
 
-    private fun repoHasStaged(graph: Graph): Boolean {
-        val list = graph.services.waterMarkRepo.imageInfoList
-        val selected = graph.services.waterMarkRepo.selectedImage.value
-        return list.any { it.uri.value.contains("ewm_src_") } ||
-            selected.uri.value.contains("ewm_src_")
-    }
-
     /**
-     * F12/F16: pause before Session+repo guarded publish; empty G2; never StateFlow/repo A.
+     * F12/F16: pause before guarded Session publication; empty G2; never publish A.
      */
     @Test
-    fun f16_pause_at_session_repo_boundary_empty_g2_never_emits_a() = runTest(mainDispatcher.scheduler) {
+    fun f16_pause_at_session_boundary_empty_g2_never_emits_a() = runTest(mainDispatcher.scheduler) {
         val graph = isolatedGraph()
         try {
             val aBytes = solidPng(Color(0xFFAA0000))
@@ -171,7 +163,7 @@ class IosPickGenerationPublishBoundaryTest {
             assertTrue(g2 > g1)
             assertFalse(IosPickGenerationGate.isPhotoCurrent(g1))
             assertTrue(stagedUris(graph).isEmpty(), "A must not be on Session while paused")
-            assertFalse(repoHasStaged(graph), "A must not be in repo while paused")
+            assertTrue(graph.services.session.launchScreenUiStateFlow.value.curImageInfo == null)
 
             releaseG1.complete(Unit)
             val result = g1Job.await()
@@ -186,7 +178,7 @@ class IosPickGenerationPublishBoundaryTest {
                 "StateFlow must never emit staged A after G2 (emissions=$emissions)",
             )
             assertTrue(stagedUris(graph).isEmpty(), "final Session must not hold A")
-            assertFalse(repoHasStaged(graph), "repo must not persist A after empty G2")
+            assertTrue(graph.services.session.launchScreenUiStateFlow.value.curImageInfo == null)
         } finally {
             IosPickPublishProbe.clear()
             graph.close()

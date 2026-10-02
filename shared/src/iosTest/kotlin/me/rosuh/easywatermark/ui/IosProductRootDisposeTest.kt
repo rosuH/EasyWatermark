@@ -35,7 +35,6 @@ class IosProductRootDisposeTest {
             dataStore = createWaterMarkDataStore(name = "e2_dispose_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "e2_dispose_uc_$id"),
