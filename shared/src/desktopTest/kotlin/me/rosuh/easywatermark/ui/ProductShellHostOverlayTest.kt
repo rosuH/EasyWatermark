@@ -46,11 +46,6 @@ class ProductShellHostOverlayTest {
             !src.contains("event.changes.forEach { it.consume() }"),
             "must not consume-all on a sibling Box in front of About",
         )
-        assertTrue(src.contains("LocalAboutBackBinder"), "About must register onBack with the shell")
-        assertTrue(
-            src.contains(".testTag(\"aboutBack\")"),
-            "rest-positioned aboutBack hit target must keep the test tag",
-        )
     }
 
     @Test

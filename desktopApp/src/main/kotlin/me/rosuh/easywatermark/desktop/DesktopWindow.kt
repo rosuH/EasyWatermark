@@ -1144,6 +1144,7 @@ fun launchDesktopWindow() = application {
                 route = productRoute,
                 aboutReturn = aboutReturn,
                 chromeColor = windowChromeColor,
+                openSourceOpen = showOpenSource,
             ) { route ->
             when (route) {
                 ProductShellNav.Route.Launch -> {

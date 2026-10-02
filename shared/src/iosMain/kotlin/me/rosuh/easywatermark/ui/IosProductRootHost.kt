@@ -1021,6 +1021,7 @@ class IosProductRootHost(
                 route = productRoute,
                 aboutReturn = aboutReturn,
                 modifier = Modifier.fillMaxSize(),
+                openSourceOpen = showOpenSource,
             ) { route ->
                 when (route) {
                 ProductShellNav.Route.Launch -> {
