@@ -45,12 +45,6 @@ GRADLE_NAMESPACE_PATTERN = (
 GRADLE_NAMESPACE_PROP_PATTERN = (
     r'namespace\s*[:=]?\s*project\.property\(\s*[\'"]([^\'"]+)[\'"]\s*\)'
 )
-GRADLE_GROUP_PATTERN = (
-    r'group(?:Id)?\s*(?:[:=]|\.set\(?)\s*[\'"]?([a-zA-Z0-9._]+)[\'"]?\)?'
-)
-GRADLE_GROUP_PROP_PATTERN = (
-    r'group(?:Id)?\s*[:=]?\s*project\.property\(\s*[\'"]([^\'"]+)[\'"]\s*\)'
-)
 GRADLE_TARGET_SDK_PATTERN = (
     r"targetSdk(?:Version)?(?:\.set\(?)?\s*[:="
     r" (]*\s*([\'\"]?[\w\d_\.]+[\'\"]?)\)?"
@@ -370,16 +364,6 @@ def parse_application_modules(
               if ns_prop_match:
                 app_id = lookups["properties"].get(ns_prop_match.group(1))
 
-          # Fallback to group / groupId if applicationId and namespace are missing
-          if not app_id:
-            group_match = re.search(GRADLE_GROUP_PATTERN, content)
-            if group_match:
-              app_id = group_match.group(1)
-            else:
-              group_prop_match = re.search(GRADLE_GROUP_PROP_PATTERN, content)
-              if group_prop_match:
-                app_id = lookups["properties"].get(group_prop_match.group(1))
-
           modules.append({
               "name": mod_name,
               "path": mod_dir,
@@ -422,9 +406,6 @@ def determine_primary_identity(
     primary_id = (
         gradle_properties.get("applicationId")
         or gradle_properties.get("namespace")
-        or gradle_properties.get("group")
-        or gradle_properties.get("groupId")
-        or gradle_properties.get("GROUP")
     )
   if not primary_sdk:
     primary_sdk = _resolve_to_int(
