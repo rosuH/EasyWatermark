@@ -61,9 +61,20 @@ it.each([1, 5])(
       height: 100,
     } as unknown as HTMLCanvasElement;
     const update = vi.fn();
-    const stop = watchMedia(canvas, "android", "mock", update);
+    const diagnose = vi.fn();
+    const stop = watchMedia(canvas, "android", "mock", update, diagnose);
     await vi.advanceTimersByTimeAsync(0);
     expect(decode).toHaveBeenCalledTimes(1);
+    expect(diagnose).toHaveBeenCalledTimes(1);
+    expect(diagnose.mock.calls[0][0]).toMatchObject({
+      reason: "decoder-backlog",
+      firstPacketMs: 0,
+      firstIdrMs: 0,
+      firstOutputMs: null,
+      decodeCount: 1,
+      outputCount: 0,
+      maxQueue: 6,
+    });
     expect(close).toHaveBeenCalledTimes(1);
     expect(videoSignal?.aborted).toBe(true);
     expect(read).toHaveBeenCalledTimes(1);
@@ -79,3 +90,111 @@ it.each([1, 5])(
     expect(fetchMock).toHaveBeenCalledTimes(2);
   },
 );
+
+it.each([false, true])(
+  "keeps the original 2s deadline with first packet received=%s",
+  async (hasPacket) => {
+    vi.useFakeTimers();
+    const decoder = vi.fn();
+    vi.stubGlobal("VideoDecoder", decoder);
+    const read = vi.fn().mockImplementation(() => new Promise(() => {}));
+    if (hasPacket)
+      read.mockResolvedValueOnce({ done: false, value: packet(7) });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url.startsWith("/api/device-video")
+          ? { ok: true, status: 200, body: { getReader: () => ({ read }) } }
+          : { ok: false, status: 204 },
+      ),
+    );
+    const canvas = {
+      getContext: () => ({ clearRect: vi.fn() }),
+      width: 0,
+      height: 0,
+    } as unknown as HTMLCanvasElement;
+    const diagnose = vi.fn();
+    const stop = watchMedia(canvas, "android", "mock", vi.fn(), diagnose);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(diagnose).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(diagnose).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        reason: "first-frame-timeout",
+        elapsedMs: 2000,
+        firstPacketMs: hasPacket ? 0 : null,
+        firstIdrMs: null,
+        firstOutputMs: null,
+        decodeCount: 0,
+        outputCount: 0,
+        maxQueue: 0,
+      }),
+    );
+    expect(decoder).not.toHaveBeenCalled();
+    stop();
+  },
+);
+
+it("records the decoder's real error once, before the fallback's fetch result", async () => {
+  vi.useFakeTimers();
+  class Decoder {
+    state = "configured";
+    decodeQueueSize = 0;
+    constructor(private callbacks: { error: (error: DOMException) => void }) {}
+    configure() {}
+    decode() {
+      queueMicrotask(() =>
+        this.callbacks.error(
+          new DOMException("fixture decode rejected", "EncodingError"),
+        ),
+      );
+    }
+    close() {
+      this.state = "closed";
+    }
+  }
+  vi.stubGlobal("VideoDecoder", Decoder);
+  vi.stubGlobal(
+    "EncodedVideoChunk",
+    class {
+      constructor(public init: unknown) {}
+    },
+  );
+  const read = vi
+    .fn()
+    .mockResolvedValueOnce({
+      done: false,
+      value: concat([packet(7), packet(8), packet(5)]),
+    })
+    .mockImplementation(() => new Promise(() => {}));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) =>
+      url.startsWith("/api/device-video")
+        ? { ok: true, status: 200, body: { getReader: () => ({ read }) } }
+        : { ok: false, status: 204 },
+    ),
+  );
+  const canvas = {
+    getContext: () => ({ clearRect: vi.fn() }),
+    width: 0,
+    height: 0,
+  } as unknown as HTMLCanvasElement;
+  const diagnose = vi.fn();
+  const stop = watchMedia(canvas, "android", "mock", vi.fn(), diagnose);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(diagnose).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      reason: "decoder-error",
+      errorName: "EncodingError",
+      errorMessage: "fixture decode rejected",
+      decodeCount: 1,
+      outputCount: 0,
+      firstIdrMs: 0,
+      firstOutputMs: null,
+    }),
+  );
+  await vi.advanceTimersByTimeAsync(2500);
+  expect(diagnose).toHaveBeenCalledTimes(1);
+  stop();
+});
