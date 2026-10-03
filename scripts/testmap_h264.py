@@ -112,12 +112,27 @@ def split_annexb(buf: bytearray) -> tuple[list[bytes], bytearray]:
     return nalus, bytearray(data[starts[-1] :])
 
 
+def nalu_offset(raw: bytes) -> int:
+    return 4 if raw.startswith(ANNEXB4) else 3
+
+
 def nalu_type(nalu: bytes) -> int:
     raw = ensure_annexb(nalu)
-    off = 4 if raw.startswith(ANNEXB4) else 3
+    off = nalu_offset(raw)
     if off >= len(raw):
         return 0
     return raw[off] & 0x1F
+
+
+def avc_codec(sps: bytes | None) -> str | None:
+    """AVC codec profile/compatibility/level from the SPS NAL header."""
+    if not sps:
+        return None
+    raw = ensure_annexb(sps)
+    off = nalu_offset(raw)
+    if nalu_type(raw) != 7 or len(raw) < off + 4:
+        return None
+    return "avc1." + raw[off + 1:off + 4].hex().upper()
 
 
 class _VideoProducer:
@@ -141,15 +156,21 @@ class _VideoProducer:
 
     def _publish(self, payload: bytes) -> None:
         kind = nalu_type(payload) if payload[:1] != b"{" else 0
-        packet = pack_frame(payload)
+        packets = [pack_frame(payload)]
         with self._cv:
             if kind == 7:
                 self._sps = payload
+                codec = avc_codec(payload)
+                if codec:
+                    # Both page clients receive the actual profile before SPS
+                    # and the first keyframe, using the existing config packet.
+                    packets.insert(0, pack_frame(config_payload(codec=codec)))
             elif kind == 8:
                 self._pps = payload
-            self._seq += 1
-            self._packets.append((self._seq, packet))
-            self._packet_bytes += len(packet)
+            for packet in packets:
+                self._seq += 1
+                self._packets.append((self._seq, packet))
+                self._packet_bytes += len(packet)
             while (len(self._packets) > MAX_PENDING_PACKETS
                    or self._packet_bytes > MAX_PENDING_BYTES):
                 _, expired = self._packets.popleft()
@@ -176,12 +197,13 @@ class _VideoProducer:
             except OSError:
                 pass
         finally:
-            self._cleanup()
-            # iOS has no idb here, so the thread ends at once. Subscribers
-            # must wake and let the page fall back to a still.
-            self._stop.set()
-            with self._cv:
-                self._cv.notify_all()
+            try:
+                self._cleanup()
+            finally:
+                # Cleanup failure must also wake subscribers to fall back.
+                self._stop.set()
+                with self._cv:
+                    self._cv.notify_all()
 
     def _run_android(self, serial: str) -> None:
         jar = scrcpy_server_jar()
@@ -343,7 +365,7 @@ class _VideoProducer:
             last = self._seq
         try:
             # The first yield can also be cancelled (for example on navigation).
-            yield pack_frame(config_payload())
+            yield pack_frame(config_payload(codec=avc_codec(sps) or DEFAULT_CODEC))
             if sps:
                 yield pack_frame(sps)
             if pps:
