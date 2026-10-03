@@ -151,8 +151,12 @@ export function watchMedia(
           const data = key
             ? concat([...(sps ? [sps] : []), ...(pps ? [pps] : []), payload])
             : payload;
-          // Drop delta backlog instead of retaining unbounded decoded frames.
-          if (decoder.decodeQueueSize > 5 && !key) continue;
+          // Delta frames may reference queued frames. End this stream rather
+          // than skip arbitrary references and paint a corrupted live view.
+          if (decoder.decodeQueueSize > 5) {
+            useStill();
+            break;
+          }
           decoder.decode(
             new EncodedVideoChunk({
               type: key ? "key" : "delta",
