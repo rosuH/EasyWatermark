@@ -27,19 +27,33 @@ def producer():
 
 
 def nal(kind):
-    return video.ANNEXB4 + bytes([kind]) + b'fixture'
+    return video.ANNEXB4 + bytes([kind]) + (bytes.fromhex('42c032') if kind == 7 else b'fixture')
 
 
 class QueueTests(unittest.TestCase):
+    def test_actual_sps_codec_for_both_annexb_start_codes_and_late_subscriber(self):
+        # Real Android capture: video-packets.json, SPS header 000000016742c032.
+        for prefix in [video.ANNEXB4, b'\x00\x00\x01']:
+            sps = prefix + bytes.fromhex('6742c0328d68044012de5e42')
+            self.assertEqual(video.avc_codec(sps), 'avc1.42C032')
+            p = producer(); p._publish(sps)
+            stream = p.subscribe()
+            self.assertEqual(next(stream), video.pack_frame(video.config_payload(codec='avc1.42C032')))
+            self.assertEqual(next(stream), video.pack_frame(sps))
+            stream.close()
+        self.assertIsNone(video.avc_codec(video.ANNEXB4 + bytes.fromhex('6742c0')))
+        self.assertIsNone(video.avc_codec(nal(8)))
+
     def test_burst_keeps_parameter_key_and_delta_order_for_both_subscribers(self):
         p = producer()
         a, b = p.subscribe(), p.subscribe()
         next(a); next(b)
         for kind in [7, 8, 5, 1]:
             p._publish(nal(kind))
-        expected = [video.pack_frame(nal(k)) for k in [7, 8, 5, 1]]
-        self.assertEqual([next(a) for _ in range(4)], expected)
-        self.assertEqual([next(b) for _ in range(4)], expected)
+        expected = [video.pack_frame(video.config_payload(codec='avc1.42C032'))]
+        expected += [video.pack_frame(nal(k)) for k in [7, 8, 5, 1]]
+        self.assertEqual([next(a) for _ in expected], expected)
+        self.assertEqual([next(b) for _ in expected], expected)
         a.close(); b.close()
         self.assertEqual(p.subscriber_count(), 0)
 
@@ -60,6 +74,8 @@ class QueueTests(unittest.TestCase):
         with patch.object(video, 'MAX_PENDING_PACKETS', 2):
             for kind in [7, 8, 5]:
                 p._publish(nal(kind))
+                if kind == 7:
+                    self.assertEqual(next(fast), video.pack_frame(video.config_payload(codec='avc1.42C032')))
                 self.assertEqual(next(fast), video.pack_frame(nal(kind)))
         self.assertEqual(list(slow), [])
         self.assertEqual(p.subscriber_count(), 1)
@@ -93,6 +109,17 @@ class QueueTests(unittest.TestCase):
                 capture_output=True, timeout=8, check=False)
         self.assertEqual(p._kids, [])
         self.assertEqual(p._forwards, [])
+
+    def test_producer_ends_subscription_when_cleanup_fails(self):
+        p = producer()
+        p.target = {'platform': 'host-fixture'}
+        stream = p.subscribe(); next(stream)
+        with patch.object(p, '_cleanup', side_effect=OSError('fixture cleanup failure')):
+            with self.assertRaisesRegex(OSError, 'fixture cleanup failure'):
+                p._run()
+        self.assertTrue(p._stop.is_set())
+        self.assertEqual(list(stream), [])
+        self.assertEqual(p.subscriber_count(), 0)
 
     def test_stop_wakes_waiting_subscriber(self):
         p = producer()
