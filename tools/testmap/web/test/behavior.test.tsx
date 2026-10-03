@@ -334,6 +334,7 @@ it("Follow live leaves a completed repeat and resumes only that platform's activ
     />,
   );
   await screen.findByText("android active step");
+  await act(async () => {});
   fireEvent.click(screen.getByRole("button", { name: /ios repeat one/ }));
   const ios = within(screen.getByRole("region", { name: "ios device" }));
   fireEvent.click(ios.getByRole("button", { name: /ios saved step/ }));
@@ -539,4 +540,73 @@ it("falls back to still frames and cancels all retries on media cleanup", async 
   await vi.advanceTimersByTimeAsync(5000);
   expect(fetchMock.mock.calls).toHaveLength(count);
   expect(clearRect).toHaveBeenCalled();
+});
+
+it("keeps the last video fallback details readable after the task ends", async () => {
+  vi.spyOn(mediaModule, "watchMedia").mockImplementation(
+    (_canvas, _platform, _device, _update, diagnose) => {
+      diagnose?.({
+        reason: "first-frame-timeout",
+        elapsedMs: 2000,
+        firstPacketMs: 30,
+        firstIdrMs: null,
+        firstOutputMs: null,
+        codec: "avc1.42C032",
+        decodeCount: 0,
+        outputCount: 0,
+        maxQueue: 0,
+      });
+      return vi.fn();
+    },
+  );
+  const task = {
+    id: "mock",
+    platform: "android",
+    label: "Mock task",
+    state: "running",
+    steps: [],
+  } as unknown as StatusTask;
+  const { rerender } = render(
+    <DeviceLane
+      platform="android"
+      runId="run"
+      task={task}
+      watch={{
+        platform: "android",
+        device: "mock",
+        name: "Mock device",
+        kind: "emulator",
+      }}
+      live
+    />,
+  );
+  fireEvent.click(await screen.findByText("Last video fallback details"));
+  expect(screen.getByText(/Reason: first-frame-timeout/)).toBeTruthy();
+  expect(
+    screen.getByText(/First packet \/ IDR \/ output: 30 ms \/ — \/ —/),
+  ).toBeTruthy();
+  rerender(
+    <DeviceLane
+      platform="android"
+      runId="run"
+      task={{ ...task, state: "review_required" }}
+      watch={{
+        platform: "android",
+        device: "mock",
+        name: "Mock device",
+        kind: "emulator",
+      }}
+      live={false}
+    />,
+  );
+  expect(screen.getByText(/Codec: avc1.42C032/)).toBeTruthy();
+  rerender(
+    <DeviceLane
+      platform="android"
+      runId="run"
+      task={{ ...task, id: "another-task", state: "review_required" }}
+      live={false}
+    />,
+  );
+  expect(screen.queryByText("Last video fallback details")).toBeNull();
 });

@@ -16,7 +16,7 @@ import {
   stepHref,
   title,
 } from "./model";
-import { watchMedia } from "./media";
+import { watchMedia, type VideoDiagnostic } from "./media";
 import { Button } from "./components/ui/button";
 import {
   CopyButton,
@@ -48,12 +48,16 @@ export function DeviceLane({
   const [selected, setSelected] = useState<Step | null>(null),
     [media, setMedia] = useState("connecting"),
     [retry, setRetry] = useState(0);
+  const [videoDiagnostic, setVideoDiagnostic] = useState<
+    (VideoDiagnostic & { taskId: string; runId: string }) | null
+  >(null);
   const canvas = useRef<HTMLCanvasElement>(null),
     currentStep = useRef<HTMLButtonElement>(null);
   const visible = useVisible();
   const taskId = task ? taskKey(task) : "";
   useEffect(() => {
     setSelected(null);
+    setVideoDiagnostic(null);
   }, [runId, taskId]);
   const streaming =
     live &&
@@ -64,7 +68,14 @@ export function DeviceLane({
     ["running", "paused"].includes(task.state);
   useEffect(() => {
     if (!streaming || !watch || !canvas.current) return;
-    return watchMedia(canvas.current, platform, watch.device, setMedia);
+    setVideoDiagnostic(null);
+    return watchMedia(
+      canvas.current,
+      platform,
+      watch.device,
+      setMedia,
+      (diagnostic) => setVideoDiagnostic({ ...diagnostic, taskId, runId }),
+    );
   }, [streaming, platform, watch?.device, retry, runId, taskId]);
   const current = task?.steps?.find((s) => s.state === "current");
   useEffect(() => {
@@ -167,6 +178,29 @@ export function DeviceLane({
             : t("Screenshot timing unverified", "截图时刻未验证")}
         </p>
       )}
+      {!selected &&
+        videoDiagnostic?.taskId === taskId &&
+        videoDiagnostic.runId === runId && (
+          <details>
+            <summary>
+              {t("Last video fallback details", "最近视频降级详情")}
+            </summary>
+            <pre className="log">
+              {[
+                `${t("Reason", "原因")}: ${videoDiagnostic.reason}`,
+                `${t("Elapsed", "耗时")}: ${videoDiagnostic.elapsedMs} ms`,
+                `${t("First packet / IDR / output", "首包 / 关键帧 / 输出")}: ${[videoDiagnostic.firstPacketMs, videoDiagnostic.firstIdrMs, videoDiagnostic.firstOutputMs].map((value) => (value === null ? "—" : `${value} ms`)).join(" / ")}`,
+                `Codec: ${videoDiagnostic.codec}`,
+                `${t("Decode / output / peak queue", "提交解码 / 输出 / 队列峰值")}: ${videoDiagnostic.decodeCount} / ${videoDiagnostic.outputCount} / ${videoDiagnostic.maxQueue}`,
+                videoDiagnostic.errorName
+                  ? `${videoDiagnostic.errorName}: ${videoDiagnostic.errorMessage || ""}`
+                  : "",
+              ]
+                .filter(Boolean)
+                .join("\n")}
+            </pre>
+          </details>
+        )}
       <div className="lane-caption">
         <span>
           {selected
