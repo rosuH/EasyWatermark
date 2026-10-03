@@ -4,7 +4,10 @@ press label="Style"
 wait label="TileMode"
 wait id="editorOption-TextTypeFace"
 press id="editorOption-TextTypeFace"
-wait "id=\"choice-1\" label=\"Bold\""
-press "id=\"choice-1\" label=\"Bold\""
-wait "id=\"choice-1\" label=\"Bold\""
+wait id="editorControl-TextTypeFace"
+# Android puts choice-1 on the parent; Bold also labels a separate View.
+wait "role=\"textview\" label=\"Bold\""
+press "role=\"textview\" label=\"Bold\""
+wait "role=\"textview\" label=\"Bold\""
+# SDK 0.21.2 drops Android checked: verify Bold checked / Normal unchecked in raw layout.
 close
