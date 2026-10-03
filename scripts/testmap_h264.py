@@ -234,11 +234,13 @@ class _VideoProducer:
         if fwd.returncode != 0:
             return
         self._forwards.append((serial, port))
+        # Shorter keyframe chains usually fit the bounded late-join ring.
+        # MediaCodec's interval is a target, not a wall-clock guarantee.
         server_cmd = (
             f"CLASSPATH={DEVICE_JAR} app_process / com.genymobile.scrcpy.Server "
             f"{SCRCPY_VERSION} scid={scid_s} log_level=error audio=false "
             f"control=false tunnel_forward=true raw_stream=true cleanup=true "
-            f"max_fps=30 video_bit_rate=4000000"
+            f"max_fps=30 video_bit_rate=4000000 video_codec_options=i-frame-interval=1"
         )
         proc = self._track(
             subprocess.Popen(
