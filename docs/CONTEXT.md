@@ -68,6 +68,8 @@ After a product change: [`eval/README.md`](../eval/README.md) (select → script
 
 Pre-merge / pre-ship: skill `e2e-testmap` Mode B. Fill `docs/testmap/runs/<ts>-<sha>-verify.md` (gitignored) covering **stability** (script red/green + Agent Device N-repeat), **UI** (frames vs expected + human Confirm), and **performance** only when select suggested L3 (numbers do not own pass/fail). This is not a GitHub required check. Agents must not mint Confirm and must not recommend merge without that report.
 
+The local testmap console keeps project data in `docs/testmap/` and the self-contained web client in `tools/testmap/web/`. The existing Python CLI owns execution and run records; the UI reads the catalog and runtime APIs. Run completion, script checks, independent review, and human confirmation are separate claims. Historical evidence stays attached to its run and package identity. The canonical operating skill is `skills/e2e-testmap/SKILL.md`, with linked discovery entries for agents.
+
 ## User flows
 
 pick image(s) (photo picker / share-in via ACTION_SEND) → edit in Editor (panels: content text/templates, style color+alpha+size, layout gap+rotation+tile mode, icon watermark) → save (format+quality) → share/open.

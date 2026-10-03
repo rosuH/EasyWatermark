@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+import time
 
 # Suite: after SIGTERM, give the SDK/agent child this long before SIGKILL.
 CHILD_TERM_S = 5
@@ -47,29 +48,88 @@ def terminate_process_group(
     term_s: float = RUNNER_TERM_S,
     kill_s: float = RUNNER_KILL_S,
 ) -> None:
-    """SIGTERM the session, wait term_s, then SIGKILL. Never shuts a device."""
-    if proc is None or proc.poll() is not None:
+    """Stop the owned session, even after its leader exits. Never shuts a device.
+
+    Callers must create this process with start_new_session=True. Waiting only
+    for the leader leaks descendants (and leaves inherited stdout pipes open).
+    """
+    if proc is None:
         return
-    try:
-        os.killpg(proc.pid, signal.SIGTERM)
-    except (ProcessLookupError, PermissionError, OSError):
+
+    def signal_group(sig: int) -> bool:
         try:
-            proc.terminate()
+            os.killpg(proc.pid, sig)
+            return True
+        except ProcessLookupError:
+            return False
         except OSError:
+            # A process without a session still gets the old direct-child fallback.
+            if proc.poll() is None and sig:
+                proc.send_signal(sig)
+            return proc.poll() is None
+
+    if not signal_group(signal.SIGTERM):
+        proc.poll()
+        return
+    deadline = time.monotonic() + term_s
+    while time.monotonic() < deadline:
+        proc.poll()  # Reap the leader without treating its exit as group exit.
+        if not signal_group(0):
             return
-    try:
-        proc.wait(timeout=term_s)
-        return
-    except subprocess.TimeoutExpired:
-        pass
-    try:
-        os.killpg(proc.pid, signal.SIGKILL)
-    except (ProcessLookupError, PermissionError, OSError):
-        try:
-            proc.kill()
-        except OSError:
-            pass
+        time.sleep(min(0.05, max(0, deadline - time.monotonic())))
+    signal_group(signal.SIGKILL)
     try:
         proc.wait(timeout=kill_s)
     except subprocess.TimeoutExpired:
         pass
+
+
+def run_captured(
+    cmd: list[str], *, timeout: float, text: bool = True, cwd=None, should_stop=None,
+    stop_grace_s: float = CHILD_TERM_S,
+) -> subprocess.CompletedProcess:
+    """Bound captured CLI commands and their owned descendants, including pipe EOF."""
+    if should_stop and should_stop():
+        empty = "" if text else b""
+        return subprocess.CompletedProcess(cmd, 130, empty, empty)
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        start_new_session=True, text=text, cwd=cwd,
+    )
+    try:
+        expires = time.monotonic() + timeout
+        while True:
+            if should_stop and should_stop():
+                terminate_process_group(proc, term_s=stop_grace_s, kill_s=min(stop_grace_s, RUNNER_KILL_S))
+                try:
+                    stdout, stderr = proc.communicate(timeout=min(stop_grace_s, RUNNER_KILL_S))
+                except subprocess.TimeoutExpired as exc:
+                    stdout, stderr = exc.output or b"", exc.stderr or b""
+                    if text:
+                        stdout = stdout.decode(errors="replace") if isinstance(stdout, bytes) else stdout
+                        stderr = stderr.decode(errors="replace") if isinstance(stderr, bytes) else stderr
+                return subprocess.CompletedProcess(cmd, 130, stdout, stderr)
+            remaining = expires - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(cmd, timeout)
+            try:
+                stdout, stderr = proc.communicate(timeout=min(.25, remaining) if should_stop else remaining)
+                return subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+            except subprocess.TimeoutExpired:
+                if not should_stop:
+                    raise
+    except subprocess.TimeoutExpired as exc:
+        terminate_process_group(proc)
+        try:
+            exc.output, exc.stderr = proc.communicate(timeout=RUNNER_KILL_S)
+        except subprocess.TimeoutExpired:
+            # A detached descendant can retain a pipe but cannot extend this deadline.
+            proc.stdout.close()
+            proc.stderr.close()
+        raise
+    except BaseException:
+        terminate_process_group(proc)
+        raise
+    finally:
+        proc.stdout.close()
+        proc.stderr.close()
