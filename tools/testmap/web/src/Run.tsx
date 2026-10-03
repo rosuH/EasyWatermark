@@ -35,12 +35,14 @@ export function DeviceLane({
   task,
   runId,
   live,
+  onFollowLive,
 }: {
   platform: string;
   watch?: Watch;
   task?: StatusTask;
   runId: string;
   live: boolean;
+  onFollowLive?: () => void;
 }) {
   const t = useT();
   const [selected, setSelected] = useState<Step | null>(null),
@@ -172,7 +174,13 @@ export function DeviceLane({
             : task?.label || t("No task for this lane", "此设备通道没有任务")}
         </span>
         {selected ? (
-          <Button size="sm" onClick={() => setSelected(null)}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setSelected(null);
+              if (live) onFollowLive?.();
+            }}
+          >
             <ArrowLeft size={13} />
             {live
               ? t("Follow live", "跟随实时")
@@ -398,6 +406,13 @@ export function RunView({
               task={getTask(p)}
               runId={st?.id || ""}
               live={live}
+              onFollowLive={() =>
+                setSelections((previous) => {
+                  const next = { ...previous };
+                  delete next[p];
+                  return next;
+                })
+              }
             />
           ))}
         </div>
