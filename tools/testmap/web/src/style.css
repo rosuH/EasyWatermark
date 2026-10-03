@@ -378,7 +378,7 @@ main {
   color: #7f8ca0;
 }
 .graph {
-  height: calc(100vh - 318px);
+  height: calc(100dvh - 424px);
   min-height: 455px;
   position: relative;
   background: #101721;
@@ -1177,7 +1177,7 @@ td small {
 }
 @media (min-width: 1440px) {
   .graph {
-    min-height: 545px;
+    min-height: min(545px, calc(100dvh - 424px));
   }
   .device-stage {
     height: 500px;
@@ -1301,6 +1301,13 @@ td small {
   }
   .filter-select span {
     display: none;
+  }
+}
+@media (max-height: 850px) {
+  .graph {
+    /* Reserve the header, filters, footer and fixed draft bar on short screens. */
+    height: max(240px, calc(100dvh - 424px));
+    min-height: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
