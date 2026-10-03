@@ -781,10 +781,15 @@ final class PickerFlowUITests: XCTestCase {
         XCTAssertTrue(scrollUntilHittable(rowById, in: app, timeout: 10),
                       "Saved template row id=\(rowId) was not reachable for Apply.")
         tapIfPossible(rowById)
-        let selectedForUse = expectation(for: NSPredicate(format: "isSelected == YES"), evaluatedWith: rowById, handler: nil)
-        wait(for: [selectedForUse], timeout: 10)
+        // The confirmation modal covers the list; wait for its actionable control instead of
+        // querying selection on the obscured row. The exact applied text is asserted below.
         let useConfirm = app.descendants(matching: .any)["templateUseConfirm"].firstMatch
-        XCTAssertTrue(useConfirm.waitForExistence(timeout: 10), "Template Use confirmation did not appear.")
+        let confirmationReady = expectation(
+            for: NSPredicate { _, _ in useConfirm.exists && useConfirm.isHittable },
+            evaluatedWith: useConfirm,
+            handler: nil
+        )
+        wait(for: [confirmationReady], timeout: 10)
         tapIfPossible(useConfirm)
         XCTAssertTrue(
             wait(forLabel: host, toEqual: marker, timeout: 15),
