@@ -31,12 +31,48 @@ export function packets(buffer: Uint8Array): {
   }
   return { payloads, rest: buffer.slice(offset) };
 }
+export interface VideoDiagnostic {
+  reason:
+    | "webcodecs-unavailable"
+    | "first-frame-timeout"
+    | "frame-timeout"
+    | "http-error"
+    | "stream-ended"
+    | "stream-error"
+    | "packet-error"
+    | "configure-error"
+    | "decode-error"
+    | "decoder-error"
+    | "decoder-backlog";
+  elapsedMs: number;
+  firstPacketMs: number | null;
+  firstIdrMs: number | null;
+  firstOutputMs: number | null;
+  codec: string;
+  decodeCount: number;
+  outputCount: number;
+  maxQueue: number;
+  errorName?: string;
+  errorMessage?: string;
+}
 export function watchMedia(
   canvas: HTMLCanvasElement,
   platform: string,
   device: string,
   update: (state: string) => void,
+  diagnose?: (diagnostic: VideoDiagnostic) => void,
 ) {
+  const started = performance.now();
+  const elapsed = () => Math.round(performance.now() - started);
+  const stats = {
+    firstPacketMs: null as number | null,
+    firstIdrMs: null as number | null,
+    firstOutputMs: null as number | null,
+    codec: "avc1.42E01E",
+    decodeCount: 0,
+    outputCount: 0,
+    maxQueue: 0,
+  };
   const controller = new AbortController();
   let videoAbort = new AbortController();
   let decoder: VideoDecoder | undefined;
@@ -72,9 +108,17 @@ export function watchMedia(
     }
     if (!controller.signal.aborted) timer = setTimeout(still, 1000);
   };
-  const useStill = () => {
+  const useStill = (reason: VideoDiagnostic["reason"], error?: unknown) => {
     if (fallback || controller.signal.aborted) return;
     fallback = true;
+    diagnose?.({
+      ...stats,
+      reason,
+      elapsedMs: elapsed(),
+      ...(error instanceof Error || error instanceof DOMException
+        ? { errorName: error.name, errorMessage: error.message.slice(0, 500) }
+        : {}),
+    });
     clearTimeout(watchdog);
     videoAbort.abort();
     if (decoder && decoder.state !== "closed") decoder.close();
@@ -82,19 +126,19 @@ export function watchMedia(
     update("connecting");
     void still();
   };
-  const arm = (ms: number) => {
+  const arm = (ms: number, reason: VideoDiagnostic["reason"]) => {
     clearTimeout(watchdog);
-    watchdog = setTimeout(useStill, ms);
+    watchdog = setTimeout(() => useStill(reason), ms);
   };
   const video = async () => {
     if (typeof VideoDecoder === "undefined") {
-      useStill();
+      useStill("webcodecs-unavailable");
       return;
     }
-    arm(2000);
+    arm(2000, "first-frame-timeout");
     let sps: Uint8Array | undefined;
     let pps: Uint8Array | undefined;
-    let codec = "avc1.42E01E";
+    let phase: VideoDiagnostic["reason"] = "stream-error";
     let ts = 0;
     let keySeen = false;
     let buffer: Uint8Array = new Uint8Array();
@@ -102,19 +146,32 @@ export function watchMedia(
       const response = await fetch(`/api/device-video?${query}`, {
         signal: videoAbort.signal,
       });
-      if (!response.ok || response.status === 204 || !response.body)
-        throw new Error("No video");
+      if (!response.ok || response.status === 204 || !response.body) {
+        useStill(
+          "http-error",
+          new Error(`HTTP ${response.status}: no video body`),
+        );
+        return;
+      }
       const reader = response.body.getReader();
       while (!controller.signal.aborted && !fallback) {
+        phase = "stream-error";
         const next = await reader.read();
-        if (next.done) throw new Error("Video ended");
+        if (next.done) {
+          useStill("stream-ended");
+          return;
+        }
+        if (next.value.length && stats.firstPacketMs === null)
+          stats.firstPacketMs = elapsed();
+        phase = "packet-error";
         const parsed = packets(concat([buffer, next.value]));
         buffer = parsed.rest;
         for (const payload of parsed.payloads) {
+          phase = "packet-error";
           if (!payload.length) continue;
           if (payload[0] === 123) {
             const cfg = JSON.parse(new TextDecoder().decode(payload));
-            codec = cfg.codec || codec;
+            stats.codec = cfg.codec || stats.codec;
             continue;
           }
           const kind = naluType(payload);
@@ -128,23 +185,28 @@ export function watchMedia(
           }
           if (kind === 6 || kind === 9) continue;
           const key = kind === 5;
+          if (key && stats.firstIdrMs === null) stats.firstIdrMs = elapsed();
           if (!key && !keySeen) continue;
           if (!decoder) {
+            phase = "configure-error";
             decoder = new VideoDecoder({
               output: (frame) => {
                 try {
                   if (!fallback && !controller.signal.aborted) {
+                    if (stats.firstOutputMs === null)
+                      stats.firstOutputMs = elapsed();
+                    stats.outputCount++;
                     draw(frame, frame.displayWidth, frame.displayHeight);
                     update("video");
-                    arm(1200);
+                    arm(1200, "frame-timeout");
                   }
                 } finally {
                   frame.close();
                 }
               },
-              error: useStill,
+              error: (error) => useStill("decoder-error", error),
             });
-            decoder.configure({ codec, optimizeForLatency: true });
+            decoder.configure({ codec: stats.codec, optimizeForLatency: true });
           }
           if (fallback) break;
           keySeen = true;
@@ -153,10 +215,12 @@ export function watchMedia(
             : payload;
           // Delta frames may reference queued frames. End this stream rather
           // than skip arbitrary references and paint a corrupted live view.
+          stats.maxQueue = Math.max(stats.maxQueue, decoder.decodeQueueSize);
           if (decoder.decodeQueueSize > 5) {
-            useStill();
+            useStill("decoder-backlog");
             break;
           }
+          phase = "decode-error";
           decoder.decode(
             new EncodedVideoChunk({
               type: key ? "key" : "delta",
@@ -164,10 +228,12 @@ export function watchMedia(
               data,
             }),
           );
+          stats.decodeCount++;
+          stats.maxQueue = Math.max(stats.maxQueue, decoder.decodeQueueSize);
         }
       }
-    } catch {
-      if (!controller.signal.aborted && !fallback) useStill();
+    } catch (error) {
+      if (!controller.signal.aborted && !fallback) useStill(phase, error);
     }
   };
   update("connecting");
