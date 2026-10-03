@@ -6,7 +6,11 @@ const require = createRequire(import.meta.url);
 const root = new URL("..", import.meta.url);
 const html = readFileSync(new URL("dist/index.html", root), "utf8");
 const escapeHtml = (text) =>
-  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  text
+    .replace(/[ \t]+$/gm, "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 assert.deepEqual(readdirSync(new URL("dist", root)), ["index.html"]);
 const section = html.match(
   /<details id="third-party-licenses"[\s\S]*?<\/details>/,
