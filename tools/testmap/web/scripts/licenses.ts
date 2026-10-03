@@ -5,7 +5,11 @@ import type { Plugin } from "vite";
 
 const require = createRequire(import.meta.url);
 const escapeHtml = (text: string) =>
-  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  text
+    .replace(/[ \t]+$/gm, "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 
 function packageRoot(id: string): string | undefined {
   if (!isAbsolute(id) || !id.includes("node_modules/")) return;
