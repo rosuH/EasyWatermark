@@ -44,6 +44,51 @@ class QueueTests(unittest.TestCase):
         self.assertIsNone(video.avc_codec(video.ANNEXB4 + bytes.fromhex('6742c0')))
         self.assertIsNone(video.avc_codec(nal(8)))
 
+    def test_late_join_replays_latest_retained_idr_and_every_delta_then_live(self):
+        p = producer()
+        sps, pps = nal(7), nal(8)
+        old_key, old_delta = nal(5) + b'old', nal(1) + b'old'
+        key, first, second = nal(5) + b'new', nal(1) + b'one', nal(1) + b'two'
+        for payload in [sps, pps, old_key, old_delta, key, first, second]:
+            p._publish(payload)
+        stream = p.subscribe()
+        self.assertEqual(next(stream), video.pack_frame(video.config_payload(codec='avc1.42C032')))
+        self.assertEqual(next(stream), video.pack_frame(sps))
+        self.assertEqual(next(stream), video.pack_frame(pps))
+        self.assertEqual([next(stream) for _ in range(3)],
+                         [video.pack_frame(payload) for payload in [key, first, second]])
+        live = nal(1) + b'live'
+        p._publish(live)
+        self.assertEqual(next(stream), video.pack_frame(live))
+        stream.close()
+        self.assertEqual(p.subscriber_count(), 0)
+
+    def test_late_join_never_borrows_an_evicted_keyframe(self):
+        p = producer()
+        with patch.object(video, 'MAX_PENDING_PACKETS', 2):
+            for payload in [nal(7), nal(8), nal(5), nal(1) + b'one', nal(1) + b'two']:
+                p._publish(payload)
+        stream = p.subscribe()
+        for _ in range(3):
+            next(stream)  # Current config/SPS/PPS only, no cached old IDR.
+        new_key = nal(5) + b'new'
+        p._publish(new_key)
+        self.assertEqual(next(stream), video.pack_frame(new_key))
+        stream.close()
+
+    def test_late_join_does_not_pair_old_gop_with_new_parameters(self):
+        for new_parameter in [video.ANNEXB4 + bytes.fromhex('6742c033'), nal(8) + b'new']:
+            p = producer()
+            for payload in [nal(7), nal(8), nal(5), nal(1), new_parameter, nal(1)]:
+                p._publish(payload)
+            stream = p.subscribe()
+            for _ in range(3):
+                next(stream)
+            new_key = nal(5) + b'new-parameters'
+            p._publish(new_key)
+            self.assertEqual(next(stream), video.pack_frame(new_key))
+            stream.close()
+
     def test_burst_keeps_parameter_key_and_delta_order_for_both_subscribers(self):
         p = producer()
         a, b = p.subscribe(), p.subscribe()
