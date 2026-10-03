@@ -2778,6 +2778,8 @@ class StopForbiddenError(Exception):
 
 
 class RunManager:
+    START_TIMEOUT_S = 20
+
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.cv = threading.Condition(self.lock)
@@ -2924,26 +2926,54 @@ class RunManager:
             start_new_session=True,
             env={**os.environ, "TMPDIR": os.environ.get("TMPDIR") or "/tmp"},
         )
-        holder: list[str] = []
+        ready = threading.Event()
+        handshake: dict[str, str] = {}
+        diagnostics: list[str] = []
 
-        def _first() -> None:
-            if proc.stdout is None:
-                return
-            holder.append(proc.stdout.readline())
+        def _read_output() -> None:
+            # One reader owns the pipe before and after the handshake. Import
+            # warnings are diagnostics, not the runner's run-id announcement.
+            try:
+                if proc.stdout is None:
+                    return
+                for line in proc.stdout:
+                    sys.stderr.write(line)
+                    sys.stderr.flush()
+                    if "id" not in handshake:
+                        diagnostics.append(line[-2048:])
+                        del diagnostics[:-8]
+                        match = re.match(r"^testmap run (\S+)(?:\s|$)", line)
+                        if match and RUN_ID_RE.fullmatch(match[1]):
+                            handshake["id"] = match[1]
+                            ready.set()
+            except (OSError, ValueError) as exc:
+                handshake["error"] = str(exc)
+            finally:
+                ready.set()
+                if proc.stdout is not None:
+                    proc.stdout.close()
+                proc.poll()
 
-        reader = threading.Thread(target=_first, daemon=True)
-        reader.start()
-        reader.join(20)
-        line = holder[0] if holder else ""
-        run_id = ""
-        if line.startswith("testmap run "):
-            run_id = line.split()[2]
-        if proc.stdout is not None:
-            threading.Thread(
-                target=_drain_runner_output, args=(proc,), daemon=True, name="testmap-cli-log"
-            ).start()
-        if not run_id:
-            raise RuntimeError(line.strip() or "runner did not report a run id")
+        reader = threading.Thread(target=_read_output, daemon=True, name="testmap-cli-log")
+        try:
+            reader.start()
+            announced = ready.wait(self.START_TIMEOUT_S)
+        except BaseException:
+            terminate_process(proc)
+            if reader.ident is not None:
+                reader.join(RUNNER_KILL_S)
+            elif proc.stdout is not None:
+                proc.stdout.close()
+            raise
+        run_id = handshake.get("id", "")
+        if not announced or not run_id:
+            # The CLI can already have children when its announcement is lost.
+            # Preserve its normal restore grace, then end the entire owned group.
+            terminate_process(proc)
+            reader.join(RUNNER_KILL_S)
+            reason = "runner start timed out" if not announced else "runner exited without a run id"
+            detail = handshake.get("error") or "".join(diagnostics).strip()
+            raise RuntimeError(reason + (f": {detail}" if detail else ""))
         rec = load_run(run_id) or {}
         return {
             "id": run_id,

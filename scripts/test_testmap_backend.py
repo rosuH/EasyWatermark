@@ -24,6 +24,78 @@ import testmap_setup as setup
 
 
 class BackendChecks(unittest.TestCase):
+    def _fake_start(self, script, processes):
+        popen = subprocess.Popen
+
+        def launch(cmd, **kwargs):
+            proc = popen([sys.executable, '-u', '-c', script], **kwargs)
+            processes.append(proc)
+            return proc
+
+        return patch.object(runner.subprocess, 'Popen', side_effect=launch)
+
+    def test_start_waits_past_warnings_and_uses_one_output_reader(self):
+        processes = []
+        log = io.StringIO()
+        run_id = '20261003T063940-e17629e6'
+        script = ('import time\nprint("SyntaxWarning: legacy generator")\n'
+                  'print("testmap run not-a-valid-id")\ntime.sleep(.05)\n'
+                  f'print("testmap run {run_id}  (not a CI gate)")\n'
+                  'print("post-handshake output")\n')
+        with self._fake_start(script, processes), patch.object(runner, 'load_status_record', return_value=None), patch.object(runner, 'load_run', return_value={'state': 'review_required'}), patch.object(runner, '_drain_runner_output') as old_drainer, contextlib.redirect_stderr(log):
+            result = runner.RunManager().start(['fake-offline-task'])
+            self.assertEqual(run_id, result['id'])
+            self.assertEqual('review_required', result['state'])
+            processes[0].wait(timeout=2)
+            deadline = time.monotonic() + 2
+            while not processes[0].stdout.closed and time.monotonic() < deadline:
+                time.sleep(.01)
+            self.assertTrue(processes[0].stdout.closed)
+            old_drainer.assert_not_called()
+        self.assertIn('SyntaxWarning: legacy generator', log.getvalue())
+        self.assertIn('post-handshake output', log.getvalue())
+
+    def test_start_eof_without_run_id_is_an_error_and_reaps_child(self):
+        processes = []
+        log = io.StringIO()
+        with self._fake_start('print("startup failed"); raise SystemExit(7)', processes), patch.object(runner, 'load_status_record', return_value=None), contextlib.redirect_stderr(log):
+            with self.assertRaisesRegex(RuntimeError, 'exited without a run id.*startup failed'):
+                runner.RunManager().start(['fake-offline-task'])
+        self.assertEqual(7, processes[0].returncode)
+        self.assertTrue(processes[0].stdout.closed)
+        self.assertIn('startup failed', log.getvalue())
+
+    def test_start_timeout_ends_owned_group_even_after_leader_exit(self):
+        # A child that inherits stdout must not keep a failed UI launch alive.
+        for leader_exits in (False, True):
+            processes = []
+            script = ('import os,signal,time\n'
+                      'signal.signal(signal.SIGTERM,signal.SIG_IGN)\n'
+                      'print("warning before a missing handshake")\n')
+            if leader_exits:
+                script += 'pid=os.fork()\nif pid: os._exit(0)\n'
+            script += 'time.sleep(30)\n'
+            started = time.monotonic()
+            try:
+                with self._fake_start(script, processes), patch.object(runner, 'load_status_record', return_value=None), patch.object(runner.RunManager, 'START_TIMEOUT_S', .15), patch.object(runner, 'terminate_process', lambda proc: stop.terminate_process_group(proc, term_s=.1, kill_s=.2)), contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaisesRegex(RuntimeError, 'runner start timed out'):
+                        runner.RunManager().start(['fake-offline-task'])
+                self.assertLess(time.monotonic() - started, 2)
+                self.assertIsNotNone(processes[0].poll())
+                self.assertTrue(processes[0].stdout.closed)
+                deadline = time.monotonic() + 1
+                while time.monotonic() < deadline:
+                    try:
+                        os.killpg(processes[0].pid, 0)
+                    except ProcessLookupError:
+                        break
+                    time.sleep(.02)
+                else:
+                    self.fail('failed start left its owned process group alive')
+            finally:
+                for proc in processes:
+                    stop.terminate_process_group(proc, term_s=.1, kill_s=.2)
+
     def test_process_failure_cannot_be_hidden_by_success_json(self):
         with tempfile.TemporaryDirectory() as folder:
             evidence = Path(folder)

@@ -177,6 +177,20 @@ class HttpTests(unittest.TestCase):
         self.assertIn(b'multipart/x-mixed-replace; boundary=fixture', head)
         self.assertEqual(body, b'--fixture\r\njpeg')
 
+    def test_run_start_failure_returns_json_instead_of_dropping_connection(self):
+        ns = handler_namespace()
+        ns['BusyError'] = type('BusyError', (Exception,), {})
+        ns['StopForbiddenError'] = type('StopForbiddenError', (Exception,), {})
+        def fail(*args, **kwargs):
+            raise RuntimeError('runner did not report a run id')
+        ns['MANAGER'] = SimpleNamespace(start=fail)
+        replies = []
+        request = SimpleNamespace(path='/api/run',
+            _read_json=lambda: {'tasks': ['fixture']},
+            _json=lambda code, body: replies.append((code, body)))
+        ns['Handler'].do_POST(request)
+        self.assertEqual(replies, [(500, {'error': 'runner did not report a run id'})])
+
     def test_inactive_run_never_starts_producer(self):
         ns = handler_namespace()
         ns['MANAGER'] = SimpleNamespace(snapshot=lambda: {'state': 'passed'})
