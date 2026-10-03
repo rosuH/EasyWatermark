@@ -363,6 +363,21 @@ class _VideoProducer:
             sps = self._sps
             pps = self._pps
             last = self._seq
+            if sps and pps:
+                # A new viewer needs the entire retained reference chain, not
+                # only parameter sets followed by arbitrary live delta frames.
+                # Keep the existing cursor/overflow checks; allocate no cache.
+                for seq, packet in reversed(self._packets):
+                    payload = packet[4:]
+                    if payload[:1] == b"{":
+                        continue
+                    kind = nalu_type(payload)
+                    if kind in {7, 8}:
+                        # Do not pair a previous GOP with newer parameter sets.
+                        break
+                    if kind == 5:
+                        last = seq - 1
+                        break
         try:
             # The first yield can also be cancelled (for example on navigation).
             yield pack_frame(config_payload(codec=avc_codec(sps) or DEFAULT_CODEC))
