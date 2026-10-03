@@ -9,6 +9,7 @@ Does not mint human Confirm. Does not shut down live emulators.
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import subprocess
 import sys
@@ -22,7 +23,7 @@ sys.dont_write_bytecode = True
 
 from e2e_select import select_report  # noqa: E402
 from testmap_eval import render_report, summarize_stability  # noqa: E402
-from testmap_run import load_run  # noqa: E402
+from testmap_run import _tee_child, load_run  # noqa: E402
 
 RUNS = REPO_ROOT / "docs" / "testmap" / "runs"
 
@@ -40,48 +41,12 @@ def _git_sha() -> str:
         return "HEAD"
 
 
-def _run_agent_task(cmd: str) -> dict:
-    proc = subprocess.run(
-        [sys.executable, str(SCRIPTS / "testmap_run.py"), cmd],
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-    )
-    run_id = ""
-    for line in (proc.stdout or "").splitlines():
-        if line.startswith("testmap run "):
-            run_id = line.split()[2]
-    rec = load_run(run_id) if run_id else None
-    task = {}
-    if rec:
-        for item in rec.get("tasks") or []:
-            if item.get("id") == cmd:
-                task = item
-                break
-        if not task and rec.get("tasks"):
-            task = rec["tasks"][0]
-    state = str(task.get("state") or rec.get("state") or "failed")
-    flake = ""
-    log = proc.stdout or ""
-    if "REPLAY_DIVERGENCE" in log or "REPLAY_DIVERGENCE" in (proc.stderr or ""):
-        flake = "REPLAY_DIVERGENCE"
-    elif "setup failed" in log:
-        flake = "setup"
-    elif proc.returncode != 0 and not run_id:
-        flake = "timeout_or_spawn"
-    return {
-        "run_id": run_id or ((rec or {}).get("id") or ""),
-        "state": state,
-        "evidence_dir": task.get("evidence_dir") or "",
-        "flake_class": flake,
-    }
-
-
 def collect_stability(agent: list[dict], repeats: int, do_run: bool) -> list[dict]:
     cmds = [str(item.get("cmd") or "") for item in agent if item.get("cmd")]
     grouped: dict[str, list[dict]] = {cmd: [] for cmd in cmds}
+    runner_failed = False
     if do_run and cmds:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             [
                 sys.executable,
                 str(SCRIPTS / "testmap_run.py"),
@@ -93,14 +58,19 @@ def collect_stability(agent: list[dict], repeats: int, do_run: bool) -> list[dic
             ],
             cwd=REPO_ROOT,
             text=True,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
+        output = io.StringIO()
+        exit_code = _tee_child(proc, output, tee_stdout=True)
         run_id = ""
-        for line in (proc.stdout or "").splitlines():
+        for line in output.getvalue().splitlines():
             if line.startswith("testmap run "):
                 run_id = line.split()[2]
                 break
         rec = load_run(run_id) if run_id else None
+        runner_failed = exit_code != 0 or not rec or rec.get("state") not in {"passed", "review_required"}
         for task in (rec or {}).get("tasks") or []:
             cmd = str(task.get("id") or "")
             if cmd not in grouped:
@@ -113,12 +83,18 @@ def collect_stability(agent: list[dict], repeats: int, do_run: bool) -> list[dic
                     "flake_class": "",
                 }
             )
-        if proc.returncode != 0 and not run_id:
+        if exit_code != 0 and not run_id:
             for cmd in cmds:
                 grouped[cmd].append(
                     {"run_id": "", "state": "failed", "evidence_dir": "", "flake_class": "timeout_or_spawn"}
                 )
-    return [summarize_stability(cmd, grouped.get(cmd, []), repeats) for cmd in cmds]
+    summaries = [summarize_stability(cmd, grouped.get(cmd, []), repeats) for cmd in cmds]
+    if runner_failed:
+        for row in summaries:
+            if row["verdict"] in {"stable", "not_run"}:
+                row["verdict"] = "block"
+                row["flake_class"] = "runner_failed_or_incomplete"
+    return summaries
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -141,7 +117,11 @@ def main(argv: list[str] | None = None) -> int:
         print("docs-only: generator + guard; no agent repeats", file=sys.stderr)
     sha = args.sha or _git_sha()
     stability = collect_stability(report.get("agent") or [], repeats, args.run)
-    blocking = [row for row in stability if row.get("verdict") == "block"]
+    blocking = [
+        row for row in stability
+        if row.get("verdict") in {"block", "flake"}
+        or (args.run and row.get("verdict") != "stable")
+    ]
     text = render_report(
         change=args.change,
         git_sha=sha,

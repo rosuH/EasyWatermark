@@ -23,10 +23,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+
+from testmap_stop import run_captured
 
 from testmap_artemis import (
     load_result_json,
@@ -302,12 +305,10 @@ def is_agent_device_cmd(cmd: list[str]) -> bool:
 def agent_device_version(bin_path: str | None = None) -> str:
     binary = bin_path or agent_device_bin()
     try:
-        proc = subprocess.run(
+        proc = run_captured(
             [binary, "--version"],
             text=True,
-            capture_output=True,
             timeout=10,
-            check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
         return ""
@@ -366,7 +367,7 @@ def ios_prepare_needed(udid: str) -> bool:
     return True
 
 
-def maybe_prepare_ios_runner(spec: dict, logf) -> None:
+def maybe_prepare_ios_runner(spec: dict, logf, should_stop=None) -> None:
     """Run `prepare ios-runner` on the same --udid before iOS replay when needed."""
     platform = spec.get("agent_platform") or spec.get("needs_device")
     if platform != "ios":
@@ -385,15 +386,23 @@ def maybe_prepare_ios_runner(spec: dict, logf) -> None:
     if logf is not None:
         logf.write(f"\n## prepare: {' '.join(cmd)}\n")
         logf.flush()
-    proc = subprocess.run(
-        cmd,
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        timeout=300,
-        check=False,
-    )
+    try:
+        proc = run_captured(
+            cmd, cwd=REPO_ROOT, text=True, timeout=300, should_stop=should_stop,
+        )
+    except subprocess.TimeoutExpired as exc:
+        def text(value):
+            return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else (value or "")
+        blob = text(exc.stdout) + text(exc.stderr) + "\nHARNESS_TIMEOUT during iOS prepare after 300s\n"
+        if logf is not None:
+            logf.write(blob)
+            logf.flush()
+        (evidence / "prepare.log").write_text(blob, encoding="utf-8")
+        raise
+    cancelled = proc.returncode == 130 or (should_stop and should_stop())
     blob = (proc.stdout or "") + (proc.stderr or "")
+    if cancelled:
+        blob += "\nHARNESS_CANCELLED during iOS prepare\n"
     if logf is not None and blob:
         logf.write(blob)
         if not blob.endswith("\n"):
@@ -404,6 +413,8 @@ def maybe_prepare_ios_runner(spec: dict, logf) -> None:
             (evidence / "prepare.log").write_text(blob, encoding="utf-8")
         except OSError:
             pass
+    if cancelled:
+        raise InterruptedError("iOS prepare cancelled by Stop")
     if proc.returncode != 0:
         raise RuntimeError(
             f"prepare ios-runner failed (exit {proc.returncode}) for --udid {udid}"
@@ -508,15 +519,21 @@ def _coerced_replay_result(
     else:
         result = dict(result)
     blob = log_text + json.dumps(result, default=str)
+    sdk_timeout = re.search(r"TIMEOUT after \d+ms|\"timeoutCleanupPending\"\s*:\s*true|\"reason\"\s*:\s*\"timeout_cleanup_pending\"", blob)
+    if exit_code == 124 or sdk_timeout or result.get("timed_out") or result.get("status") == "timed_out":
+        result["status"] = "timed_out"
+        result["timed_out"] = True
+        result["agent_status"] = "timed_out"
+        result["error"] = (
+            "harness deadline exceeded" if exit_code == 124
+            else (sdk_timeout.group(0) if sdk_timeout else result.get("error") or "replay timed out")
+        )
+        return result
     if "REPLAY_DIVERGENCE" in blob:
-        result.setdefault("status", "failed")
+        result["status"] = "failed"
         result["agent_status"] = "replay_divergence"
         result.setdefault("error", "REPLAY_DIVERGENCE")
         result.setdefault("timed_out", False)
-        return result
-    if result.get("timed_out") or result.get("status") == "timed_out":
-        result["status"] = "timed_out"
-        result["timed_out"] = True
         return result
     if exit_code in {130, -15, -9} or result.get("status") == "interrupted":
         result["status"] = "interrupted"
@@ -524,16 +541,16 @@ def _coerced_replay_result(
         return result
     if result.get("status") == "blocked":
         return result
+    if exit_code not in (0, None):
+        result["status"] = "failed"
+        result["agent_status"] = "failed"
+        result.setdefault("error", f"replay exit {exit_code}")
+        result.setdefault("timed_out", False)
+        return result
     raw_status = str(result.get("status") or "")
     if raw_status in {"passed", "ok", "completed", "success"}:
         result["status"] = "executed_review_required"
         result.setdefault("agent_status", "completed")
-        return result
-    if exit_code not in (0, None):
-        result.setdefault("status", "failed")
-        result.setdefault("agent_status", "failed")
-        result.setdefault("error", f"replay exit {exit_code}")
-        result.setdefault("timed_out", False)
         return result
     if not raw_status:
         result["status"] = "executed_review_required"

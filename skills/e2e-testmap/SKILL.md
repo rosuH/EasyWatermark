@@ -24,7 +24,7 @@ scripts/e2e-run.sh edge:<id>@android#agent
 scripts/e2e-run.sh edge:<id>@ios#agent
 ```
 
-If `http://127.0.0.1:8931/api/status` is up, POST the task so the watch pane follows. Queue `edge:<id>@android#agent` (the runner mirrors a supported `@ios#agent` twin and runs the two lanes in parallel). The pane shows Android, iOS, and Desktop side by side. Do not auto-open the native scrcpy window.
+If `http://127.0.0.1:8931/api/status` is up, POST the task so the watch pane follows. Queue `edge:<id>@android#agent` (the runner mirrors a supported `@ios#agent` twin and runs the two lanes in parallel). The execution view shows the selected mobile lanes with their own steps. Desktop host checks remain available as tasks; their witness images are not device video. Do not auto-open the native scrcpy window.
 
 ```bash
 curl -sS -X POST http://127.0.0.1:8931/api/run \
@@ -64,7 +64,7 @@ The CLI (`scripts/e2e-run.sh` / `scripts/testmap_run.py`) is the only runner. Th
 }
 ```
 
-`source` is `manual` (a chosen task list), `select` (`e2e-select`), or `verify` (`e2e-verify.sh --run`). `repeat` is `k/N` for that row. `state` on the run and on each task is one of `pending`, `running`, `passed`, `review_required`, `failed`, `skipped`, `stopped`. `shot` is a file name under `runs/<id>/steps/` for every executed step, including a failed step. When the capture itself fails, the step has `shot_error` instead of `shot`. A missing file is shown as「无截图」and is never filled from another step. `e2e-verify.sh --run` writes one record whose rows are `1/N`, `2/N`, and keeps going after a failure. Each case restarts its own app before the script runs, so it does not continue from the previous case's screen. `/api/status` reads this file (the running record, otherwise the latest). Restarting the console does not drop it.
+`source` is `manual` (a chosen task list), `select` (`e2e-select`), or `verify` (`e2e-verify.sh --run`). `repeat` is `k/N` for that row. Run and task states include `pending`, `running`, `passed`, `review_required`, `failed`, `skipped`, `stopped`, `uncovered`, and `interrupted`. Unknown states must stay visible and must not be treated as success. `shot` is a file name under `runs/<id>/steps/` for every executed step, including a failed step. When the capture itself fails, the step has `shot_error` instead of `shot`. A missing file is shown as「无截图」and is never filled from another step. `e2e-verify.sh --run` writes one record whose rows are `1/N`, `2/N`, and keeps going after a failure. Each case restarts its own app before the script runs, so it does not continue from the previous case's screen. `/api/status` reads this file (the running record, otherwise the latest). Restarting the console does not drop it.
 
 ## Mode B — pre-merge / pre-ship
 
@@ -87,7 +87,7 @@ Standing orders: do not shut down live emulators/simulators; `--serial` / `--udi
 
 - Process 0 / batch success / `review_required` is not a product pass.
 - `drive: seam|none` stays that way even if the agent walked a system picker.
-- `REPLAY_DIVERGENCE` / timeout / setup fail = **flake class**, not a UI-quality fail. Restore state then `replay --from` + `--plan-digest`; do not rewrite the digest.
+- `REPLAY_DIVERGENCE`, timeout, and setup failure are execution failures to investigate. Record the actual failure and distinguish environment, assertion, and product causes using evidence; do not automatically convert them to a product pass or blame the device. Use bounded single-case diagnosis before repeats. Preserve `--plan-digest` when resuming a replay.
 - Photo Picker uses batch JSON (`find` + `first: true`); native `.ad` cannot pass `--first`.
 
 ## Out of scope
@@ -97,3 +97,7 @@ Standing orders: do not shut down live emulators/simulators; `--serial` / `--udi
 - Creating or changing the harness itself → `testing-setup`.
 - Device boot/screenshot plumbing → `android-cli`.
 - Unscripted explore → `docs/agents/e2e-walk.md`.
+
+## Skill source
+
+This file (`skills/e2e-testmap/SKILL.md`) is authoritative. The `.agents` and `.claude` entries link here. Edit only this source.

@@ -15,7 +15,7 @@ After a **product** code change or new requirement, before asking to merge or sh
 5. Human Confirm on the console. Agent must not mint it.
 6. Only then ask the owner to merge.
 
-`scripts/e2e-verify.sh --change '…'` writes the report stub without executing devices. `--run` executes agent repeats and fills the stability table (exit 2 if any agent task is 0/N, unless you later mark a known product failure in the report).
+`scripts/e2e-verify.sh --change '…'` writes the report stub without executing devices. `--run` executes agent repeats and fills the stability table. A failed runner, missing execution, or mixed/failed repetitions keeps the report blocked; a later successful attempt does not erase an earlier failure. Known coverage gaps remain explicit in the report and require the owner to accept the limitation.
 
 Single-edge debug (`跑 pick-to-editor`) is Mode A in `e2e-testmap` and is **not** a merge gate.
 
