@@ -12,6 +12,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check:licenses": "node scripts/check-licenses.mjs",
     "check:dist": "node scripts/check-dist.mjs",
     "lint": "prettier --check src test scripts vite.config.ts package.json tsconfig.json"
   },

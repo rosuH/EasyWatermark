@@ -16,4 +16,724 @@ Error generating stack: `+l.message+`
 `),label:u("Copy log","复制日志")})]}),p.jsx("p",{className:"muted",children:S?.semantics||u("Execution, script checks, agent observation, independent review and human confirmation are separate records.","执行、脚本检查、代理观察、独立审阅和人工确认分别记录。")}),p.jsx("div",{className:"package-grid",children:Object.entries(S?.packages||{}).map(([O,z])=>z&&p.jsxs("details",{children:[p.jsxs("summary",{children:[O," · ",z.version]}),p.jsx("p",{children:p.jsx("code",{children:z.package})}),p.jsx("p",{children:z.artifact}),p.jsx("code",{children:z.sha256})]},O))}),p.jsxs("details",{open:!S?.active,children:[p.jsx("summary",{children:u("Run log (latest lines)","运行日志（末尾内容）")}),p.jsx("pre",{className:"log",children:S?.log_tail?.join(`
 `)||u("No log output yet.","尚无日志。")})]}),T.error&&p.jsx(fn,{children:T.error}),U?.tasks.map((O,z)=>p.jsxs("details",{className:"task-evidence",children:[p.jsxs("summary",{children:[p.jsx(tn,{state:O.state}),O.label||O.id," · ",O.platform]}),p.jsx("p",{children:O.note}),p.jsx("pre",{children:O.cmd?.join(" ")}),p.jsx(Wl,{value:O.cmd?.join(" ")||"",label:u("Copy command","复制命令")}),O.layers&&p.jsx("dl",{className:"layer-grid",children:Object.entries(O.layers).map(([G,oe])=>p.jsxs("div",{children:[p.jsx("dt",{children:G.replaceAll("_"," ")}),p.jsx("dd",{children:typeof oe=="object"?JSON.stringify(oe):String(oe)})]},G))}),p.jsx("ul",{className:"result-cases",children:O.cases?.map((G,oe)=>p.jsxs("li",{children:[p.jsx(tn,{state:G.status}),p.jsxs("span",{children:[St(o,"cases",G.ref||G.name,f),p.jsx("small",{children:G.message})]})]},G.ref+oe))}),p.jsx("div",{className:"evidence-links",children:O.evidence_links?.map(G=>p.jsx("a",{href:tb(G.href),target:"_blank",rel:"noreferrer",children:G.name},G.href))}),p.jsx("div",{className:"thumbs",children:O.steps?.filter(G=>G.shot).map(G=>p.jsx(Za,{src:bs(U.id,G.shot),label:`${O.platform} · ${G.n} · ${G.text}`},G.n))})]},O.id+z)),!!H.length&&p.jsxs(p.Fragment,{children:[p.jsx("h3",{children:u("Failure screenshots","失败截图")}),p.jsx("div",{className:"thumbs",children:H.map(({task:O,step:z},G)=>p.jsx(Za,{src:bs(U.id,z.shot),label:`${O.platform} · ${z.text}`},G))})]}),!n&&S?.active&&S.live?.preview?.exists&&p.jsxs("details",{children:[p.jsx("summary",{children:u("L1 render preview — not a device stream","L1 渲染预览：不是设备画面")}),p.jsx(Za,{src:`/artifacts/live/preview.png?t=${S.live.preview.mtime_ms}`,label:S.live.preview.test||"L1"}),p.jsx("div",{className:"thumbs",children:S.live.keyframes?.map(O=>p.jsx(Za,{src:`/artifacts/keyframes/${encodeURIComponent(O.file)}`,label:O.file},O.file))})]})]})]})}function mM(){const n=Sv(),a=Yn(),[o,r]=Y.useState("catalog"),[u,f]=Y.useState(0),[d,h]=Y.useState(null),g=Un("/api/catalog",0,u),m=Un("/api/map",o==="catalog"?5e3:0,u),y=Un("/api/tasks",0,u),b=Un("/api/devices",0,u),v=Un(o==="history"?"/api/runs":null,5e3,u),[S,T]=Y.useState([]),[C,R]=Y.useState(!1),[j,V]=Y.useState("auto"),[_,D]=Y.useState(1),[U,H]=Y.useState(!1),[O,z]=Y.useState(""),G=()=>f(M=>M+1),oe=M=>T(E=>E.includes(M)?E.filter(L=>L!==M):[...E,M]),te=M=>{h(M),r("run")},K=Object.values(b.data||{}).flat(),k=[...new Set(g.data?.edges.flatMap(M=>Object.keys(M.platforms))||[])].filter(M=>K.some(E=>E.platform===M&&E.kind!=="host")||Object.values(g.data?.agent||{}).some(E=>E[M]===!0)),Z=async()=>{H(!0),z("");try{await Qf("/api/run",{tasks:S,device:j,repeat:_,source:"manual"}),h(null),r("run"),R(!1),G()}catch(M){z(Kf(M,n))}finally{H(!1)}},A=M=>{if(M.startsWith("edge:")&&g.data){const[E,L]=M.slice(5).split("@");return`${St(g.data,"edges",E,n)} · ${L||""}`}return y.data?.runnable.find(E=>E.id===M)?.label||M};return Y.useEffect(()=>{const M=E=>{if(E.key==="/"&&!(E.target instanceof HTMLInputElement)&&!(E.target instanceof HTMLTextAreaElement)){const L=document.querySelector(".search input");L&&(E.preventDefault(),L.focus())}E.key==="Escape"&&R(!1)};return document.addEventListener("keydown",M),()=>document.removeEventListener("keydown",M)},[]),p.jsxs(p.Fragment,{children:[p.jsxs("header",{className:"app-header",children:[p.jsxs("div",{className:"brand",children:[p.jsx("div",{className:"brand-mark",children:p.jsx(Cf,{size:20})}),p.jsxs("span",{children:["testmap",p.jsx("small",{children:a("Evidence, then confidence.","以证据建立信心。")})]})]}),p.jsxs("nav",{"aria-label":a("Main navigation","主导航"),children:[p.jsxs(Be,{variant:"ghost","aria-current":o==="catalog"?"page":void 0,onClick:()=>r("catalog"),children:[p.jsx(Cf,{size:16}),a("Catalog","目录")]}),p.jsxs(Be,{variant:"ghost","aria-current":o==="run"?"page":void 0,onClick:()=>{r("run")},children:[p.jsx(ff,{size:15}),a("Execution","执行")]}),p.jsxs(Be,{variant:"ghost","aria-current":o==="history"?"page":void 0,onClick:()=>r("history"),children:[p.jsx(X1,{size:16}),a("History","历史")]})]}),p.jsxs("div",{className:"header-meta",children:[p.jsxs("code",{children:[m.data?.head?.sha.slice(0,8)||"—",m.data?.head?.dirty?" + dirty":""]}),p.jsxs("span",{className:`connection ${m.error?"offline":""}`,children:[p.jsx("i",{}),m.error?a("Offline","离线"):m.data?a("Connected","已连接"):a("Connecting","连接中")]}),p.jsx(gM,{})]})]}),p.jsxs("main",{children:[(g.error||m.error)&&p.jsxs(fn,{children:[a("Console connection unavailable.","控制台连接不可用。")," ",g.error||m.error,p.jsxs(Be,{size:"sm",onClick:G,children:[p.jsx(Fg,{size:13}),a("Retry","重试")]})]}),!g.data||!m.data?p.jsx("div",{className:"panel",children:p.jsx(ea,{title:g.error||m.error?a("Unable to load the catalog","无法载入目录"):a("Loading the catalog…","正在载入目录…"),detail:a("The console serves the catalog and its evidence.","目录与证据由本地控制台提供。")})}):o==="catalog"?p.jsx(sM,{catalog:g.data,map:m.data,draft:S,toggle:oe,refresh:G,openRun:te}):o==="run"?p.jsx(hM,{runId:d,platforms:k,catalog:g.data,onCurrent:()=>h(null)},d||"current"):p.jsxs("section",{className:"panel history",children:[p.jsxs("div",{className:"panel-heading",children:[p.jsxs("div",{children:[p.jsx("span",{className:"eyebrow",children:a("TRACEABLE RESULTS","可追溯结果")}),p.jsx("h1",{children:a("Run history","运行历史")})]}),p.jsxs("span",{className:"tag",children:[v.data?.runs.length||0," ",a("runs","次运行")]})]}),v.error&&p.jsx(fn,{children:v.error}),v.data?.runs.length?p.jsx("div",{className:"table-wrap",children:p.jsxs("table",{children:[p.jsx("thead",{children:p.jsx("tr",{children:[a("Result / run","结果 / 运行"),a("Started","开始时间"),a("Revision","版本"),a("Source / target","来源 / 目标"),a("Checks","检查"),a("Duration","耗时")].map(M=>p.jsx("th",{children:M},M))})}),p.jsx("tbody",{children:v.data.runs.map(M=>p.jsxs("tr",{children:[p.jsx("td",{children:p.jsxs("button",{className:"history-open",onClick:()=>te(M.id),children:[p.jsx(tn,{state:M.state}),p.jsx("code",{children:M.id}),p.jsx(U1,{size:14})]})}),p.jsx("td",{children:new Date(M.started).toLocaleString(n==="zh"?"zh-CN":"en-GB")}),p.jsx("td",{children:p.jsxs("code",{children:[M.git?.sha?.slice(0,8),M.git?.dirty?" + dirty":""]})}),p.jsxs("td",{children:[M.source||"—",p.jsx("small",{children:M.device||M.platforms?.join(" + ")})]}),p.jsxs("td",{children:[p.jsxs("span",{className:"result-number",children:[M.pass_count||0," ✓"]})," ","/ ",M.fail_count||0," × / ",M.uncovered_count||0," ","—"]}),p.jsx("td",{children:Np(M.duration_s)})]},M.id))})]})}):p.jsx(ea,{title:a("No runs yet","尚无运行"),detail:a("Completed and interrupted runs will be listed here.","已完成或中断的运行都会保留在这里。")})]})]}),p.jsxs("section",{className:"draft-bar","aria-label":a("Run draft","运行草稿"),children:[p.jsxs("div",{className:"draft-summary",children:[p.jsx(G1,{size:19}),p.jsxs("strong",{children:[S.length," ",a("selected tasks","个已选任务")]}),p.jsxs("span",{children:[_,"× ·"," ",j==="auto"?a("Automatic devices","自动选择设备"):j]})]}),p.jsxs("div",{className:"row",children:[p.jsxs(Be,{onClick:()=>R(!C),"aria-expanded":C,children:[p.jsx(W1,{size:15}),a("Run settings & host checks","运行设置与主机检查")]}),p.jsxs(Be,{variant:"default",disabled:!S.length||U,onClick:()=>{Z()},children:[p.jsx(ff,{size:14}),U?a("Starting…","正在启动…"):a("Run draft","运行草稿")]})]})]}),O&&p.jsx("div",{className:"floating-error",children:p.jsxs(fn,{children:[O,p.jsx(Be,{variant:"ghost",size:"icon","aria-label":a("Dismiss","关闭"),onClick:()=>z(""),children:p.jsx(xo,{size:14})})]})}),C&&p.jsx(yM,{close:()=>R(!1),children:p.jsxs("section",{className:"settings-panel panel","aria-label":a("Run settings","运行设置"),children:[p.jsxs("div",{className:"panel-heading",children:[p.jsx("h2",{children:a("Prepare a run","准备运行")}),p.jsx(Be,{size:"icon",autoFocus:!0,"aria-label":a("Close settings","关闭设置"),onClick:()=>R(!1),children:p.jsx(xo,{size:16})})]}),p.jsxs("div",{className:"settings-content",children:[p.jsxs("div",{className:"settings-controls",children:[p.jsxs("label",{children:[a("Device","设备"),p.jsxs("select",{value:j,onChange:M=>V(M.target.value),children:[p.jsx("option",{value:"auto",children:a("Auto — available platforms in parallel","自动：可用平台并行")}),K.filter(M=>M.kind!=="host").map(M=>p.jsxs("option",{value:M.id,children:[M.platform," · ",M.name," · ",M.state]},M.platform+M.id))]})]}),p.jsxs("label",{children:[a("Repeat","重复"),p.jsx("input",{type:"number",min:1,max:20,value:_,onChange:M=>D(Math.max(1,Math.min(20,Number(M.target.value)||1)))})]}),p.jsxs(Be,{onClick:G,children:[p.jsx(Fg,{size:14}),a("Refresh devices","刷新设备")]})]}),b.error&&p.jsx(fn,{children:b.error}),p.jsx("p",{className:"notice",children:a("With automatic devices, a device walk also runs on the other supported mobile platform. A pinned device limits the run to that device’s platform. The execution queue shows the actual expanded tasks.","自动选择设备时，设备回放也会在另一个受支持的移动平台运行。指定设备后，仅运行其平台。执行队列会显示服务端实际展开的任务。")}),p.jsx("h3",{children:a("Selected tasks","已选任务")}),S.length?p.jsx("div",{className:"draft-list",children:S.map(M=>p.jsxs("div",{className:"row between",children:[p.jsxs("span",{children:[A(M),p.jsx("code",{children:M})]}),p.jsx(Be,{size:"icon","aria-label":`${a("Remove","移除")} ${A(M)}`,onClick:()=>oe(M),children:p.jsx(xo,{size:14})})]},M))}):p.jsx("p",{className:"muted",children:a("Choose a path in the catalog, or add a host check below.","在目录选择路径，或添加下面的主机检查。")}),p.jsxs("h3",{children:[p.jsx(F1,{size:16}),a("Host & diagnostic checks","主机与诊断检查")]}),y.error&&p.jsx(fn,{children:y.error}),p.jsx("div",{className:"host-checks",children:y.data?.runnable.map(M=>p.jsxs("div",{className:"host-check",children:[p.jsxs("label",{children:[p.jsx("input",{type:"checkbox",checked:S.includes(M.id),onChange:()=>oe(M.id)}),p.jsxs("span",{children:[M.label,p.jsxs("small",{children:[M.platforms.join(" + "),M.heavy?` · ${a("Build workload","构建任务")}`:""]})]})]}),p.jsxs("details",{children:[p.jsx("summary",{children:a("Command","命令")}),p.jsx("pre",{children:M.cmd.join(" ")}),p.jsx(Wl,{value:M.cmd.join(" "),label:a("Copy command","复制命令")})]})]},M.id))}),!!y.data?.manual?.length&&p.jsxs("details",{children:[p.jsx("summary",{children:a("Manual tasks","手动任务")}),p.jsx("pre",{children:JSON.stringify(y.data.manual,null,2)}),p.jsx(Wl,{value:JSON.stringify(y.data.manual,null,2)})]})]}),p.jsxs("footer",{className:"settings-footer",children:[p.jsx(Be,{onClick:()=>T([]),disabled:!S.length,children:a("Clear draft","清空草稿")}),p.jsxs(Be,{variant:"default",disabled:!S.length||U,onClick:()=>{Z()},children:[p.jsx(ff,{size:14}),a("Start run","开始运行")]})]})]})})]})}const bv=Y.createContext(()=>{}),Sv=()=>Y.useContext(li);function gM(){const n=Sv(),a=Y.useContext(bv);return p.jsx(Be,{size:"sm",variant:"ghost","aria-label":"Switch language / 切换语言",onClick:()=>a(n==="en"?"zh":"en"),children:n==="en"?"中文":"EN"})}function pM(){const[n,a]=Y.useState(()=>{try{return localStorage.getItem("testmap-language")==="en"?"en":localStorage.getItem("testmap-language")==="zh"||navigator.language.startsWith("zh")?"zh":"en"}catch{return"en"}});return Y.useEffect(()=>{document.documentElement.lang=n;try{localStorage.setItem("testmap-language",n)}catch{}},[n]),p.jsx(li.Provider,{value:n,children:p.jsx(bv.Provider,{value:a,children:p.jsx(mM,{})})})}function yM({children:n,close:a}){const o=Y.useRef(null);return Y.useEffect(()=>(o.current?.showModal(),()=>o.current?.close()),[]),p.jsx("dialog",{ref:o,className:"settings-backdrop","aria-label":"Run settings / 运行设置",onCancel:a,onClick:r=>{r.target===r.currentTarget&&a()},children:n})}O1.createRoot(document.getElementById("root")).render(p.jsx(Y.StrictMode,{children:p.jsx(pM,{})}));</script>
   <style rel="stylesheet" crossorigin>.react-flow{direction:ltr;--xy-edge-stroke-default: #b1b1b7;--xy-edge-stroke-width-default: 1;--xy-edge-stroke-selected-default: #555;--xy-connectionline-stroke-default: #b1b1b7;--xy-connectionline-stroke-width-default: 1;--xy-attribution-background-color-default: rgba(255, 255, 255, .5);--xy-minimap-background-color-default: #fff;--xy-minimap-mask-background-color-default: rgba(240, 240, 240, .6);--xy-minimap-mask-stroke-color-default: transparent;--xy-minimap-mask-stroke-width-default: 1;--xy-minimap-node-background-color-default: #e2e2e2;--xy-minimap-node-stroke-color-default: transparent;--xy-minimap-node-stroke-width-default: 2;--xy-background-color-default: transparent;--xy-background-pattern-dots-color-default: #91919a;--xy-background-pattern-lines-color-default: #eee;--xy-background-pattern-cross-color-default: #e2e2e2;background-color:var(--xy-background-color, var(--xy-background-color-default));--xy-node-color-default: inherit;--xy-node-border-default: 1px solid #1a192b;--xy-node-background-color-default: #fff;--xy-node-group-background-color-default: rgba(240, 240, 240, .25);--xy-node-boxshadow-hover-default: 0 1px 4px 1px rgba(0, 0, 0, .08);--xy-node-boxshadow-selected-default: 0 0 0 .5px #1a192b;--xy-node-border-radius-default: 3px;--xy-handle-background-color-default: #1a192b;--xy-handle-border-color-default: #fff;--xy-selection-background-color-default: rgba(0, 89, 220, .08);--xy-selection-border-default: 1px dotted rgba(0, 89, 220, .8);--xy-controls-button-background-color-default: #fefefe;--xy-controls-button-background-color-hover-default: #f4f4f4;--xy-controls-button-color-default: inherit;--xy-controls-button-color-hover-default: inherit;--xy-controls-button-border-color-default: #eee;--xy-controls-box-shadow-default: 0 0 2px 1px rgba(0, 0, 0, .08);--xy-edge-label-background-color-default: #ffffff;--xy-edge-label-color-default: inherit;--xy-resize-background-color-default: #3367d9}.react-flow.dark{--xy-edge-stroke-default: #3e3e3e;--xy-edge-stroke-width-default: 1;--xy-edge-stroke-selected-default: #727272;--xy-connectionline-stroke-default: #b1b1b7;--xy-connectionline-stroke-width-default: 1;--xy-attribution-background-color-default: rgba(150, 150, 150, .25);--xy-minimap-background-color-default: #141414;--xy-minimap-mask-background-color-default: rgba(60, 60, 60, .6);--xy-minimap-mask-stroke-color-default: transparent;--xy-minimap-mask-stroke-width-default: 1;--xy-minimap-node-background-color-default: #2b2b2b;--xy-minimap-node-stroke-color-default: transparent;--xy-minimap-node-stroke-width-default: 2;--xy-background-color-default: #141414;--xy-background-pattern-dots-color-default: #777;--xy-background-pattern-lines-color-default: #777;--xy-background-pattern-cross-color-default: #777;--xy-node-color-default: #f8f8f8;--xy-node-border-default: 1px solid #3c3c3c;--xy-node-background-color-default: #1e1e1e;--xy-node-group-background-color-default: rgba(240, 240, 240, .25);--xy-node-boxshadow-hover-default: 0 1px 4px 1px rgba(255, 255, 255, .08);--xy-node-boxshadow-selected-default: 0 0 0 .5px #999;--xy-handle-background-color-default: #bebebe;--xy-handle-border-color-default: #1e1e1e;--xy-selection-background-color-default: rgba(200, 200, 220, .08);--xy-selection-border-default: 1px dotted rgba(200, 200, 220, .8);--xy-controls-button-background-color-default: #2b2b2b;--xy-controls-button-background-color-hover-default: #3e3e3e;--xy-controls-button-color-default: #f8f8f8;--xy-controls-button-color-hover-default: #fff;--xy-controls-button-border-color-default: #5b5b5b;--xy-controls-box-shadow-default: 0 0 2px 1px rgba(0, 0, 0, .08);--xy-edge-label-background-color-default: #141414;--xy-edge-label-color-default: #f8f8f8}.react-flow__background{background-color:var(--xy-background-color-props, var(--xy-background-color, var(--xy-background-color-default)));pointer-events:none;z-index:-1}.react-flow__container{position:absolute;width:100%;height:100%;top:0;left:0}.react-flow__pane{z-index:1}.react-flow__pane.draggable{cursor:grab}.react-flow__pane.dragging{cursor:grabbing}.react-flow__pane.selection{cursor:pointer}.react-flow__viewport{transform-origin:0 0;z-index:2;pointer-events:none}.react-flow__renderer{z-index:4}.react-flow__selection{z-index:6}.react-flow__nodesselection-rect:focus,.react-flow__nodesselection-rect:focus-visible{outline:none}.react-flow__edge-path{stroke:var(--xy-edge-stroke, var(--xy-edge-stroke-default));stroke-width:var(--xy-edge-stroke-width, var(--xy-edge-stroke-width-default));fill:none}.react-flow__connection-path{stroke:var(--xy-connectionline-stroke, var(--xy-connectionline-stroke-default));stroke-width:var(--xy-connectionline-stroke-width, var(--xy-connectionline-stroke-width-default));fill:none}.react-flow .react-flow__edges{position:absolute}.react-flow .react-flow__edges svg{overflow:visible;position:absolute;pointer-events:none}.react-flow__edge{pointer-events:visibleStroke}.react-flow__edge.selectable{cursor:pointer}.react-flow__edge.animated path{stroke-dasharray:5;animation:dashdraw .5s linear infinite}.react-flow__edge.animated path.react-flow__edge-interaction{stroke-dasharray:none;animation:none}.react-flow__edge.inactive{pointer-events:none}.react-flow__edge.selected,.react-flow__edge:focus,.react-flow__edge:focus-visible{outline:none}.react-flow__edge.selected .react-flow__edge-path,.react-flow__edge.selectable:focus .react-flow__edge-path,.react-flow__edge.selectable:focus-visible .react-flow__edge-path{stroke:var(--xy-edge-stroke-selected, var(--xy-edge-stroke-selected-default))}.react-flow__edge-textwrapper{pointer-events:all}.react-flow__edge .react-flow__edge-text{pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.react-flow__arrowhead polyline{stroke:var(--xy-edge-stroke, var(--xy-edge-stroke-default))}.react-flow__arrowhead polyline.arrowclosed{fill:var(--xy-edge-stroke, var(--xy-edge-stroke-default))}.react-flow__connection{pointer-events:none}.react-flow__connection .animated{stroke-dasharray:5;animation:dashdraw .5s linear infinite}svg.react-flow__connectionline{z-index:1001;overflow:visible;position:absolute}.react-flow__nodes{pointer-events:none;transform-origin:0 0}.react-flow__node{position:absolute;-webkit-user-select:none;-moz-user-select:none;user-select:none;pointer-events:all;transform-origin:0 0;box-sizing:border-box;cursor:default}.react-flow__node.selectable{cursor:pointer}.react-flow__node.draggable{cursor:grab;pointer-events:all}.react-flow__node.draggable.dragging{cursor:grabbing}.react-flow__nodesselection{z-index:3;transform-origin:left top;pointer-events:none}.react-flow__nodesselection-rect{position:absolute;pointer-events:all;cursor:grab}.react-flow__handle{position:absolute;pointer-events:none;min-width:5px;min-height:5px;width:6px;height:6px;background-color:var(--xy-handle-background-color, var(--xy-handle-background-color-default));border:1px solid var(--xy-handle-border-color, var(--xy-handle-border-color-default));border-radius:100%}.react-flow__handle.connectingfrom{pointer-events:all}.react-flow__handle.connectionindicator{pointer-events:all;cursor:crosshair}.react-flow__handle-bottom{top:auto;left:50%;bottom:0;transform:translate(-50%,50%)}.react-flow__handle-top{top:0;left:50%;transform:translate(-50%,-50%)}.react-flow__handle-left{top:50%;left:0;transform:translate(-50%,-50%)}.react-flow__handle-right{top:50%;right:0;transform:translate(50%,-50%)}.react-flow__edgeupdater{cursor:move;pointer-events:all}.react-flow__pane.selection .react-flow__panel{pointer-events:none}.react-flow__panel{position:absolute;z-index:5;margin:15px}.react-flow__panel.top{top:0}.react-flow__panel.bottom{bottom:0}.react-flow__panel.top.center,.react-flow__panel.bottom.center{left:50%;transform:translate(-15px) translate(-50%)}.react-flow__panel.left{left:0}.react-flow__panel.right{right:0}.react-flow__panel.left.center,.react-flow__panel.right.center{top:50%;transform:translateY(-15px) translateY(-50%)}.react-flow__attribution{font-size:10px;background:var(--xy-attribution-background-color, var(--xy-attribution-background-color-default));padding:2px 3px;margin:0}.react-flow__attribution a{text-decoration:none;color:#999}@keyframes dashdraw{0%{stroke-dashoffset:10}}.react-flow__edgelabel-renderer{position:absolute;width:100%;height:100%;pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none;left:0;top:0}.react-flow__viewport-portal{position:absolute;width:100%;height:100%;left:0;top:0;-webkit-user-select:none;-moz-user-select:none;user-select:none}.react-flow__minimap{background:var( --xy-minimap-background-color-props, var(--xy-minimap-background-color, var(--xy-minimap-background-color-default)) )}.react-flow__minimap-svg{display:block}.react-flow__minimap-mask{fill:var( --xy-minimap-mask-background-color-props, var(--xy-minimap-mask-background-color, var(--xy-minimap-mask-background-color-default)) );stroke:var( --xy-minimap-mask-stroke-color-props, var(--xy-minimap-mask-stroke-color, var(--xy-minimap-mask-stroke-color-default)) );stroke-width:var( --xy-minimap-mask-stroke-width-props, var(--xy-minimap-mask-stroke-width, var(--xy-minimap-mask-stroke-width-default)) )}.react-flow__minimap-node{fill:var( --xy-minimap-node-background-color-props, var(--xy-minimap-node-background-color, var(--xy-minimap-node-background-color-default)) );stroke:var( --xy-minimap-node-stroke-color-props, var(--xy-minimap-node-stroke-color, var(--xy-minimap-node-stroke-color-default)) );stroke-width:var( --xy-minimap-node-stroke-width-props, var(--xy-minimap-node-stroke-width, var(--xy-minimap-node-stroke-width-default)) )}.react-flow__background-pattern.dots{fill:var( --xy-background-pattern-color-props, var(--xy-background-pattern-color, var(--xy-background-pattern-dots-color-default)) )}.react-flow__background-pattern.lines{stroke:var( --xy-background-pattern-color-props, var(--xy-background-pattern-color, var(--xy-background-pattern-lines-color-default)) )}.react-flow__background-pattern.cross{stroke:var( --xy-background-pattern-color-props, var(--xy-background-pattern-color, var(--xy-background-pattern-cross-color-default)) )}.react-flow__controls{display:flex;flex-direction:column;box-shadow:var(--xy-controls-box-shadow, var(--xy-controls-box-shadow-default))}.react-flow__controls.horizontal{flex-direction:row}.react-flow__controls-button{display:flex;justify-content:center;align-items:center;height:26px;width:26px;padding:4px;border:none;background:var(--xy-controls-button-background-color, var(--xy-controls-button-background-color-default));border-bottom:1px solid var( --xy-controls-button-border-color-props, var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default)) );color:var( --xy-controls-button-color-props, var(--xy-controls-button-color, var(--xy-controls-button-color-default)) );cursor:pointer;-webkit-user-select:none;-moz-user-select:none;user-select:none}.react-flow__controls-button svg{width:100%;max-width:12px;max-height:12px;fill:currentColor}.react-flow__edge.updating .react-flow__edge-path{stroke:#777}.react-flow__edge-text{font-size:10px}.react-flow__node.selectable:focus,.react-flow__node.selectable:focus-visible{outline:none}.react-flow__node-input,.react-flow__node-default,.react-flow__node-output,.react-flow__node-group{padding:10px;border-radius:var(--xy-node-border-radius, var(--xy-node-border-radius-default));width:150px;font-size:12px;color:var(--xy-node-color, var(--xy-node-color-default));text-align:center;border:var(--xy-node-border, var(--xy-node-border-default));background-color:var(--xy-node-background-color, var(--xy-node-background-color-default))}.react-flow__node-input.selectable:hover,.react-flow__node-default.selectable:hover,.react-flow__node-output.selectable:hover,.react-flow__node-group.selectable:hover{box-shadow:var(--xy-node-boxshadow-hover, var(--xy-node-boxshadow-hover-default))}.react-flow__node-input.selectable.selected,.react-flow__node-input.selectable:focus,.react-flow__node-input.selectable:focus-visible,.react-flow__node-default.selectable.selected,.react-flow__node-default.selectable:focus,.react-flow__node-default.selectable:focus-visible,.react-flow__node-output.selectable.selected,.react-flow__node-output.selectable:focus,.react-flow__node-output.selectable:focus-visible,.react-flow__node-group.selectable.selected,.react-flow__node-group.selectable:focus,.react-flow__node-group.selectable:focus-visible{box-shadow:var(--xy-node-boxshadow-selected, var(--xy-node-boxshadow-selected-default))}.react-flow__node-group{background-color:var(--xy-node-group-background-color, var(--xy-node-group-background-color-default))}.react-flow__nodesselection-rect,.react-flow__selection{background:var(--xy-selection-background-color, var(--xy-selection-background-color-default));border:var(--xy-selection-border, var(--xy-selection-border-default))}.react-flow__nodesselection-rect:focus,.react-flow__nodesselection-rect:focus-visible,.react-flow__selection:focus,.react-flow__selection:focus-visible{outline:none}.react-flow__controls-button:hover{background:var( --xy-controls-button-background-color-hover-props, var(--xy-controls-button-background-color-hover, var(--xy-controls-button-background-color-hover-default)) );color:var( --xy-controls-button-color-hover-props, var(--xy-controls-button-color-hover, var(--xy-controls-button-color-hover-default)) )}.react-flow__controls-button:disabled{pointer-events:none}.react-flow__controls-button:disabled svg{fill-opacity:.4}.react-flow__controls-button:last-child{border-bottom:none}.react-flow__controls.horizontal .react-flow__controls-button{border-bottom:none;border-right:1px solid var( --xy-controls-button-border-color-props, var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default)) )}.react-flow__controls.horizontal .react-flow__controls-button:last-child{border-right:none}.react-flow__resize-control{position:absolute}.react-flow__resize-control.left,.react-flow__resize-control.right{cursor:ew-resize}.react-flow__resize-control.top,.react-flow__resize-control.bottom{cursor:ns-resize}.react-flow__resize-control.top.left,.react-flow__resize-control.bottom.right{cursor:nwse-resize}.react-flow__resize-control.bottom.left,.react-flow__resize-control.top.right{cursor:nesw-resize}.react-flow__resize-control.handle{width:5px;height:5px;border:1px solid #fff;border-radius:1px;background-color:var(--xy-resize-background-color, var(--xy-resize-background-color-default));translate:-50% -50%}.react-flow__resize-control.handle.left{left:0;top:50%}.react-flow__resize-control.handle.right{left:100%;top:50%}.react-flow__resize-control.handle.top{left:50%;top:0}.react-flow__resize-control.handle.bottom{left:50%;top:100%}.react-flow__resize-control.handle.top.left,.react-flow__resize-control.handle.bottom.left{left:0}.react-flow__resize-control.handle.top.right,.react-flow__resize-control.handle.bottom.right{left:100%}.react-flow__resize-control.line{border-color:var(--xy-resize-background-color, var(--xy-resize-background-color-default));border-width:0;border-style:solid}.react-flow__resize-control.line.left,.react-flow__resize-control.line.right{width:1px;transform:translate(-50%);top:0;height:100%}.react-flow__resize-control.line.left{left:0;border-left-width:1px}.react-flow__resize-control.line.right{left:100%;border-right-width:1px}.react-flow__resize-control.line.top,.react-flow__resize-control.line.bottom{height:1px;transform:translateY(-50%);left:0;width:100%}.react-flow__resize-control.line.top{top:0;border-top-width:1px}.react-flow__resize-control.line.bottom{border-bottom-width:1px;top:100%}.react-flow__edge-textbg{fill:var(--xy-edge-label-background-color, var(--xy-edge-label-background-color-default))}.react-flow__edge-text{fill:var(--xy-edge-label-color, var(--xy-edge-label-color-default))}@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-outline-style:solid}}}@layer theme{:root,:host{--font-sans:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono)}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab,red,red)){::placeholder{color:color-mix(in oklab,currentcolor 50%,transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}@layer components;@layer utilities{.visible{visibility:visible}.block{display:block}.hidden{display:none}.w-full{width:100%}.transform{transform:var(--tw-rotate-x,)var(--tw-rotate-y,)var(--tw-rotate-z,)var(--tw-skew-x,)var(--tw-skew-y,)}.outline{outline-style:var(--tw-outline-style);outline-width:1px}}:root{color:#dfe5ee;font-synthesis:none;color-scheme:dark;--dur-1:.12s;--dur-2:.2s;--dur-3:.32s;--ease:cubic-bezier(.16,1,.3,1);--line:#27303e;--muted:#909cae;--accent:#a5c0ff;background:#0c1016;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}*{box-sizing:border-box}body{min-width:760px;margin:0}button,input,select{font:inherit}button,a,input,select,summary{-webkit-tap-highlight-color:transparent}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.45}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline-offset:3px;outline:2px solid #a5c0ff}input,select{border:1px solid var(--line);color:inherit;background:#151c27;border-radius:7px;min-width:0;padding:8px 10px}input[type=checkbox]{accent-color:#a5c0ff;flex-shrink:0;width:16px;height:16px}a{color:#a5c0ff;text-decoration:none}a:hover{text-decoration:underline}h1,h2,h3,p{margin:0}h1{letter-spacing:-.7px;font-size:25px;font-weight:600}h2{font-size:18px;font-weight:600;line-height:1.4}h3{align-items:center;gap:7px;margin:18px 0 10px;font-size:13px;font-weight:600;display:flex}p{line-height:1.6}small{color:var(--muted);font-size:11px;line-height:1.5;display:block}code,pre{overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}pre{white-space:pre-wrap;overflow-wrap:anywhere}code{color:#b0bccd}summary{cursor:pointer;font-size:12px;font-weight:500;line-height:1.6}details>summary{padding:10px 0}details p{font-size:12px}strong{font-weight:600}.muted{color:var(--muted);font-size:12px}.row{align-items:center;gap:8px;display:flex}.between{justify-content:space-between}.w-full{width:100%;margin-bottom:8px}.tag{border:1px solid var(--line);white-space:nowrap;color:#aebace;border-radius:5px;padding:2px 6px;font-size:10px}.eyebrow{letter-spacing:1.5px;color:#788aa5;margin-bottom:7px;font-size:9px;font-weight:650;display:block}.button{white-space:normal;min-height:34px;transition:transform var(--dur-1)var(--ease);text-align:center;border:1px solid #0000;border-radius:7px;justify-content:center;align-items:center;gap:7px;padding:7px 11px;font-size:12px;font-weight:500;line-height:1.4;display:inline-flex}.button:active:not(:disabled){transform:scale(.98)}.button-outline{color:#dce4f1;background:#18202c;border-color:#303b4c}.button-outline:hover{background:#202b3b}.button-primary{color:#12223e;background:#b3caff}.button-primary:hover{background:#c8d9ff}.button-ghost{color:#9eabbd;background:0 0}.button-ghost:hover{color:#e4ecf7;background:#222b3a}.button-danger{color:#ffb5ba;background:#40242c;border-color:#6c3643}.button-sm{min-height:28px;padding:4px 7px;font-size:11px}.button-icon{flex-shrink:0;width:32px;height:32px;padding:7px}.app-header{border-bottom:1px solid var(--line);justify-content:space-between;align-items:center;gap:20px;height:83px;padding:0 28px;display:flex}.brand{letter-spacing:-.5px;align-items:center;gap:11px;font-size:18px;font-weight:650;display:flex}.brand small{letter-spacing:0;margin-top:3px;font-size:10px;font-weight:400}.brand-mark{color:#adc8ff;background:#19243a;border:1px solid #415577;border-radius:11px;place-items:center;width:35px;height:35px;display:grid}.app-header nav{background:#101721;border:1px solid #202a38;border-radius:10px;gap:4px;padding:4px;display:flex}.app-header nav .button[aria-current=page]{color:#e6eeff;background:#293549}.header-meta{align-items:center;gap:13px;font-size:11px;display:flex}.connection{color:#9baabc;align-items:center;gap:6px;display:flex}.connection i{background:#91c7af;border-radius:50%;width:5px;height:5px}.connection.offline i{background:#eaa6a6}main{max-width:1920px;margin:auto;padding:24px 28px 96px}.panel{border:1px solid var(--line);background:#121923;border-radius:12px;overflow:hidden}.panel-heading{justify-content:space-between;align-items:center;gap:16px;padding:22px 22px 17px;display:flex}.segmented{border:1px solid var(--line);background:#0d131c;border-radius:8px;padding:3px;display:flex}.segmented .button[aria-pressed=true]{color:#e4ecfa;background:#273448}.catalog-layout{grid-template-columns:minmax(0,1fr) 330px;align-items:start;gap:18px;display:grid}.catalog-main{min-width:0}.filters{border-bottom:1px solid var(--line);padding:0 20px 14px}.search{color:#7b8ba2;background:#0e151f;border:1px solid #303d50;border-radius:8px;align-items:center;gap:8px;padding-left:10px;display:flex}.search input{background:0 0;border:0;width:100%;height:36px;font-size:12px}.filter-row{flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;display:flex}.filter-select{color:#8492a5;align-items:center;gap:5px;font-size:10px;display:flex}.filter-select select{background:#1c2634;border:0;max-width:100px;padding:4px;font-size:11px}.count{color:#7f8ca0;margin-left:auto;font-size:10px}.graph{background:#101721;height:calc(100vh - 318px);min-height:455px;position:relative}.react-flow__node.graph-node{color:#e0e8f5;text-align:left;width:190px;min-width:172px;height:72px;box-shadow:none;background:#1a2535;border:1px solid #475267;border-radius:10px;padding:12px 15px}.graph-node.focused{background:#24344d;border-color:#a5c0ff}.graph-node strong{font-size:13px;display:block}.node-kind{text-transform:uppercase;color:#8291a7;letter-spacing:1px;margin-bottom:5px;font-size:9px;display:block}.react-flow__handle{background:#8698b4;border:0}.edge-label{position:absolute}.edge-label button{color:#aebed4;background:#172230;border:1px solid #53637a;border-radius:6px;place-items:center;width:21px;height:21px;font-size:10px;display:grid}.edge-label button:hover{color:#e3ecff;border-color:#c0d4ff}.react-flow__controls{box-shadow:none;border:1px solid #3b485b;border-radius:7px;overflow:hidden}.react-flow__controls button{fill:#c5d1e3;background:#192434;border-bottom:1px solid #364357}.react-flow__controls button:hover{background:#2e3f58}.graph-hint{color:#8493a9;pointer-events:none;font-size:10px;position:absolute;bottom:18px;right:18px}.catalog-footer{border-top:1px solid var(--line);color:#8392a8;justify-content:space-between;gap:10px;padding:14px 20px;font-size:10px;display:flex}.inspector{min-height:555px;max-height:calc(100vh - 196px);overflow:auto}.inspector-heading{border-bottom:1px solid var(--line);padding:21px 20px 17px}.inspector-heading h2{margin-bottom:10px;font-size:18px}.inspector-heading .status{margin-top:8px}.inspector-content{padding:16px 20px 22px}.route{color:#a7b9d7;background:#1b2637;border-radius:6px;padding:9px 10px;font-size:12px}.status{color:#8595ac;white-space:nowrap;align-items:center;gap:5px;font-size:10px;line-height:1.5;display:inline-flex}.status-passed,.status-done{color:#94cab5}.status-failed,.status-interrupted{color:#eea0a8}.status-review_required,.status-blocked{color:#ddc391}.status-running,.status-current{color:#a6c0f5}.platform-plan{border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center;gap:9px;padding:9px 0;font-size:11px;display:flex}.platform-plan strong{min-width:52px}.platform-plan label{align-items:center;gap:5px;display:flex}.technical{margin-top:13px}dl{margin:0}dt{color:#8494ac;text-transform:uppercase;font-size:10px}dd{overflow-wrap:anywhere;margin:4px 0 12px;font-size:12px}.case{border-bottom:1px solid var(--line);padding:11px 0}.case>strong{margin:5px 0;font-size:12px;line-height:1.5;display:block}.case .row code{flex:1;font-size:10px}.thumbs{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:10px;display:grid}.shot-link{border:1px solid var(--line);border-radius:7px;min-width:0;display:block;overflow:hidden}.shot-link img{object-fit:contain;max-width:100%;max-height:220px;margin:auto;display:block}.shot-link span{padding:6px;font-size:10px;display:block}.confirm-box{border-top:1px solid var(--line);margin-top:22px;padding-top:2px}.confirm-box>p,.confirm-box>.row,.confirm-box>.button{margin-bottom:10px}.confirm-box .row code{font-size:10px}.confirm-box .row{flex-wrap:wrap}.confirmation-current,.confirmation-stale{background:#1b2a2b;border-radius:7px;margin:12px 0;padding:10px;font-size:11px}.confirmation-stale{color:#ddc391;background:#30291e}.confirmation-stale p,.confirmation-current p{margin:5px 0;font-size:10px}.undo{animation:enter var(--dur-2)var(--ease);background:#253d39;border-radius:8px;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;padding:9px;font-size:12px;display:flex}.empty{text-align:center;color:#64768e;flex-direction:column;justify-content:center;align-items:center;gap:14px;min-height:230px;padding:55px 24px;display:flex}.empty strong{color:#b4c0d3;font-size:14px}.empty p{color:#7f90a8;max-width:260px;font-size:12px}.inspector>.empty{padding:75px 30px}.tree{min-height:455px;max-height:calc(100vh - 318px);padding:12px 20px;overflow:auto}.tree>details{margin-bottom:8px}.tree summary{color:#bac8dd;justify-content:space-between;padding:10px 0;font-size:13px;display:flex}.tree summary:before{content:"⌄";margin-right:8px}.tree summary span{color:#7e8fa8;margin-left:auto;font-size:10px}.tree-row{border-left:1px solid #344257;margin-left:7px}.tree-row.selected{background:#23334d}.tree-path{text-align:left;color:#d1dced;background:0 0;border:0;align-items:center;gap:8px;width:100%;padding:11px 8px;font-size:12px;display:flex}.tree-path:hover{background:#1b283b}.tree-path>span:first-of-type{flex:1}.tree-path small{margin-top:3px;font-size:10px}.error{color:#f0b4be;background:#35232b;border:1px solid #68414d;border-radius:8px;align-items:center;gap:10px;margin-bottom:14px;padding:12px;font-size:12px;display:flex}.error>svg{flex-shrink:0}.error>span{flex:1}.draft-bar{z-index:20;background:#141d2b;border-top:1px solid #344056;justify-content:space-between;gap:16px;min-height:70px;padding:14px 28px;display:flex;position:fixed;bottom:0;left:0;right:0;box-shadow:0 -8px 30px #060b1233}.draft-summary{color:#bfd0ea;align-items:center;gap:11px;font-size:12px;display:flex}.draft-summary>span{color:#8194b2;font-size:11px}.settings-backdrop{z-index:40;background:#050910aa;justify-content:center;align-items:center;padding:36px;display:flex;position:fixed;inset:0}.settings-panel{width:760px;max-height:calc(100vh - 72px);animation:enter var(--dur-2)var(--ease);flex-direction:column;display:flex;box-shadow:0 24px 100px #0008}.settings-panel .panel-heading{border-bottom:1px solid var(--line)}.settings-content{padding:20px 24px;overflow:auto}.settings-controls{align-items:end;gap:14px;display:flex}.settings-controls label{flex-direction:column;gap:7px;font-size:11px;display:flex}.settings-controls label:first-child{flex:1}.settings-controls input{width:65px}.settings-controls select{width:100%;font-size:11px}.notice{color:#adc0db;background:#1c2a3d;border-radius:7px;margin-top:15px;padding:10px 13px;font-size:11px}.draft-list>.row{border-bottom:1px solid var(--line);padding:10px 0;font-size:12px}.draft-list code{color:#8295b2;margin-top:4px;font-size:10px;display:block}.host-check{border-bottom:1px solid var(--line);padding:12px 0}.host-check>label{align-items:center;gap:12px;font-size:12px;display:flex}.host-check pre{background:#0a1018;border-radius:6px;padding:12px;font-size:11px}.host-check summary{color:#8b9bb3;font-size:10px}.settings-footer{border-top:1px solid var(--line);justify-content:space-between;padding:16px 24px;display:flex}.floating-error{z-index:45;max-width:620px;position:fixed;bottom:84px;right:28px}.page-heading{justify-content:space-between;align-items:center;gap:16px;margin:0 0 20px;display:flex}.page-heading p{margin-top:7px}.progress-card{color:#9cb0ce;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-bottom:20px;font-size:11px;display:flex}.progress-track{background:#283344;border-radius:2px;width:100%;height:3px;overflow:hidden}.progress-track i{transform-origin:0;background:#a8c3ff;height:100%;display:block}.execution-layout{grid-template-columns:245px minmax(0,1fr);align-items:start;gap:18px;display:grid}.task-list{min-width:0}.section-heading{border-bottom:1px solid var(--line);justify-content:space-between;align-items:center;gap:12px;padding:15px 17px;display:flex}.section-heading h3{margin:0}.section-heading h2{align-items:center;gap:9px;display:flex}.task-row{border:0;border-bottom:1px solid var(--line);text-align:left;color:#d6e1f3;background:0 0;flex-direction:column;gap:6px;width:100%;min-height:100px;padding:14px 16px;display:flex}.task-row:last-child{border-bottom:0}.task-row:hover{background:#1c2a3d}.task-row.selected{background:#243653;border-left:2px solid #a5c0ff}.task-row strong{overflow-wrap:anywhere;font-size:12px;line-height:1.6}.task-row>span:last-of-type{color:#92a4bf;font-size:10px}.device-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-width:0;display:grid}.device-lane{min-width:0}.lane-header{border-bottom:1px solid var(--line);justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;display:flex}.lane-header strong{text-transform:capitalize;font-size:13px}.lane-header small{overflow-wrap:anywhere;margin-top:3px;font-size:10px}.live-label{color:#9fc7b6;white-space:nowrap;align-items:center;gap:5px;font-size:9px;display:flex}.device-stage{background:#0b111a;justify-content:center;align-items:center;height:420px;padding:18px;display:flex;overflow:hidden}.device-stage canvas,.device-stage img{object-fit:contain;border-radius:7px;width:auto;max-width:100%;height:auto;max-height:100%}.device-stage .empty{min-height:0;padding:22px}.lane-caption{border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:#92a9ca;justify-content:space-between;align-items:center;gap:7px;min-height:54px;padding:11px 14px;font-size:10px;display:flex}.lane-caption>span{overflow-wrap:anywhere}.step-list{max-height:300px;position:relative;overflow:auto}.step-list>p{padding:18px}.step{border:0;border-bottom:1px solid var(--line);color:#becde4;text-align:left;background:0 0;grid-template-columns:20px minmax(0,1fr) auto;gap:8px;width:100%;padding:13px 12px;display:grid}.step:hover,.step.selected{background:#253752}.step-number{color:#849ab9;padding-top:3px;font-size:10px}.step strong{overflow-wrap:anywhere;font-size:11px;line-height:1.5;display:block}.step small{overflow-wrap:anywhere;margin-top:4px;font-size:9px}.step .status{font-size:9px}.danger-text{color:#dda0a9!important}.diagnostics{margin-top:20px;padding:0 20px 22px}.diagnostics>.section-heading{padding-left:0;padding-right:0}.diagnostics>p{margin:15px 0}.diagnostics .log{color:#aab9cd;background:#0b111a;border:1px solid #263349;border-radius:7px;max-height:350px;padding:16px;font-size:11px;line-height:1.8;overflow:auto}.diagnostics details{border-bottom:1px solid var(--line)}.package-grid{gap:22px;display:flex}.task-evidence summary{align-items:center;gap:13px;display:flex}.task-evidence pre{background:#0c121b;padding:12px}.layer-grid{grid-template-columns:repeat(3,1fr);gap:12px;margin-top:15px;display:grid}.layer-grid dt{font-size:9px}.layer-grid dd{font-size:11px}.result-cases{padding:0;list-style:none}.result-cases li{align-items:start;gap:12px;padding:9px 0;font-size:12px;display:flex}.evidence-links{gap:12px;font-size:12px;display:flex}.history .table-wrap{overflow:auto}table{border-collapse:collapse;text-align:left;width:100%}th{color:#8394ae;border-block:1px solid var(--line);padding:13px 20px;font-size:10px;font-weight:500}td{border-bottom:1px solid var(--line);vertical-align:middle;padding:17px 20px;font-size:11px}.history-open{color:inherit;text-align:left;background:0 0;border:0;grid-template-columns:1fr 15px;gap:6px;display:grid}.history-open .status{grid-column:1/-1}.history-open:hover code{color:#c2d7ff}td small{margin-top:5px}.result-number{color:#9ccbb5}@keyframes enter{0%{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}@media(min-width:1440px){.graph{min-height:545px}.device-stage{height:500px}.catalog-layout{grid-template-columns:minmax(0,1fr) 360px}.inspector{min-height:645px}.execution-layout{grid-template-columns:270px minmax(0,1fr)}}@media(max-width:1150px){.app-header{padding-inline:18px}.brand small,.header-meta code{display:none}main{padding:20px 18px 100px}.catalog-layout{grid-template-columns:minmax(0,1fr) 300px;gap:12px}.panel-heading{padding:18px 16px}.panel-heading h1{font-size:21px}.filters{padding-inline:14px}.filter-row{gap:7px}.filter-select{gap:3px}.filter-select select{max-width:75px}.execution-layout{grid-template-columns:205px minmax(0,1fr);gap:12px}.device-grid{gap:12px}.device-stage{height:340px;padding:12px}.lane-header{gap:5px;padding:11px}.step{grid-template-columns:17px minmax(0,1fr);padding:12px 10px}.step .status{grid-column:2}.draft-bar{padding-inline:18px}.draft-summary>span{display:none}.graph{min-height:460px}.catalog-footer{padding:12px;font-size:9px}.inspector-content,.inspector-heading{padding-inline:16px}th,td{padding:14px}}@media(max-width:850px){.catalog-layout{grid-template-columns:minmax(0,1fr) 280px}.brand{font-size:15px}.header-meta .connection{display:none}.app-header nav .button{font-size:11px}.execution-layout{grid-template-columns:180px minmax(0,1fr)}.lane-header{flex-wrap:wrap}.device-stage{height:300px}.draft-bar .button{font-size:11px}.filters .filter-row{gap:5px}.filter-select span{display:none}}@media(prefers-reduced-motion:reduce){*,:before,:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}dialog.settings-backdrop{width:100%;max-width:100%;height:100%;max-height:100%;color:inherit;border:0;margin:0}dialog.settings-backdrop::backdrop{background:#05091099}.button:focus-visible:active{transform:none}.edge-label button{align-items:center;gap:4px;display:flex}@property --tw-rotate-x{syntax:"*";inherits:false}@property --tw-rotate-y{syntax:"*";inherits:false}@property --tw-rotate-z{syntax:"*";inherits:false}@property --tw-skew-x{syntax:"*";inherits:false}@property --tw-skew-y{syntax:"*";inherits:false}@property --tw-outline-style{syntax:"*";inherits:false;initial-value:solid}</style>
-</head><body><div id="root"></div></body></html>
+</head><body><div id="root"></div>
+<details id="third-party-licenses" style="margin:12px 20px;font-size:12px"><summary>Third-party licenses / 第三方许可</summary>
+<section><h2>@radix-ui/react-compose-refs@1.1.2 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">MIT License
+
+Copyright (c) 2022 WorkOS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>@radix-ui/react-slot@1.2.3 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) 2022 WorkOS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>@rollup/plugin-commonjs generated helper (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@rollup/plugin-alias, @rollup/plugin-commonjs, @rollup/plugin-dynamic-import-vars, @rollup/pluginutils
+License: MIT
+By: Johannes Stein
+Repository: https://github.com/rollup/plugins
+
+License: MIT
+By: Rich Harris
+Repository: https://github.com/rollup/plugins
+
+License: MIT
+By: LarsDenBakker
+Repository: https://github.com/rollup/plugins
+
+License: MIT
+By: Rich Harris
+Repository: https://github.com/rollup/plugins
+
+&gt; The MIT License (MIT)
+&gt; 
+&gt; Copyright (c) 2019 RollupJS Plugin Contributors (https://github.com/rollup/plugins/graphs/contributors)
+&gt; 
+&gt; Permission is hereby granted, free of charge, to any person obtaining a copy
+&gt; of this software and associated documentation files (the "Software"), to deal
+&gt; in the Software without restriction, including without limitation the rights
+&gt; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+&gt; copies of the Software, and to permit persons to whom the Software is
+&gt; furnished to do so, subject to the following conditions:
+&gt; 
+&gt; The above copyright notice and this permission notice shall be included in
+&gt; all copies or substantial portions of the Software.
+&gt; 
+&gt; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+&gt; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+&gt; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+&gt; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+&gt; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+&gt; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+&gt; THE SOFTWARE.
+
+---------------------------------------</pre></section>
+<section><h2>@xyflow/react@12.8.5 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) 2019-2024 webkid GmbH
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>@xyflow/system@0.0.69 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) 2019-2024 webkid GmbH
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>class-variance-authority@0.7.1 (Apache-2.0)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   Copyright 2022 Joe Bell
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.</pre></section>
+<section><h2>classcat@5.0.5 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE.md
+
+Copyright © Jorge Bucaran &lt;&lt;https://jorgebucaran.com&gt;&gt;
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre></section>
+<section><h2>clsx@2.1.1 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">license
+
+MIT License
+
+Copyright (c) Luke Edwards &lt;luke.edwards05@gmail.com&gt; (lukeed.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre></section>
+<section><h2>d3-color@3.1.0 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2022 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>d3-dispatch@3.0.1 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>d3-drag@3.0.0 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>d3-ease@3.0.1 (BSD-3-Clause)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+Copyright 2001 Robert Penner
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the author nor the names of contributors may be used to
+  endorse or promote products derived from this software without specific prior
+  written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre></section>
+<section><h2>d3-interpolate@3.0.1 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>d3-selection@3.0.0 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>d3-timer@3.0.1 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>d3-transition@3.0.1 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>d3-zoom@3.0.0 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+Copyright 2010-2021 Mike Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section><h2>lucide-react@0.468.0 (ISC)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+ISC License
+
+Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</pre></section>
+<section><h2>react-dom@19.1.1 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>react@19.1.1 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>scheduler@0.26.0 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>shadcn/ui Button pattern (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">MIT License
+
+Copyright (c) 2023 shadcn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>tailwind-merge@3.3.1 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE.md
+
+MIT License
+
+Copyright (c) 2021 Dany Castillo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>tailwindcss@4.1.13 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) Tailwind Labs, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>use-sync-external-store@1.7.0 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>vite@7.3.6 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE.md
+
+# Vite core license
+Vite is released under the MIT license:
+
+MIT License
+
+Copyright (c) 2019-present, VoidZero Inc. and Vite contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section><h2>zustand@4.5.7 (MIT)</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">LICENSE
+
+MIT License
+
+Copyright (c) 2019 Paul Henschel
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+</details>
+</body></html>
