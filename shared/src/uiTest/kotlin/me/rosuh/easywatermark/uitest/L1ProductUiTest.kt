@@ -13,6 +13,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -125,7 +127,12 @@ class L1ProductUiTest {
             .performClick()
         awaitIdle()
         waitForTag("editorControl-TextTypeFace")
-        onNodeWithText("Bold", useUnmergedTree = true).performClick()
+        onNode(
+            hasTestTag("choice-1") and
+                hasAnyAncestor(hasTestTag("editorControl-TextTypeFace")) and
+                !hasAnyAncestor(hasTestTag("editorPaintStyle")),
+            useUnmergedTree = true,
+        ).performClick()
         awaitIdle()
         waitUntil(timeoutMillis = 5_000) {
             session.waterMark.textTypeface == TextTypeface.Bold
