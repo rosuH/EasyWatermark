@@ -134,7 +134,7 @@ def _materialize_batch_evidence(source, root, derived, shot_names, raw):
         if path.exists():
             raise ValueError("step evidence target already exists; refusing stale reuse")
         path.parent.mkdir(parents=True, exist_ok=True)
-        steps.append({"command": "screenshot", "positionals": [str(path)]})
+        steps.append({"command": "screenshot", "input": {"path": str(path), "stabilize": False}})
         mapping.append({"replay_step": len(mapping) + 1, "step": n,
                         "kind": "screenshot", "path": str(path)})
     result = (json.dumps(steps, indent=2) + "\n").encode()
