@@ -31,6 +31,26 @@ def nal(kind):
 
 
 class QueueTests(unittest.TestCase):
+    def test_android_server_receives_native_keyframe_interval(self):
+        p = producer()
+        p._forwards = []
+        # Stop at the mocked spawn boundary: no subprocess/socket/device runs.
+        with patch.object(video, 'scrcpy_server_jar', return_value=Path('/mock/scrcpy-server')), \
+             patch.object(video, 'adb_bin', return_value='mock-adb'), \
+             patch.object(video.subprocess, 'run', return_value=SimpleNamespace(returncode=0)), \
+             patch.object(video.socket, 'socket') as socket_factory, \
+             patch.object(video.subprocess, 'Popen', side_effect=RuntimeError('mock spawn boundary')) as spawn:
+            socket_factory.return_value.getsockname.return_value = ('127.0.0.1', 12345)
+            with self.assertRaisesRegex(RuntimeError, 'mock spawn boundary'):
+                p._run_android('fixture-device')
+            args = spawn.call_args.args[0]
+        self.assertEqual(args[:4], ['mock-adb', '-s', 'fixture-device', 'shell'])
+        options = args[4].split()
+        self.assertIn('video_codec_options=i-frame-interval=1', options)
+        self.assertIn('max_fps=30', options)
+        self.assertIn('raw_stream=true', options)
+        self.assertIn('control=false', options)
+
     def test_actual_sps_codec_for_both_annexb_start_codes_and_late_subscriber(self):
         # Real Android capture: video-packets.json, SPS header 000000016742c032.
         for prefix in [video.ANNEXB4, b'\x00\x00\x01']:
