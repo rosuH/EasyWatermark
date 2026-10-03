@@ -72,6 +72,10 @@ from testmap_run import (  # noqa: E402
     write_historical_projection,
 )
 
+from generate_testmap import catalog_payload, load_copy  # noqa: E402
+
+WEB_HTML = SCRIPTS.parent / "tools" / "testmap" / "web" / "dist" / "index.html"
+
 MANAGER = RunManager()
 _frame_lock = threading.Lock()
 _frame_at: dict[str, float] = {}
@@ -191,11 +195,12 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
         qs = parse_qs(parsed.query)
-        if path in {"/", "/map.html"}:
-            if not MAP_HTML.is_file():
-                self._json(500, {"error": "missing docs/testmap/map.html; run generate_testmap.py"})
+        if path in {"/", "/legacy", "/map.html"}:
+            page = WEB_HTML if path == "/" else MAP_HTML
+            if not page.is_file():
+                self._json(503, {"error": "testmap page is not built", "page": str(page.relative_to(SCRIPTS.parent))})
                 return
-            html = MAP_HTML.read_text(encoding="utf-8")
+            html = page.read_text(encoding="utf-8")
             token = _issue_confirm_token()
             meta = '<meta name="ewm-confirm-token" content="' + token + '">'
             if "</head>" in html:
@@ -203,6 +208,13 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 html = meta + html
             self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+            return
+        if path == "/api/catalog":
+            try:
+                nodes, edges = load_map()
+                self._json(200, catalog_payload(nodes, edges, load_copy()))
+            except (OSError, ValueError) as exc:
+                self._json(500, {"error": str(exc)})
             return
         if path == "/api/map":
             try:

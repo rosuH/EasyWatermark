@@ -1026,6 +1026,90 @@ PREFERRED_NODE_ORDER = (
 )
 
 
+def artemis_payload(edges: list[dict]) -> dict:
+    """Historical Artemis payload for old records. Console run chip uses DATA.agent."""
+    try:
+        from testmap_artemis import artemis_cases_by_id, load_artemis_manifest
+
+        cases = artemis_cases_by_id(load_artemis_manifest())
+    except (OSError, ValueError, json.JSONDecodeError):
+        cases = {}
+    out = {}
+    for edge in edges:
+        eid = edge["id"]
+        case = cases.get(eid) or {}
+        out[eid] = {
+            "id": eid,
+            "supported": bool(case.get("supported")),
+            "platform": case.get("platform") or "android",
+            "setup": case.get("setup"),
+            "verify": case.get("verify"),
+            "reason": case.get("reason") or "",
+            "drive_unchanged": True,
+        }
+    return out
+
+
+def agent_payload(edges: list[dict]) -> dict:
+    """Console Agent Device support from cases.json; never desktop."""
+    try:
+        from testmap_agent_device import agent_device_cases_by_id, case_supports_platform
+
+        cases = agent_device_cases_by_id()
+    except (OSError, ValueError, json.JSONDecodeError):
+        cases = {}
+    out = {}
+    for edge in edges:
+        eid = edge["id"]
+        case = cases.get(eid) or {}
+        reason = case.get("reason") if isinstance(case.get("reason"), dict) else {}
+        plats = edge.get("platforms") or {}
+        ios = plats.get("ios") if isinstance(plats.get("ios"), dict) else {}
+        ios_drive = str((ios or {}).get("drive") or "none")
+        if case:
+            android_ok = case_supports_platform(case, "android")
+            ios_ok = case_supports_platform(case, "ios")
+        else:
+            android_ok = True
+            ios_ok = ios_drive != "none"
+        out[eid] = {
+            "id": eid,
+            "android": android_ok,
+            "ios": ios_ok,
+            "desktop": False,
+            "drive_unchanged": True,
+            "reason": {
+                "android": reason.get("android")
+                or ("" if android_ok else "Agent Device unsupported on Android for this edge"),
+                "ios": reason.get("ios")
+                or ("" if ios_ok else "ios drive is none on this edge"),
+                "desktop": "Compose Desktop is not an Agent Device target; keep L1/desktopTest.",
+            },
+        }
+    return out
+
+
+def catalog_payload(nodes: list[dict], edges: list[dict], copy: dict) -> dict:
+    """Project data shared by the API and temporary legacy renderer."""
+    covered = layer_coverage(edges)
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "summary": {layer: len(covered[layer]) for layer in ("L0", "L1", "L2", "L3")},
+        "total": len(edges),
+        "edge_plans": edge_plans_payload(edges),
+        "copy": copy,
+        "agent": agent_payload(edges),
+        "artemis": artemis_payload(edges),
+        "node_kinds": NODE_KIND,
+        "node_order": list(PREFERRED_NODE_ORDER),
+        "layer_titles": {
+            layer: {"en": title, "zh": ("入口", "中枢", "浮层与面板", "导出")[layer]}
+            for layer, title in LAYER_TITLES.items()
+        },
+    }
+
+
 def _node_kind_id(nid: str) -> str:
     return NODE_KIND.get(nid, "screen")
 
@@ -1349,90 +1433,19 @@ def compute_graph_layout(nodes: list[dict], edges: list[dict]) -> dict:
     }
 
 
-def _artemis_payload(edges: list[dict]) -> dict:
-    """Historical Artemis payload for old records. Console run chip uses DATA.agent."""
-    try:
-        from testmap_artemis import artemis_cases_by_id, load_artemis_manifest
 
-        cases = artemis_cases_by_id(load_artemis_manifest())
-    except (OSError, ValueError, json.JSONDecodeError):
-        cases = {}
-    out = {}
-    for edge in edges:
-        eid = edge["id"]
-        case = cases.get(eid) or {}
-        out[eid] = {
-            "id": eid,
-            "supported": bool(case.get("supported")),
-            "platform": case.get("platform") or "android",
-            "setup": case.get("setup"),
-            "verify": case.get("verify"),
-            "reason": case.get("reason") or "",
-            "drive_unchanged": True,
-        }
-    return out
-
-
-def _agent_payload(edges: list[dict]) -> dict:
-    """Console Agent Device support from cases.json; never desktop."""
-    try:
-        from testmap_agent_device import agent_device_cases_by_id, case_supports_platform
-
-        cases = agent_device_cases_by_id()
-    except (OSError, ValueError, json.JSONDecodeError):
-        cases = {}
-    out = {}
-    for edge in edges:
-        eid = edge["id"]
-        case = cases.get(eid) or {}
-        reason = case.get("reason") if isinstance(case.get("reason"), dict) else {}
-        plats = edge.get("platforms") or {}
-        ios = plats.get("ios") if isinstance(plats.get("ios"), dict) else {}
-        ios_drive = str((ios or {}).get("drive") or "none")
-        if case:
-            android_ok = case_supports_platform(case, "android")
-            ios_ok = case_supports_platform(case, "ios")
-        else:
-            android_ok = True
-            ios_ok = ios_drive != "none"
-        out[eid] = {
-            "id": eid,
-            "android": android_ok,
-            "ios": ios_ok,
-            "desktop": False,
-            "drive_unchanged": True,
-            "reason": {
-                "android": reason.get("android")
-                or ("" if android_ok else "Agent Device unsupported on Android for this edge"),
-                "ios": reason.get("ios")
-                or ("" if ios_ok else "ios drive is none on this edge"),
-                "desktop": "Compose Desktop is not an Agent Device target; keep L1/desktopTest.",
-            },
-        }
-    return out
-
-
-def _html_payload(
-    nodes: list[dict], edges: list[dict], summary: dict, total: int, copy: dict
-) -> str:
-    payload = {
+def _html_payload(nodes: list[dict], edges: list[dict], copy: dict) -> str:
+    payload = catalog_payload(nodes, edges, copy)
+    payload.update({
         "generated": GENERATED_BANNER,
-        "nodes": nodes,
-        "edges": edges,
         "layout": compute_graph_layout(nodes, edges),
-        "summary": summary,
-        "total": total,
-        "edge_plans": edge_plans_payload(edges),
-        "copy": copy,
-        "agent": _agent_payload(edges),
-        "artemis": _artemis_payload(edges),
         "honesty": {
             "pick-to-editor": (
                 "map android.drive stays seam. Agent Device may walk the system picker; "
                 "that evidence is recorded on the run, not as a drive rewrite."
             )
         },
-    }
+    })
     # Neutralize </script> so the inline JSON cannot break the host page.
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace(
         "<", "\\u003c"
@@ -6463,7 +6476,7 @@ function renderRunStatus(st) {
     $("prog-bar").style.transform = "scaleX(" + (q.length ? (done / q.length) : 0) + ")";
     $("prog-meta").textContent = t("run.progress", {done: done, total: q.length})
       + (st.current ? " · " + st.current.id + " " + st.current.elapsed_s + "s" : "")
-      + (pause ? " · " + t("run.queuePaused") : "");
+      + (st.pause_queue ? " · " + t("run.queuePaused") : "");
     $("queue").dataset.stepper = "1";
     var queueSig = lang + "|" + q.map(function (t) {
       return t.id + ":" + t.state;
@@ -7534,10 +7547,7 @@ def check_embedded_js(html: str) -> str | None:
 
 
 def render_html(nodes: list[dict], edges: list[dict], copy: dict) -> str:
-    covered = layer_coverage(edges)
-    total = len(edges)
-    summary = {layer: len(covered[layer]) for layer in ("L0", "L1", "L2", "L3")}
-    data = _html_payload(nodes, edges, summary, total, copy)
+    data = _html_payload(nodes, edges, copy)
     return HTML_TEMPLATE.replace("__BANNER__", GENERATED_BANNER).replace("__DATA__", data)
 
 

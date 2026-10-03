@@ -82,7 +82,7 @@ Debug `applicationId` is `me.rosuh.easywatermark.debug` (installs beside product
 - **Decisions:** new forks get an ADR (`docs/adr/`, Proposed until the owner signs). Milestone PRs update CONTEXT/ADR, or say “no doc impact”. Change this file only for durable agent rules.
 - **Parity:** Android production v2.10.0 on `master` is the visual/behavior baseline. Verify renders by viewing screenshots, not byte sizes.
 - **Machines:** do not shut down already-live Android or iOS simulators (standing order). Cap Gradle with `--max-workers=8`; `./gradlew --stop` when you started the daemon. Warn before long emulator+build load.
-- **Human Confirm:** only a click in the testmap page may call `POST /api/confirm` (the page load issues a one-time token). Agents must not call this endpoint, including via curl, fetch, or scripts. Independent review is not Confirm.
+- **Human Confirm:** only a click in the testmap page may call `POST /api/confirm` (the page load issues an expiring page token). Agents must not call this endpoint, including via curl, fetch, or scripts. Independent review is not Confirm.
 
 ## Skills
 
