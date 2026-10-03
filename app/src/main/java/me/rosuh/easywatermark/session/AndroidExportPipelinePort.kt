@@ -92,6 +92,10 @@ class AndroidExportPipelinePort(
         config: WaterMark,
         prefs: UserPreferences,
     ): ExportOutcome {
+        // Official getMemoryInfo() guidance: free reconstructable caches before a full-res decode.
+        // Never skip the export — only drop BitmapCache / Coil / preview frames if the system
+        // or Java heap is already tight.
+        me.rosuh.easywatermark.platform.AndroidMemoryPressure.releaseReconstructableIfNeeded(appContext)
         val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri.toUri())
         if (rect.isFailure()) {
             return ExportOutcome.failure(
