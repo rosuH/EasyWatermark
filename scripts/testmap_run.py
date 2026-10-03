@@ -1949,43 +1949,32 @@ def _agent_task_state(spec: dict, extra: dict) -> str:
 
 
 def watch_from_task(task: dict | None) -> dict | None:
-    """Extract a watch target from a task cmd / device dict. Ignores placeholders."""
+    """Use this task's resolved device; command flags cover older records."""
     if not isinstance(task, dict):
         return None
     cmd = list(task.get("cmd") or [])
-    platform = None
-    device = None
-    if "--platform" in cmd:
-        i = cmd.index("--platform")
-        if i + 1 < len(cmd):
-            platform = str(cmd[i + 1])
-    if "--serial" in cmd:
-        i = cmd.index("--serial")
-        if i + 1 < len(cmd):
-            device = str(cmd[i + 1])
-            platform = platform or "android"
-    if "--udid" in cmd:
-        i = cmd.index("--udid")
-        if i + 1 < len(cmd):
-            device = str(cmd[i + 1])
-            platform = platform or "ios"
     spec_dev = task.get("device") if isinstance(task.get("device"), dict) else {}
-    if not device:
-        device = str(spec_dev.get("id") or "")
+    platform = str(task.get("platform") or spec_dev.get("platform") or _cmd_flag(cmd, "--platform"))
+    serial, udid = _cmd_flag(cmd, "--serial"), _cmd_flag(cmd, "--udid")
     if not platform:
-        platform = str(spec_dev.get("platform") or "")
-    if not device or device in {"auto", "<device>", ""}:
-        return None
+        platform = "android" if serial else "ios" if udid else ""
     if platform not in {"android", "ios"}:
         return None
-    builder = task.get("builder")
-    if not builder and is_agent_device_cmd(cmd):
-        builder = "agent-device"
+    device = str(spec_dev.get("id") or "")
+    if device in {"", "auto", "<device>"}:
+        device = serial if platform == "android" else udid
+    if not device or device in {"auto", "<device>"}:
+        return None
+    if platform == "ios" and device.startswith("emulator-"):
+        return None
+    same_device = device == spec_dev.get("id")
     return {
         "platform": platform,
         "device": device,
+        "name": (spec_dev.get("name") if same_device else None) or device,
+        "kind": spec_dev.get("kind") if same_device else None,
         "task_id": task.get("id"),
-        "builder": builder,
+        "builder": task.get("builder") or ("agent-device" if is_agent_device_cmd(cmd) else None),
     }
 
 
@@ -2600,6 +2589,32 @@ def _watch_from_slots() -> dict[str, dict | None]:
     return watches
 
 
+def _watch_from_record(rec: dict) -> dict[str, dict | None]:
+    """Never attach a global/default device to recorded run evidence."""
+    watches: dict[str, dict | None] = {"android": None, "ios": None, "desktop": None}
+    tasks = [t for t in rec.get("tasks") or [] if isinstance(t, dict)]
+    platforms = {str(t.get("platform") or "") for t in tasks} & {"android", "ios"}
+    for platform in platforms:
+        lane = [t for t in tasks if t.get("platform") == platform]
+        running = [t for t in lane if t.get("state") in {"running", "paused"}]
+        # If the active task has no known identity, do not show an earlier
+        # task's device in its place. Finished runs use the last resolved task.
+        completed = [t for t in reversed(lane) if t.get("state") != "pending"]
+        candidates = running or completed or list(reversed(lane))
+        for task in candidates:
+            watch = watch_from_task(task)
+            if watch:
+                watches[platform] = watch
+                break
+        if watches[platform] is None and len(platforms) == 1:
+            requested = str(rec.get("device") or "")
+            if requested and requested not in {"auto", "<device>"}:
+                watches[platform] = watch_from_task({
+                    "platform": platform, "device": {"id": requested},
+                })
+    return watches
+
+
 def _steps_for_watch(tasks: list[dict]) -> list[dict]:
     chosen: dict[str, dict] = {}
     for task in tasks:
@@ -2622,7 +2637,7 @@ def _steps_for_watch(tasks: list[dict]) -> list[dict]:
 
 
 def project_status(rec: dict | None) -> dict:
-    watches = _watch_from_slots()
+    watches = _watch_from_record(rec) if rec else _watch_from_slots()
     idle = {
         "active": False,
         "state": "idle",
@@ -2820,43 +2835,7 @@ class RunManager:
         return chosen or self.last_watch
 
     def _watch_slots(self, rec: dict | None) -> dict[str, dict | None]:
-        slots = default_watch_slots()
-        out: dict[str, dict | None] = {}
-        for plat, item in slots.items():
-            overlay = self.last_watches.get(plat)
-            if plat == "ios" and overlay and str(overlay.get("device") or "").startswith("emulator-"):
-                overlay = None
-            if rec:
-                for task in rec.get("tasks") or []:
-                    w = watch_from_task(task)
-                    if w and w.get("platform") == plat:
-                        dev = str(w.get("device") or "")
-                        if plat == "ios" and (dev.startswith("emulator-") or w.get("kind") == "emulator"):
-                            continue
-                        overlay = w
-                        if task.get("state") == "running":
-                            break
-            if overlay and overlay.get("device"):
-                dev = str(overlay.get("device") or "")
-                if plat == "ios" and dev.startswith("emulator-"):
-                    out[plat] = None
-                    continue
-                out[plat] = {
-                    "platform": plat,
-                    "device": overlay.get("device"),
-                    "name": (item or {}).get("name") if item else overlay.get("device"),
-                    "kind": overlay.get("kind") or (item or {}).get("kind"),
-                }
-            elif item:
-                out[plat] = {
-                    "platform": plat,
-                    "device": item.get("id"),
-                    "name": item.get("name"),
-                    "kind": item.get("kind"),
-                }
-            else:
-                out[plat] = None
-        return out
+        return _watch_from_record(rec) if rec else _watch_from_slots()
 
     def _public_steps(self) -> list[dict]:
         out: list[dict] = []

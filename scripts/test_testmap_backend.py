@@ -24,6 +24,49 @@ import testmap_setup as setup
 
 
 class BackendChecks(unittest.TestCase):
+    def test_manual_run_watch_uses_recorded_qa_device_without_default_probe(self):
+        run_id = '20261003T071642-4107cdfe'
+        task = {'id': 'edge:launch-to-gallery@android#agent', 'platform': 'android',
+                'state': 'running', 'device_request': 'emulator-5556',
+                'device': {'id': 'emulator-5556', 'name': 'EWM_E2E_QA_20261003', 'kind': 'emulator'},
+                'cmd': ['agent-device', 'test', 'fixture.ad', '--platform', 'android', '--serial', '<device>']}
+        record = {'id': run_id, 'state': 'running', 'started': '2026-10-03T07:16:42Z',
+                  'source': 'manual', 'device': 'emulator-5556', 'pid': os.getpid(), 'tasks': [task]}
+        with tempfile.TemporaryDirectory() as folder, patch.object(runner, 'RUNS_DIR', Path(folder)), patch.object(runner, 'default_watch_slots', side_effect=AssertionError('recorded run must not probe default devices')), patch.object(runner, 'live_snapshot', return_value={}):
+            (Path(folder) / (run_id + '.json')).write_text(json.dumps(record))
+            handler = object.__new__(console.Handler)
+            handler.path = '/api/status'
+            replies = []
+            handler._json = lambda status, data: replies.append((status, data))
+            with patch.object(console, 'MANAGER', runner.RunManager()):
+                handler.do_GET()
+            status, snap = replies[-1]
+            self.assertEqual(200, status)
+            self.assertEqual(run_id, snap['id'])
+            self.assertEqual('emulator-5556', snap['watch']['device'])
+            self.assertEqual('EWM_E2E_QA_20261003', snap['watch']['name'])
+            self.assertIsNone(snap['watches']['ios'])
+            self.assertEqual('emulator-5556', console._watch_preferred(snap, 'android')['device'])
+            self.assertIsNone(console._watch_preferred(snap, 'ios'))
+
+    def test_record_watch_does_not_guess_or_reuse_another_task_device(self):
+        old = {'platform': 'android', 'state': 'review_required', 'device': {'id': 'emulator-5554', 'name': 'Old'}}
+        current = {'platform': 'android', 'state': 'running', 'cmd': ['agent-device', '--serial', '<device>']}
+        with patch.object(runner, 'default_watch_slots', side_effect=AssertionError('no default probe')), patch.object(runner, 'live_snapshot', return_value={}):
+            for record in ({'id': 'historical', 'historical': True, 'tasks': [current]},
+                           {'id': 'live', 'device': 'auto', 'tasks': [old, current]}):
+                self.assertIsNone(runner.project_status(record)['watch'])
+            record = {'id': 'explicit', 'device': 'emulator-5556', 'tasks': [current]}
+            self.assertEqual('emulator-5556', runner.project_status(record)['watch']['device'])
+            ios = {'platform': 'ios', 'state': 'running', 'device': {'id': 'IOS-QA', 'name': 'iOS QA'}}
+            record = {'id': 'multi', 'device': 'emulator-5554', 'tasks': [current, ios]}
+            snap = runner.project_status(record)
+            self.assertIsNone(snap['watch'])
+            self.assertEqual('IOS-QA', snap['watches']['ios']['device'])
+            self.assertIsNone(runner.watch_from_task({'platform': 'ios', 'device': {'id': 'emulator-5556'}}))
+            # Older records can still identify a device explicitly in the command.
+            self.assertEqual('emulator-5556', runner.watch_from_task({'platform': 'android', 'cmd': ['agent-device', '--serial', 'emulator-5556']})['device'])
+
     def _fake_start(self, script, processes):
         popen = subprocess.Popen
 
