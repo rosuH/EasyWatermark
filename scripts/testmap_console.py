@@ -520,6 +520,9 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             self._json(400, {"error": str(exc)})
             return
+        except (RuntimeError, OSError) as exc:
+            self._json(500, {"error": str(exc)})
+            return
         self._json(404, {"error": "not found"})
 
     def do_DELETE(self) -> None:  # noqa: N802
