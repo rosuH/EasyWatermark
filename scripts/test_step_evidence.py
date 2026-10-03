@@ -103,7 +103,7 @@ class EvidenceChecks(unittest.TestCase):
         with self.assertRaises(ValueError):
             steps.confined_path(self.run, self.root / 'escape.png')
 
-    def test_batch_uses_sdk_positionals_preserves_input_and_serial_order(self):
+    def test_batch_uses_sdk_input_preserves_actions_and_serial_order(self):
         source = self.root / 'source.json'
         source.write_text(json.dumps([{'command':'press', 'input':{'x':1,'y':2}}, {'command':'close'}]))
         manifest = steps.materialize_evidence_script(source, self.run, self.run / 'scripts' / 'batch.json', {1:'batch.png'})
@@ -111,7 +111,7 @@ class EvidenceChecks(unittest.TestCase):
         self.assertEqual(['press','screenshot','close'], [r['command'] for r in rows])
         command = runner._batch_one(['agent-device','batch','--session','owned','--json'], rows[1])
         payload = json.loads(command[command.index('--steps') + 1])
-        self.assertEqual([str((self.run / 'steps' / 'batch.png').resolve())], payload[0]['positionals'])
+        self.assertEqual({'command': 'screenshot', 'input': {'path': str((self.run / 'steps' / 'batch.png').resolve()), 'stabilize': False}}, payload[0])
         calls = []
         def child(proc, logf, tee, **kwargs):
             calls.append('complete')
