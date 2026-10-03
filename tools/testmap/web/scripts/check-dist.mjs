@@ -15,3 +15,8 @@ if (hash() !== before)
     "dist/index.html differs from source. Commit the rebuilt output.",
   );
 console.log("dist/index.html matches the source.");
+
+execFileSync(process.execPath, ["scripts/check-licenses.mjs"], {
+  stdio: "inherit",
+  cwd: new URL("..", import.meta.url),
+});
