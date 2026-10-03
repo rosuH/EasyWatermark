@@ -7,9 +7,11 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { Confirm } from "../src/Confirm";
-import { DeviceLane } from "../src/Run";
+import { DeviceLane, RunView } from "../src/Run";
+import * as mediaModule from "../src/media";
 import { useResource } from "../src/api";
 import { canConfirm, matches, emptyFilters, type Catalog } from "../src/model";
 import { concat, packets, watchMedia } from "../src/media";
@@ -79,6 +81,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   fetchMock.mockReset();
   vi.unstubAllGlobals();
   vi.useRealTimers();
@@ -259,6 +262,100 @@ it("keeps clicked historical evidence pinned when live steps advance", async () 
   );
   expect(fetchMock.mock.calls).toHaveLength(0);
   expect(screen.getByText("Screenshot timing unverified")).toBeTruthy();
+});
+it("Follow live leaves a completed repeat and resumes only that platform's active task", async () => {
+  const media = vi.spyOn(mediaModule, "watchMedia").mockReturnValue(vi.fn());
+  const completed = (platform: string) => ({
+    id: `${platform}:repeat`,
+    platform,
+    label: `${platform} repeat one`,
+    repeat: { k: 1, n: 3 },
+    state: "review_required",
+    steps: [
+      {
+        n: 14,
+        text: `${platform} saved step`,
+        state: "done",
+        command: "tap",
+        args: "",
+        platform,
+        shot: `${platform}-r1.png`,
+      },
+    ],
+  });
+  const running = (platform: string) => ({
+    ...completed(platform),
+    label: `${platform} repeat three`,
+    repeat: { k: 3, n: 3 },
+    state: "running",
+    steps: [
+      {
+        n: 2,
+        text: `${platform} active step`,
+        state: "current",
+        command: "tap",
+        args: "",
+        platform,
+      },
+    ],
+  });
+  fetchMock.mockImplementation(async (path: string) => {
+    if (path === "/api/status")
+      return new Response(
+        JSON.stringify({
+          id: "live-run",
+          active: true,
+          state: "running",
+          progress: { done: 2, total: 6 },
+          watches: {
+            android: { device: "mock-android" },
+            ios: { device: "mock-ios" },
+          },
+          queue: [
+            completed("android"),
+            running("android"),
+            completed("ios"),
+            running("ios"),
+          ],
+        }),
+      );
+    if (path === "/api/runs/live-run")
+      return new Response(
+        JSON.stringify({ ...record, id: "live-run", tasks: [] }),
+      );
+    throw new Error(`Unexpected mock request ${path}`);
+  });
+  render(
+    <RunView
+      runId={null}
+      platforms={["android", "ios"]}
+      catalog={{} as Catalog}
+      onCurrent={vi.fn()}
+    />,
+  );
+  await screen.findByText("android active step");
+  fireEvent.click(screen.getByRole("button", { name: /ios repeat one/ }));
+  const ios = within(screen.getByRole("region", { name: "ios device" }));
+  fireEvent.click(ios.getByRole("button", { name: /ios saved step/ }));
+  fireEvent.click(screen.getByRole("button", { name: /android repeat one/ }));
+  const android = within(
+    screen.getByRole("region", { name: "android device" }),
+  );
+  fireEvent.click(android.getByRole("button", { name: /android saved step/ }));
+  expect(android.getByRole("img").getAttribute("src")).toBe(
+    "/api/runs/live-run/steps/android-r1.png",
+  );
+  media.mockClear();
+  fireEvent.click(android.getByRole("button", { name: "Follow live" }));
+  expect(android.queryByRole("img")).toBeNull();
+  expect(android.getByText("android active step")).toBeTruthy();
+  expect(android.queryByText("android saved step")).toBeNull();
+  expect(media).toHaveBeenCalledTimes(1);
+  expect(media.mock.calls[0].slice(1, 3)).toEqual(["android", "mock-android"]);
+  expect(ios.getByRole("img").getAttribute("src")).toBe(
+    "/api/runs/live-run/steps/ios-r1.png",
+  );
+  expect(confirmCalls()).toEqual([]);
 });
 it("shows current-run successful evidence and labels its timing without confirming", () => {
   const proof = {
