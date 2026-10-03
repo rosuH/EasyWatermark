@@ -9,6 +9,8 @@ wait "id=\"sharedComposeExportSheet\" visible" 20000
 press "label=\"PNG, PNG\""
 press id="sharedComposeExportPrimary"
 wait "id=\"sharedComposeExportCounts\" visible" 30000
-wait "label=\"分享\"" 60000
-press "label=\"分享\""
+wait "label=\"success 3\" visible" 60000
+wait "id=\"sharedComposeExportPrimary\" visible enabled=true" 60000
+press id="sharedComposeExportPrimary"
+wait "id=\"ActivityListView\" visible" 20000
 close
