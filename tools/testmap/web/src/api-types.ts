@@ -326,7 +326,7 @@ export interface Device {
 export type DevicesResponse = Record<Platform, Device[]>;
 
 // ---------- device media (non-JSON) ----------
-// GET /api/device-video?platform=&device=&n=<ts>   200 application/octet-stream, HTTP chunked.
+// GET /api/device-video?platform=&device=&n=<ts>   200 application/octet-stream, HTTP connection-close delimited.
 //     Body = packets of [u32 big-endian length][payload]. payload[0]==0x7b ('{') → JSON config
 //     { codec?: string, ... } (default "avc1.42E01E"); else an Annex-B H.264 access unit.
 //     Android + iOS Simulator only; 204 when no live run / desktop / physical iOS.

@@ -17,12 +17,15 @@ import struct
 import subprocess
 import threading
 import time
+from collections import deque
 from collections.abc import Iterator
 from pathlib import Path
 
 from testmap_devices import adb_bin, resolve_watch_target
 
 IDLE_STOP_S = 3.0
+MAX_PENDING_PACKETS = 128
+MAX_PENDING_BYTES = 8_000_000
 ANNEXB4 = b"\x00\x00\x00\x01"
 DEFAULT_CODEC = "avc1.42E01E"
 DEVICE_JAR = "/data/local/tmp/ewm-scrcpy-server.jar"
@@ -122,7 +125,8 @@ class _VideoProducer:
         self.key = key
         self.target = dict(target)
         self._cv = threading.Condition()
-        self._packet: bytes | None = None
+        self._packets: deque[tuple[int, bytes]] = deque()
+        self._packet_bytes = 0
         self._sps: bytes | None = None
         self._pps: bytes | None = None
         self._seq = 0
@@ -143,8 +147,13 @@ class _VideoProducer:
                 self._sps = payload
             elif kind == 8:
                 self._pps = payload
-            self._packet = packet
             self._seq += 1
+            self._packets.append((self._seq, packet))
+            self._packet_bytes += len(packet)
+            while (len(self._packets) > MAX_PENDING_PACKETS
+                   or self._packet_bytes > MAX_PENDING_BYTES):
+                _, expired = self._packets.popleft()
+                self._packet_bytes -= len(expired)
             self._cv.notify_all()
 
     def _track(self, proc: subprocess.Popen) -> subprocess.Popen:
@@ -301,23 +310,30 @@ class _VideoProducer:
                 self._publish(nalu)
 
     def _cleanup(self) -> None:
-        for proc in self._kids:
+        # stop() and the producer's finally can arrive together. Take ownership
+        # once; anything added later is collected by the producer's finally.
+        with self._cv:
+            kids, self._kids = self._kids, []
+            forwards, self._forwards = self._forwards, []
+        for proc in kids:
             if proc.poll() is None:
-                proc.send_signal(signal.SIGTERM)
                 try:
-                    proc.wait(timeout=2)
-                except Exception:
-                    proc.kill()
-        self._kids.clear()
+                    proc.send_signal(signal.SIGTERM)
+                    try:
+                        proc.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait(timeout=2)
+                except ProcessLookupError:
+                    pass
         adb = adb_bin()
-        for serial, port in self._forwards:
+        for serial, port in forwards:
             subprocess.run(
                 [adb, "-s", serial, "forward", "--remove", f"tcp:{port}"],
                 capture_output=True,
                 timeout=8,
                 check=False,
             )
-        self._forwards.clear()
 
     def subscribe(self) -> Iterator[bytes]:
         with self._cv:
@@ -325,22 +341,30 @@ class _VideoProducer:
             sps = self._sps
             pps = self._pps
             last = self._seq
-        yield pack_frame(config_payload())
-        if sps:
-            yield pack_frame(sps)
-        if pps:
-            yield pack_frame(pps)
         try:
+            # The first yield can also be cancelled (for example on navigation).
+            yield pack_frame(config_payload())
+            if sps:
+                yield pack_frame(sps)
+            if pps:
+                yield pack_frame(pps)
             while not self._stop.is_set():
                 with self._cv:
                     if self._seq == last:
                         self._cv.wait(timeout=1.0)
+                    if self._stop.is_set():
+                        return
                     if self._seq == last:
                         continue
-                    last = self._seq
-                    packet = self._packet
-                if packet:
-                    yield packet
+                    # A slow consumer must end, never resume a broken reference
+                    # chain. EOF makes the existing page fall back to stills.
+                    if not self._packets or self._packets[0][0] > last + 1:
+                        return
+                    seq, packet = next(
+                        item for item in self._packets if item[0] > last
+                    )
+                    last = seq
+                yield packet
         finally:
             with self._cv:
                 self._subs -= 1

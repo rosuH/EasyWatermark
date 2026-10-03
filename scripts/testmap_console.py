@@ -400,15 +400,21 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.send_response(200)
             self.send_header("Content-Type", "application/octet-stream")
-            self.send_header("Transfer-Encoding", "chunked")
+            self.send_header("Connection", "close")
+            self.close_connection = True
             self.send_header("Cache-Control", "no-store, no-cache")
             self.end_headers()
+            packets = H264_HUB.iter_packets(plat, did, preferred)
             try:
-                for packet in H264_HUB.iter_packets(plat, did, preferred):
-                    self.wfile.write(f"{len(packet):X}\r\n".encode("ascii") + packet + b"\r\n")
+                # HTTP/1.0 uses connection-close delimiting. The body retains
+                # only the existing four-byte application packet framing.
+                for packet in packets:
+                    self.wfile.write(packet)
                     self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError, OSError):
                 return
+            finally:
+                packets.close()
             return
         if path == "/api/scrcpy":
             plat = (qs.get("platform") or [None])[0]
