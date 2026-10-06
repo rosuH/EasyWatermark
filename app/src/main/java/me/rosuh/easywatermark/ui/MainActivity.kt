@@ -853,10 +853,10 @@ class MainActivity : ComponentActivity() {
                                         if (!saveExportState.isSaving) showSaveSheet = false
                                     },
                                     onFormatClick = { newFormat ->
-                                        viewModel.saveOutput(newFormat)
+                                        viewModel.updateOutputFormat(newFormat)
                                     },
                                     onQualityChange = { q ->
-                                        viewModel.saveOutput(level = q)
+                                        viewModel.updateOutputQuality(q)
                                     },
                                     onCancelClick = { viewModel.cancelExport() },
                                     onRetryFailedClick = {

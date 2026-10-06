@@ -403,8 +403,9 @@ def determine_primary_identity(
 
   # 2. Fallback to global Gradle properties
   if not primary_id:
-    primary_id = gradle_properties.get("applicationId") or (
-        gradle_properties.get("namespace")
+    primary_id = (
+        gradle_properties.get("applicationId")
+        or gradle_properties.get("namespace")
     )
   if not primary_sdk:
     primary_sdk = _resolve_to_int(
@@ -462,6 +463,12 @@ def determine_primary_identity(
       primary_id = primary_id or dotnet_id
       primary_sdk = primary_sdk or dotnet_sdk
       primary_label = primary_label or dotnet_label
+
+  # 5. Last-resort directory fallback if primary_id is still missing
+  if not primary_id:
+    dir_name = os.path.basename(os.path.normpath(app_dir))
+    if dir_name and dir_name not in (".", "/", "\\"):
+      primary_id = dir_name
 
   return primary_id, primary_sdk, primary_label
 
@@ -922,8 +929,10 @@ def run_aggregation(temp_dir, repo_root):
 
 GRADLE_APP_PLUGIN_PATTERN = (
     r"(?:id\s*\(?\s*[\x27\x22]com\.android\.application[\x27\x22]\s*\)?|"
+    r"alias\s*\([^)]*android\.application[^)]*\)|"
+    r"alias\s*\([^)]*android\.app[^)]*\)|"
     r"apply\s*\(?\s*(?:plugin:\s*)?[\x27\x22]com\.android\.application"
-    r"[\x27\x22]\s*\)?)(?!\s+apply\s+false)"
+    r"[\x27\x22]\s*\)?)(?!\s*(?:\.?apply\s*\(?\s*false\s*\)?|apply\s*=\s*false))"
 )
 
 

@@ -297,7 +297,6 @@ class IosFiftyImageSessionLatencyTest {
             dataStore = createWaterMarkDataStore(name = "fifty_lat_wm_$id"),
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "fifty_lat_uc_$id"),

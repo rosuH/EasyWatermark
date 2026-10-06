@@ -17,7 +17,8 @@
 ### 1. Session host
 
 - Introduce `WatermarkSessionViewModel` in `:shared` `commonMain`, extending multiplatform `androidx.lifecycle.ViewModel`.
-- Own platform-neutral session state (`StateFlow`) and intents; call existing `WatermarkConfigEditor` / `OutputPrefsEditor` / `TemplateEditor`.
+- Own platform-neutral session state (`StateFlow`) and intents; call `WatermarkConfigEditor` / `TemplateEditor`. Output controls write the edited field through `UserConfigRepository`.
+- Session is the sole owner of image selection, offsets, and export state. The migration-era image mirror in `WaterMarkRepository`, its synchronization effects, and its selection feedback are retired; the repository persists watermark configuration only. Reducer transitions publish Session state directly, preserving selection-before-export ordering and progressive-import generation guards.
 - **Do not** move Android `ContentResolver` / `Bitmap` / `MediaStore` / native `WatermarkRenderer` into commonMain.
 
 ### 2. Ports (constructor injection)

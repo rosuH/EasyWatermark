@@ -35,7 +35,6 @@ class IosWatermarkConfigBridgeTest {
             dataStore = createWaterMarkDataStore(name = name),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         ),
     )
 

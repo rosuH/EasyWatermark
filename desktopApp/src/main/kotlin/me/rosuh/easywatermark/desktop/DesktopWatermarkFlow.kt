@@ -55,7 +55,6 @@ object DesktopWatermarkFlow {
         // Desktop uses the PURE storage-id mapper; the Android SDK-gated legacy DECAL-id-3→REPEAT mapper
         // is Android-only (there is no legacy desktop data).
         tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-        logError = { println("WaterMarkRepository: $it") },
     )
 
     /** Build ONE common [UserConfigRepository] over the desktop output-prefs store (single-instance-per-file). */

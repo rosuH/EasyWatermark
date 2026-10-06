@@ -168,6 +168,5 @@ fun defaultIosWatermarkConfigBridge(): IosWatermarkConfigBridge =
             dataStore = createWaterMarkDataStore(),
             defaultTextProvider = { sharedString(Res.string.config_default_water_mark_text) },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = { message -> println("IosWatermarkConfigBridge: $message") },
         ),
     )

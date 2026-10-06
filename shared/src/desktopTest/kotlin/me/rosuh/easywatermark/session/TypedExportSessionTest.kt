@@ -105,7 +105,6 @@ class TypedExportSessionTest {
             dataStore = waterMarkStore,
             defaultTextProvider = { "EasyWatermark" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userRepo = UserConfigRepository(createUserConfigDataStore(File(dir, "user-store")))
         return WatermarkSessionViewModel(

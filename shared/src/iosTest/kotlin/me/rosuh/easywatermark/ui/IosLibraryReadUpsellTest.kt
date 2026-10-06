@@ -60,7 +60,6 @@ class IosLibraryReadUpsellTest {
             dataStore = createWaterMarkDataStore(name = "p5_upsell_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "p5_upsell_uc_$id"),

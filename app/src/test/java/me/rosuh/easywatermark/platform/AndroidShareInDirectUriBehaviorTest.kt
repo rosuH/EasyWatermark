@@ -98,7 +98,6 @@ class AndroidShareInDirectUriBehaviorTest {
             dataStore = wmStore,
             defaultTextProvider = { "test" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userRepo = UserConfigRepository(userStore)
         val templateRepo = TemplateRepository(templateDao = null, ioContext = Dispatchers.IO)

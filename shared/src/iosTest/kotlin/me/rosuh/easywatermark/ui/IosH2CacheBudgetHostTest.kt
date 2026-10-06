@@ -30,7 +30,6 @@ class IosH2CacheBudgetHostTest {
             dataStore = createWaterMarkDataStore(name = "h2_budget_wm_$id"),
             defaultTextProvider = { "EasyWatermark 水印" },
             tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-            logError = {},
         )
         val userConfigRepo = UserConfigRepository(
             createUserConfigDataStore(name = "h2_budget_uc_$id"),

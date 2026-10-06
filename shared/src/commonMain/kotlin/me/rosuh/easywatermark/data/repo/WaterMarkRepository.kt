@@ -2,15 +2,9 @@ package me.rosuh.easywatermark.data.repo
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.withContext
-import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
@@ -36,13 +30,8 @@ import okio.IOException
 /**
  * Persisted watermark config ([waterMark]) is the durable product surface.
  *
- * **E3 residual:** in-memory image list/selection/offset ([_imageMapFlow], [_selectedImage],
- * [updateOffset], [updateImageList], [select]) remain for Session EnterEditor dual-write
- * effects and a few tests. Product editor path owns selection/offset on Session (E1);
- * do not add new production callers. Full deletion is a follow-up once Session effects
- * stop mirroring list/select into the repo.
- *
- * List/selection/offset updates are Main-confined. DataStore keys and defaults are compatibility-critical.
+ * Session owns transient image selection and offsets. DataStore keys and defaults are
+ * compatibility-critical.
  */
 class WaterMarkRepository(
     private val dataStore: DataStore<Preferences>,
@@ -56,7 +45,6 @@ class WaterMarkRepository(
     // (pre-Android-12 stored DECAL id 3 -> REPEAT), pinned by WatermarkTileModeMappingTest. NOT the pure
     // `WatermarkTileMode.fromStorageId`, which lacks the SDK gate.
     private val tileModeFromStorageId: (Int?) -> WatermarkTileMode,
-    private val logError: (String) -> Unit,
 ) {
 
     private object PreferenceKeys {
@@ -76,10 +64,6 @@ class WaterMarkRepository(
         val KEY_OFFSET_X = floatPreferencesKey(SP_KEY_OFFSET_X)
         val KEY_OFFSET_Y = floatPreferencesKey(SP_KEY_OFFSET_Y)
     }
-
-    private val _selectedImage = MutableStateFlow(ImageInfo.empty())
-
-    val selectedImage: StateFlow<ImageInfo> = _selectedImage
 
     val waterMark: Flow<WaterMark> = dataStore.data
         .catch { exception ->
@@ -110,27 +94,6 @@ class WaterMarkRepository(
                 enableBounds = it[KEY_ENABLE_BOUNDS] ?: false
             )
         }
-
-    private val _imageMapFlow: MutableStateFlow<List<ImageInfo>> = MutableStateFlow(emptyList())
-
-    val imageInfoMapFlow = _imageMapFlow
-
-    val imageInfoList: List<ImageInfo>
-        get() = imageInfoMapFlow.value
-
-    /**
- * Replace the image list on Main. Install + selected rebind run with **no suspension** between
- * Them so they cannot interleave with [select] / [updateOffset].     */
-    suspend fun updateImageList(imageList: List<ImageInfo>) {
-        withContext(Dispatchers.Main.immediate) {
-            // Atomic list replace (StateFlow). Offset path uses update{} only — no side MutableMap race.
-            _imageMapFlow.value = imageList
-            // Keep list/selected identity: if selected URI is still present, rebind to the new entry.
-            _selectedImage.update { current ->
-                imageList.firstOrNull { it.uri == current.uri } ?: current
-            }
-        }
-    }
 
     suspend fun updateText(text: String) {
         dataStore.edit {
@@ -186,43 +149,6 @@ class WaterMarkRepository(
         }
     }
 
-    /**
- * Synchronous in-memory **offset-only** update. **Main-confined** (call from UI/Main only).
- *
- * - Does **not** mutate [imageInfo] (stale UI copies are safe to pass).
- * - List CAS via [_imageMapFlow.update] is a **pure** lambda (no outer side effects).
- * - After update, the committed object is **re-read** from the final list by URI so CAS
- * Retries cannot return a never-installed instance. * - Same offsets → returns the **existing** list entry (identity shared with list + selected).
- * - [selectedImage] is updated only when its URI still matches (atomic [MutableStateFlow.update]).
- *
- * @return the installed list entry, or null if the URI was not found (no-op).
-     */
-    fun updateOffset(imageInfo: ImageInfo): ImageInfo? {
-        _imageMapFlow.update { current ->
-            val index = current.indexOfFirst { it.uri == imageInfo.uri }
-            if (index < 0) return@update current
-            val existing = current[index]
-            if (existing.offsetX == imageInfo.offsetX && existing.offsetY == imageInfo.offsetY) {
-                return@update current
-            }
-            val next = existing.copy(
-                offsetX = imageInfo.offsetX,
-                offsetY = imageInfo.offsetY,
-            )
-            current.toMutableList().also { it[index] = next }
-        }
-        // Always re-read from the final list — never trust lambda-local objects across CAS retries.
-        val committed = _imageMapFlow.value.firstOrNull { it.uri == imageInfo.uri }
-        if (committed == null) {
-            logError("updateOffset: imageInfo not found, uri = ${imageInfo.uri}")
-            return null
-        }
-        _selectedImage.update { current ->
-            if (current.uri == committed.uri) committed else current
-        }
-        return committed
-    }
-
     suspend fun resetModeToText() {
         dataStore.edit { it[KEY_MODE] = WatermarkMode.Text.value }
     }
@@ -234,20 +160,6 @@ class WaterMarkRepository(
 
     suspend fun toggleBounds(enable: Boolean) {
         dataStore.edit { it[KEY_ENABLE_BOUNDS] = enable }
-    }
-
-    suspend fun resetList() {
-        updateImageList(emptyList())
-    }
-
-    /**
- * Set selection from the **current** list entry for [ref] (or a temp [ImageInfo] if missing).
- * Read list + write selected happen on Main with no suspension between, so a concurrent
- * [updateOffset] on Main cannot install B_new while this still holds B_old.
-     */
-    suspend fun select(ref: MediaRef) = withContext(Dispatchers.Main.immediate) {
-        val info = imageInfoList.find { it.uri == ref } ?: ImageInfo(ref)
-        _selectedImage.value = info
     }
 
     companion object {

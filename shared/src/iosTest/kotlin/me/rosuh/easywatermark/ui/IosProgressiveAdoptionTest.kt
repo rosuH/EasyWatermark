@@ -297,7 +297,7 @@ class IosProgressiveAdoptionTest {
     }
 
     @Test
-    fun lastRemove_thenStaleRepoEmission_doesNotReinjectDeletedUri() = runTest(mainDispatcher) {
+    fun lastRemove_thenStaleSelectionAndOffset_doNotReinjectDeletedUri() = runTest(mainDispatcher) {
         val services = defaultIosAppServices()
         services.session.dispatchAndAwait(AppIntent.NavigateBack)
         val scope = CoroutineScope(SupervisorJob() + mainDispatcher)
@@ -316,18 +316,17 @@ class IosProgressiveAdoptionTest {
                 controller.noteFileReadyForTests(gen, "only", writeProvisionalJpeg()),
             )
             val stablePath = services.session.launchScreenUiStateFlow.value.selectedImageList.single().uri.value
-            // Simulate repo still holding the URI after leave-editor (E3 residual mirror).
-            services.waterMarkRepo.select(MediaRef(stablePath))
             assertTrue(controller.removeSlot("only"))
             assertTrue(services.session.launchScreenUiStateFlow.value.selectedImageList.isEmpty())
             assertFalse(NSFileManager.defaultManager.fileExistsAtPath(stablePath))
-            // Stale SyncCurrentImage must not re-inject deleted path into Session (A12 E1).
-            services.session.dispatchAndAwait(AppIntent.SyncCurrentImage(ImageInfo(MediaRef(stablePath))))
+            // Late host callbacks must not restore a removed and deleted source.
+            services.session.dispatchAndAwait(AppIntent.SelectCurrent(MediaRef(stablePath)))
+            services.session.applyOffset(ImageInfo(MediaRef(stablePath), offsetX = 0.1f, offsetY = 0.9f))
             val after = services.session.launchScreenUiStateFlow.value
             assertTrue(after.selectedImageList.isEmpty())
             assertTrue(
                 after.curImageInfo == null || after.curImageInfo?.uri == MediaRef.Empty,
-                "empty Session must not re-bind deleted ewm_src via SyncCurrentImage",
+                "empty Session must not re-bind deleted ewm_src via late host callbacks",
             )
         } finally {
             controller.close()

@@ -62,12 +62,9 @@ sealed class AppIntent {
     /** Mirror repo waterMark into launch state (same as MainViewModel waterMarkFlow collect). */
     data class SyncWaterMark(val waterMark: WaterMark) : AppIntent()
 
-    /** Mirror repo selected image into launch state. */
-    data class SyncCurrentImage(val info: ImageInfo?) : AppIntent()
-
     /**
- * Start batch export for [images] (defaults to current session selection when empty list
- * Is passed from hosts that want repo list — hosts should pass explicit list).     */
+     * Start batch export for the explicit [images] selection.
+     */
     data class RequestExport(val images: List<ImageInfo>) : AppIntent()
 
     data object CancelExport : AppIntent()
