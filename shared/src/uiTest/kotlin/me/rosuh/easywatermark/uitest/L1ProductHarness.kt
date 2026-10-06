@@ -106,7 +106,6 @@ internal class L1Session {
         dataStore = InMemoryPreferencesDataStore(),
         defaultTextProvider = { WaterMark.default.text },
         tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-        logError = {},
     )
     val editor = WatermarkConfigEditor(repo)
     /**
