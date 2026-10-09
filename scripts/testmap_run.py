@@ -1917,6 +1917,14 @@ def _mark_cancel_uncovered(task: dict) -> None:
         return
     if task.get("state") not in {"failed", "review_required", "passed"}:
         return
+    control = task.get("export_control") or {}
+    layers = task.get("layers") or {}
+    if (task.get("platform") == "android" and task["state"] in {"review_required", "passed"}
+            and task.get("exit_code") == 0 and layers.get("execution") == "ok"
+            and layers.get("script_checks") == "executed_review_required"
+            and layers.get("agent_observation") == "completed"
+            and control.get("status") == control.get("retry_status") == "evidence_complete"):
+        return  # This completion surface follows an evidenced cancellation and Retry.
     surface = _cancel_surface_text(task)
     if surface and any(token in surface for token in _CANCEL_COMPLETION):
         task["state"] = "uncovered"
@@ -1995,7 +2003,7 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
     """Validate real SDK actions against the bounded, fixture-scoped gate."""
     output = Path(spec["agent_device_output"])
     public_path = output / "export-control-events.json"
-    verdict = {"status": "incomplete", "evidence": str(public_path)}
+    verdict = {"status": "incomplete", "retry_status": "incomplete", "evidence": str(public_path)}
     try:
         if code != 0:
             raise ValueError("SDK cancel script did not complete")
@@ -2042,11 +2050,22 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
             [r for r in rows if r["command"] == "wait" and "absent" in r["args"] and "Share" in r["args"]],
             [r for r in rows if r["command"] == "wait" and "absent" in r["args"] and "View in gallery" in r["args"]],
         ]
-        if any(len(found) != 1 for found in required):
-            raise ValueError("Cancel press and unchanged business assertions are required")
+        retry_required = [
+            [r for r in rows if r["command"] == "press" and "Retry failed" in r["args"]],
+            [r for r in rows if r["command"] == "wait" and "absent" not in r["args"]
+             and "Processed 1 · Succeeded 1 · Failed 0" in r["args"]],
+            [r for r in rows if r["command"] == "wait" and "absent" not in r["args"] and "Share" in r["args"]],
+            [r for r in rows if r["command"] == "wait" and "absent" not in r["args"] and "View in gallery" in r["args"]],
+        ]
+        if any(len(found) != 1 for found in required + retry_required):
+            raise ValueError("Cancel and subsequent Retry business actions are required")
         indices = [found[0]["n"] for found in required]
-        if indices != sorted(indices) or len(set(indices)) != 4:
-            raise ValueError("Cancel business actions are out of order")
+        retry_indices = [found[0]["n"] for found in retry_required]
+        all_indices = indices + retry_indices
+        if all_indices != sorted(all_indices) or len(set(all_indices)) != 8:
+            raise ValueError("Cancel and Retry business actions are out of order")
+        if control.get("marker_absent") is not True:
+            raise ValueError("Consumed fixture control marker is still present or unverified")
         timing_files = list(output.rglob("replay-timing.ndjson"))
         if len(timing_files) != 1:
             raise ValueError("Expected exactly one SDK attempt timeline")
@@ -2065,7 +2084,7 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
             if len(matches) != 1 or (kind == "replay_action_stop" and matches[0].get("ok") is not True):
                 raise ValueError("Missing successful SDK action or screenshot")
             return datetime.fromisoformat(matches[0]["ts"].replace("Z", "+00:00")).timestamp() * 1000
-        for n in indices:
+        for n in all_indices:
             start, end = sdk_event(n, "replay_action_start"), sdk_event(n, "replay_action_stop")
             if start > end or sdk_event(n, "replay_action_stop", True) < end:
                 raise ValueError("Invalid SDK action/screenshot ordering")
@@ -2079,11 +2098,11 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
         if stamps[2] - low > click_end:
             raise ValueError("Cancellation was not bounded by the real Cancel press")
         if any(sdk_event(left, "replay_action_stop") > sdk_event(right, "replay_action_start")
-               for left, right in zip(indices, indices[1:])):
-            raise ValueError("Cancel assertions did not follow the real press")
+               for left, right in zip(all_indices, all_indices[1:])):
+            raise ValueError("Cancel and Retry assertions did not follow their real presses")
         if stamps[3] - low > assertion_end:
             raise ValueError("Gate did not clear before the cancellation assertion completed")
-        verdict.update(status="evidence_complete", run_id=run_id,
+        verdict.update(status="evidence_complete", retry_status="evidence_complete", run_id=run_id,
                        clock_offset_interval_ms=[low, high])
     except (ValueError, OSError, KeyError, TypeError, IndexError) as exc:
         verdict["reason"] = str(exc)
@@ -2096,7 +2115,7 @@ def ingest_agent_device_result(spec: dict, code: int) -> dict:
         return extra
     gate = _cancel_gate_evidence(spec, code)
     extra["export_control"] = gate
-    if gate["status"] != "evidence_complete":
+    if gate["status"] != "evidence_complete" or gate["retry_status"] != "evidence_complete":
         # A process-zero or external Job cancellation is never enough.
         extra["agent_device_state"] = "uncovered" if code == 0 else "failed"
         layers = dict(extra.get("layers") or {})
