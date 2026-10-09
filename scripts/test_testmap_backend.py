@@ -901,7 +901,11 @@ class SetupSafetyChecks(unittest.TestCase):
         for item in leftovers:
             item.parent.mkdir(parents=True, exist_ok=True)
             item.write_bytes(b'keep')
-        state = self.apply('ios')
+        case = agent.agent_device_cases_by_id()['ios-library-read-upsell']
+        self.assertEqual('home', case['setup'])
+        self.assertTrue(case['supported']['ios'])
+        self.assertFalse(case['supported']['android'])
+        state = self.apply('ios', case['setup'])
         self.assertFalse(path.exists())
         (self.root / 'ios' / setup.IOS_CONFIG[1]).write_bytes(b'test-created')
         setup.restore_setup(state)
@@ -910,9 +914,33 @@ class SetupSafetyChecks(unittest.TestCase):
         for item in leftovers: self.assertEqual(b'keep', item.read_bytes())
         calls = (self.root / 'calls.jsonl').read_text()
         self.assertNotIn('privacy', calls)
-        with self.assertRaisesRegex(ValueError, 'permission precondition'):
-            self.apply('ios', 'ios')
+        with patch.object(setup, '_claim_setup') as claim:
+            with self.assertRaisesRegex(ValueError, 'permission precondition'):
+                self.apply('ios', 'ios')
+            claim.assert_not_called()
         self.assertEqual(calls, (self.root / 'calls.jsonl').read_text())
+
+    def test_ios_library_upsell_script_requires_visible_prompt_before_continue(self):
+        import shlex
+        case = agent.agent_device_cases_by_id()['ios-library-read-upsell']
+        rows = runner.parse_script(setup.REPO_ROOT / case['script']['ios'], 'ios')
+        # The flat replay must block on the actual upsell, not skip an absent prompt.
+        self.assertTrue(all(row['command'] in {'open', 'wait', 'press', 'close'} for row in rows))
+        prompts = [row for row in rows if row['command'] == 'wait'
+                   and 'iosLibraryReadUpsellContinue' in row['args']]
+        self.assertEqual(1, len(prompts))
+        selector, timeout = shlex.split(prompts[0]['args'])
+        self.assertEqual('id="iosLibraryReadUpsellContinue" visible', selector)
+        self.assertGreater(int(timeout), 0)
+        self.assertLessEqual(int(timeout), 20000)
+        pick = next(row['n'] for row in rows if row['command'] == 'press'
+                    and 'launchPickImageButton' in row['args'])
+        continue_press = next(row['n'] for row in rows if row['command'] == 'press'
+                              and 'iosLibraryReadUpsellContinue' in row['args'])
+        close = next(row['n'] for row in rows if row['command'] == 'close')
+        self.assertLess(pick, prompts[0]['n'])
+        self.assertLess(prompts[0]['n'], continue_press)
+        self.assertLess(continue_press, close)
 
     def test_runner_stop_after_setup_restores_without_starting_child(self):
         with tempfile.TemporaryDirectory() as folder:

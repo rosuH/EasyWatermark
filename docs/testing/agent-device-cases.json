@@ -376,7 +376,7 @@
         "android",
         "ios"
       ],
-      "setup": "ios",
+      "setup": "home",
       "verify": "ui-only",
       "supported": {
         "android": false,
@@ -389,7 +389,7 @@
         "android": "docs/testing/agent-device/scripts/ios-library-read-upsell@android.ad",
         "ios": "docs/testing/agent-device/scripts/ios-library-read-upsell@ios.ad"
       },
-      "honesty": "supported true on iOS for the in-app Faster previews overlay. PHPicker cells and the system Photos permission dialog remain seam. Do not claim those as real. setup=ios revokes Library Read; it does not clear app state."
+      "honesty": "supported true on iOS for the in-app Faster previews overlay. The home setup backs up and restores preferences; it never changes Photos authorization. Before running, explicitly prepare and verify Library Read Denied on the authorized dedicated test simulator. A simulator being created or Photos add-only being granted is not evidence of that read authorization state. The script must observe the real upsell before pressing Continue; a missing prompt must fail. PHPicker cells and the system Photos permission dialog remain seam. Actual picker presentation after Continue still requires device evidence; SDK completion does not establish it or Human Confirm."
     },
     {
       "id": "editor-dual-pane-morph",
