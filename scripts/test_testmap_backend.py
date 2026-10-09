@@ -1552,5 +1552,291 @@ class AndroidFailureRecoveryChecks(unittest.TestCase):
         self.assertLessEqual(proof['repair']['finished_monotonic_ns'], proof['retry_dispatch_monotonic_ns'])
 
 
+
+class AndroidTemplateCrudChecks(unittest.TestCase):
+    """Real phase files/PNG mappings; fake SDK responses only, never a device."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.source = runner.REPO_ROOT / 'docs/testing/agent-device/scripts/editor-to-template-sheet@android.json'
+        self.state = {'setup': 'editor', 'platform': 'android', 'serial': 'owned-serial',
+                      'marker': 'editortotemplate-' + 'a' * 32, 'source_id': '123', 'phase': 'active',
+                      'journal': str(self.root / 'backup.json'), 'lock': str(self.root / 'lock.json')}
+        Path(self.state['lock']).write_text(json.dumps({'journal': self.state['journal']}))
+        self.spec = {'builder': 'agent-device', 'edge_id': 'editor-to-template-sheet', 'agent_platform': 'android',
+                     'serial': 'owned-serial', 'step_evidence_root': str(self.root / 'run-1'),
+                     'agent_device_output': str(self.root / 'output'),
+                     'step_evidence_task': {'edge': 'editor-to-template-sheet', 'repeat': {'k': 1, 'n': 1}},
+                     'cmd': ['fake-sdk', 'batch', '--steps-file', str(self.source), '--platform', 'android',
+                             '--serial', 'owned-serial', '--session', 'owned-session']}
+        self.nonce = 'EWM ' + self.state['marker']
+        self.exists = self.in_list = self.applied = self.stopped = self.inline = False
+        self.fault = None
+        self.calls, self.events, self.restores = [], [], []
+        self.stack = contextlib.ExitStack()
+        self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch.object(setup, 'load_setup_backup', return_value=dict(self.state)))
+        self.stack.enter_context(patch.object(runner, '_run_batched_steps', side_effect=self.batch))
+        self.stack.enter_context(patch.object(runner, '_apply_agent_setup', return_value=self.state))
+        self.stack.enter_context(patch.object(runner, 'maybe_prepare_ios_runner'))
+        self.stack.enter_context(patch.object(runner, '_restore_agent_setup', side_effect=lambda state, log: self.restores.append(state)))
+        self.release = self.stack.enter_context(patch.object(runner, 'release_agent_session'))
+        self.stack.enter_context(patch.object(runner, '_publish_agent_device_live'))
+        self.stack.enter_context(patch.object(runner, '_ingest_agent_device_result',
+            return_value={'agent_device_state': 'review_required', 'cases': [{}], 'layers': {}}))
+
+    def snapshot(self):
+        def node(index, tag='', label=None, parent=10, y=100, kind='android.view.View'):
+            result = {'index': index, 'identifier': tag, 'parentIndex': parent, 'type': kind,
+                      'rect': {'x': 0, 'y': y, 'width': 300, 'height': 50}, 'hittable': True}
+            if label is not None:
+                result['label'] = label
+            return result
+        if self.in_list:
+            nodes = [node(10, 'templateListSheet', parent=None), node(11, 'templateAddButton'), node(12)]
+            if self.exists:
+                nodes += [node(13, 'templateRow-2', self.nonce, 12), node(14, 'templateDeleteButton-2')]
+                if self.fault == 'ambiguous':
+                    nodes += [node(16, 'templateRow-3', self.nonce, 12, 125), node(17, 'templateDeleteButton-3')]
+            nodes += [node(20, 'templateRow-1', 'Existing user template', 12, 150 if self.exists else 100),
+                      node(21, 'templateDeleteButton-1')]
+            if self.fault == 'prefix' and self.applied:
+                nodes[-2]['label'] = 'Concurrent edit'
+        else:
+            if self.inline:
+                nodes = [node(10, 'watermarkTextContentInline', parent=None), node(12, 'watermarkTextTemplateIcon'),
+                         node(11, 'watermarkTextEditField', self.nonce if self.applied else 'original text', kind='android.widget.EditText')]
+            else:
+                nodes = [node(10, 'watermarkTextContent', parent=None),
+                         node(11, label=self.nonce if self.applied else 'original text', kind='android.widget.TextView')]
+        return {'appBundleId': 'me.rosuh.easywatermark.debug', 'truncated': False,
+                'visibility': {'partial': False}, 'snapshotQuality': {'state': 'healthy'}, 'nodes': nodes}
+
+    def batch(self, cmd, rows, log, tee, on_proc, on_event, should_stop, platform, env, deadline_s=420):
+        self.assertLessEqual(deadline_s, 20)
+        self.assertEqual('owned-serial', runner._cmd_flag(cmd, '--serial'))
+        for row in rows:
+            command, inp = row['command'], row['input']
+            self.calls.append((command, inp))
+            on_event(platform, {'type': 'replay_action_start', 'step': row['n'], 'command': command})
+            selector = inp.get('target', {}).get('selector', '')
+            if command == 'open':
+                self.assertTrue(inp['relaunch'])
+                self.assertIn('content://media/external_primary/images/media/123', inp['launchArgs'])
+                self.in_list = False
+                if self.fault == 'derived' and 'add-persist-sdk-' in str(log.secondary.name):
+                    derived = Path(log.secondary.name).parent / 'add-persist.json'
+                    derived.write_text(derived.read_text() + ' ')
+            elif command == 'press':
+                if selector == 'id="watermarkTextTemplateIcon"':
+                    self.in_list = True
+                elif selector == 'id="templateEditConfirm"':
+                    self.exists = True
+                    if self.fault in {'stop', 'stop-cleanup-fails'}:
+                        self.stopped = True
+                elif selector == 'id="templateUseConfirm"':
+                    self.applied, self.in_list = True, False
+                elif selector == 'id="templateDeleteConfirm"':
+                    if self.fault == 'stop-cleanup-fails':
+                        return 1
+                    self.exists = False
+                elif 'templateDeleteButton-' in selector:
+                    self.assertEqual('id="templateDeleteButton-2"', selector)
+            elif command == 'fill':
+                self.assertEqual(self.nonce, inp['text'])
+            elif command == 'screenshot':
+                setup.write_png(Path(inp['path']), 2, 2, lambda y: b'\x00\x80\xff' * 2)
+            if not (self.fault == 'bad-open' and command == 'open'):
+                log.write(json.dumps({'success': True, 'data': {'total': 1, 'executed': 1, 'results': [
+                    {'step': 1, 'command': command, 'ok': True, 'data': self.snapshot() if command == 'snapshot' else {}}]}}) + '\n')
+            on_event(platform, {'type': 'replay_action_stop', 'step': row['n'], 'command': command, 'ok': True})
+        return 0
+
+    def run_case(self):
+        return runner.run_task(self.spec, io.StringIO(), on_step_event=lambda p, e: self.events.append(e),
+                               should_stop=lambda: self.stopped)
+
+    def test_template_two_immutable_phases_exact_crud_and_global_evidence(self):
+        import hashlib
+        original = self.source.read_bytes()
+        code, _, extra = self.run_case()
+        self.assertEqual(0, code)
+        proof = extra['template_crud']
+        self.assertEqual('evidence_complete', proof['status'])
+        self.assertTrue(proof['persisted_after_relaunch'])
+        self.assertTrue(proof['applied_exactly'])
+        self.assertEqual('verified_deleted', proof['cleanup'])
+        self.assertTrue(proof['private_restored'])
+        self.assertFalse(self.exists)
+        self.assertEqual(original, self.source.read_bytes())
+        self.assertEqual(2, len(proof['phases']))
+        mapped = []
+        for phase in proof['phases']:
+            self.assertEqual(hashlib.sha256(Path(phase['source']).read_bytes()).hexdigest(), phase['source_sha256'])
+            self.assertEqual(hashlib.sha256(Path(phase['script']).read_bytes()).hexdigest(), phase['script_sha256'])
+            self.assertEqual(hashlib.sha256(original).hexdigest(), phase['canonical_source_sha256'])
+            mapped.extend(m['step'] for m in phase['mapping'] if m['kind'] == 'action')
+        self.assertEqual(list(range(1, 53)), mapped)
+        self.assertEqual(49, len([e for e in self.events if e.get('shot')]))
+        selectors = [v.get('target', {}).get('selector') for c, v in self.calls if c == 'press']
+        self.assertLess(selectors.index('id="templateEditConfirm"'), selectors.index('id="templateRow-2" label="' + self.nonce + '"'))
+        self.assertLess(selectors.index('id="templateUseConfirm"'), selectors.index('id="templateDeleteButton-2"'))
+        self.assertEqual(4, len([c for c, _ in self.calls if c == 'open']))
+        self.assertEqual([self.state], self.restores)
+        self.release.assert_called_once()
+
+    def test_template_ambiguous_nonce_refuses_use_and_delete_but_restores(self):
+        self.fault = 'ambiguous'
+        code, _, extra = self.run_case()
+        self.assertNotEqual(0, code)
+        self.assertEqual('failed', extra['template_crud']['cleanup'])
+        self.assertFalse(self.applied)
+        self.assertFalse(any('templateDeleteButton-' in v.get('target', {}).get('selector', '') for c, v in self.calls))
+        self.assertEqual([self.state], self.restores)
+        self.release.assert_called_once()
+
+    def test_template_inline_entry_has_exact_content_and_contiguous_global_mapping(self):
+        self.inline = True
+        code, _, extra = self.run_case()
+        self.assertEqual(0, code)
+        proof = extra['template_crud']
+        self.assertEqual('inline', proof['entry'])
+        self.assertEqual([4, 5, 20, 21, 32, 45, 46], proof['omitted_source_steps'])
+        mapping = [m for p in proof['phases'] for m in p['mapping'] if m['kind'] == 'action']
+        self.assertEqual(list(range(1, 46)), [m['step'] for m in mapping])
+        self.assertEqual([n for n in range(1, 53) if n not in proof['omitted_source_steps']], [m['source_step'] for m in mapping])
+        self.assertFalse(any(v.get('target', {}).get('selector') == 'id="watermarkTextContent"' for _, v in self.calls))
+        self.assertTrue(proof['applied_exactly'])
+        self.assertEqual(42, len([e for e in self.events if e.get('shot')]))
+
+    def test_template_stop_cleans_only_owned_record_and_remains_stopped(self):
+        self.fault = 'stop'
+        code, _, extra = self.run_case()
+        self.assertEqual(130, code)
+        self.assertEqual('unverified', extra['template_crud']['status'])
+        self.assertEqual('verified_deleted', extra['template_crud']['cleanup'])
+        self.assertFalse(self.exists)
+        self.assertFalse(self.applied)
+        self.assertEqual([self.state], self.restores)
+        self.release.assert_called_once()
+
+    def test_template_stop_cleanup_failure_is_visible_and_private_restore_still_runs(self):
+        self.fault = 'stop-cleanup-fails'
+        code, _, extra = self.run_case()
+        self.assertEqual(130, code)
+        self.assertEqual('failed', extra['template_crud']['cleanup'])
+        self.assertTrue(extra['template_crud']['private_restored'])
+        self.assertTrue(self.exists)
+        self.assertEqual([self.state], self.restores)
+        self.release.assert_called_once()
+
+    def test_template_source_hash_guard_prevents_any_sdk_mutation(self):
+        with patch.object(runner, '_TEMPLATE_SOURCE_SHA256', 'wrong'):
+            code, _, extra = self.run_case()
+        self.assertNotEqual(0, code)
+        self.assertEqual([], self.calls)
+        self.assertIn('source', extra['template_crud']['reason'])
+        self.assertEqual([self.state], self.restores)
+
+    def test_template_changed_prefix_does_not_count_absence_as_database_scan(self):
+        self.fault = 'prefix'
+        code, _, extra = self.run_case()
+        self.assertNotEqual(0, code)
+        self.assertIn('prefix', extra['template_crud']['reason'])
+        self.assertEqual('failed', extra['template_crud']['cleanup'])
+        self.assertEqual([self.state], self.restores)
+
+    def test_template_sdk_zero_without_owned_cleanup_is_uncovered(self):
+        result = runner.ingest_agent_device_result(self.spec, 0)
+        self.assertEqual('uncovered', result['agent_device_state'])
+        self.assertEqual('failed', result['cases'][0]['status'])
+
+    def test_template_derived_hash_drift_stops_before_add(self):
+        self.fault = 'derived'
+        code, _, extra = self.run_case()
+        self.assertNotEqual(0, code)
+        self.assertIn('derived', extra['template_crud']['reason'])
+        self.assertFalse(self.exists)
+        self.assertFalse(any(v.get('target', {}).get('selector') == 'id="templateEditConfirm"' for _, v in self.calls))
+        self.assertEqual([self.state], self.restores)
+
+    def test_template_private_restore_failure_keeps_false_and_still_closes_session(self):
+        with patch.object(runner, '_restore_agent_setup', side_effect=setup.SetupRestoreError('synthetic restore failed')):
+            with self.assertRaises(setup.SetupRestoreError):
+                self.run_case()
+        self.release.assert_called_once()
+        manifest = next((self.root / 'run-1').glob('scripts/*/template-crud.json'))
+        self.assertFalse(json.loads(manifest.read_text())['private_restored'])
+
+    def test_template_sdk_response_requires_one_actual_matching_action(self):
+        valid = {'success': True, 'data': {'total': 1, 'executed': 1, 'results': [
+            {'step': 1, 'command': 'open', 'ok': True, 'data': {'session': 'owned'}}]}}
+        self.assertEqual({'session': 'owned'}, runner._template_batch_response(json.dumps(valid), 'open'))
+        invalid = ['', '{broken', json.dumps(valid) + '\n' + json.dumps(valid)]
+        for field, value in [('executed', 0), ('total', 2), ('executed', True)]:
+            changed = json.loads(json.dumps(valid))
+            changed['data'][field] = value
+            invalid.append(json.dumps(changed))
+        for field, value in [('command', 'close'), ('ok', False), ('step', 2)]:
+            changed = json.loads(json.dumps(valid))
+            changed['data']['results'][0][field] = value
+            invalid.append(json.dumps(changed))
+        for output in invalid:
+            with self.subTest(output=output), self.assertRaises(ValueError):
+                runner._template_batch_response(output, 'open')
+
+    def test_template_zero_exit_without_open_response_cannot_reach_add(self):
+        self.fault = 'bad-open'
+        code, _, extra = self.run_case()
+        self.assertNotEqual(0, code)
+        self.assertEqual('unverified', extra['template_crud']['status'])
+        self.assertEqual(['open'], [command for command, _ in self.calls])
+        self.assertEqual([self.state], self.restores)
+        self.release.assert_called_once()
+
+    def test_template_cli_and_console_persist_proof_and_live_manifest_on_failure_and_stop(self):
+        for mode in ('cli', 'console'):
+            for stopped in (False, True):
+                with self.subTest(mode=mode, stopped=stopped):
+                    self.exists = self.in_list = self.applied = self.stopped = False
+                    self.fault = 'stop-cleanup-fails' if stopped else None
+                    task = {'id': 'edge:editor-to-template-sheet@android#agent', 'edge': 'editor-to-template-sheet',
+                            'platform': 'android', 'state': 'pending'}
+                    rec = {'id': mode + ('-stopped' if stopped else '-complete'), 'state': 'running',
+                           'started': '2026-10-10T00:00:00Z', 'tasks': [task]}
+                    holder = runner.ActiveRun(rec) if mode == 'cli' else runner.RunManager()
+                    if mode == 'console':
+                        holder.active = rec
+                    def sdk(*args, **kwargs):
+                        self.assertIn('template_crud_manifest', task)  # on_spec runs before any SDK action.
+                        result = self.batch(*args, **kwargs)
+                        if self.stopped:
+                            holder.stop_requested = True
+                        return result
+                    with patch.object(runner, 'RUNS_DIR', self.root / 'records'), \
+                         patch.object(runner, 'task_run_spec', return_value=dict(self.spec)), \
+                         patch.object(runner, '_ingest_agent_device_result', return_value={
+                             'agent_device_state': 'review_required', 'cases': [{}], 'layers': {}}), \
+                         patch.object(runner, '_run_batched_steps', side_effect=sdk):
+                        if mode == 'cli':
+                            runner._execute_task(holder, rec, task, io.StringIO())
+                        else:
+                            holder._execute_one_task(rec, task, io.StringIO())
+                        runner.finalize_record(rec)
+                        saved = json.loads((runner.RUNS_DIR / (rec['id'] + '.json')).read_text())['tasks'][0]
+                    proof = saved['template_crud']
+                    self.assertEqual(self.nonce, proof['nonce'])
+                    self.assertEqual('2', proof['row_id'])
+                    self.assertTrue(proof['private_restored'])
+                    self.assertEqual(proof['manifest'], saved['template_crud_manifest'])
+                    self.assertTrue(Path(saved['template_crud_manifest']).is_file())
+                    self.assertGreaterEqual(len(proof['phases']), 1)
+                    self.assertEqual('stopped' if stopped else 'review_required', saved['state'])
+                    self.assertEqual('failed' if stopped else 'verified_deleted', proof['cleanup'])
+                    if stopped:
+                        self.assertIn('cleanup_reason', proof)
+
 if __name__ == '__main__':
     unittest.main()
