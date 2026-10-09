@@ -638,10 +638,10 @@
         "ios": true
       },
       "script": {
-        "android": "docs/testing/agent-device/scripts/editor-clamp-drag@android.ad",
+        "android": "docs/testing/agent-device/scripts/editor-clamp-drag@android.json",
         "ios": "docs/testing/agent-device/scripts/editor-clamp-drag@ios.ad"
       },
-      "honesty": "Switches Style tile to Single then taps the preview. Offset delta is L1-proven; a tap without pan is not a product fail. Replay pass is not a product pass."
+      "honesty": "Android: owned A and exact UI nonce, fresh AX/PNG brackets, stable localized gold pixels, pixel-derived real SDK pan, visible displacement and SDK-session reopen continuity. Two immutable batch phases preserve canonical/derived hashes and global steps. Requires tools/testmap/requirements.txt before setup. This is not OCR, process-death/DataStore persistence, or A/B filmstrip proof; Single native CHECKED is not exported by SDK, so review its synchronized highlight image and real CLAMP-only drag behavior. iOS retains its separate script and gains none of these Android claims. Human Confirm remains separate."
     },
     {
       "id": "export-cancel",

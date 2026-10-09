@@ -1902,5 +1902,200 @@ class AndroidTemplateCrudChecks(unittest.TestCase):
                     if stopped:
                         self.assertIn('cleanup_reason', proof)
 
+class AndroidClampChecks(unittest.TestCase):
+    """Real synthetic pixels and phase artifacts; SDK/device operations are fake."""
+
+    def setUp(self):
+        from testmap_steps import require_clamp_pixels
+        self.Image = require_clamp_pixels()
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        marker = 'editorclampdrag-' + 'b' * 32
+        fixtures = setup.make_fixtures(self.root, marker)
+        self.state = {'setup': 'editor', 'platform': 'android', 'serial': 'owned', 'marker': marker,
+                      'source_id': '321', 'phase': 'active', 'fixtures': {k: str(v) for k, v in fixtures.items()},
+                      'journal': str(self.root / 'journal.json'), 'lock': str(self.root / 'lock.json')}
+        Path(self.state['lock']).write_text(json.dumps({'journal': self.state['journal']}))
+        self.source = runner.REPO_ROOT / 'docs/testing/agent-device/scripts/editor-clamp-drag@android.json'
+        self.spec = {'builder': 'agent-device', 'edge_id': 'editor-clamp-drag', 'agent_platform': 'android',
+                     'serial': 'owned', 'step_evidence_root': str(self.root / 'run'), 'agent_device_output': str(self.root / 'output'),
+                     'cmd': ['fake', 'batch', '--steps-file', str(self.source), '--platform', 'android', '--serial', 'owned', '--session', 'owned']}
+        self.offset, self.text, self.tab = [0, 0], 'original text', 'Content'
+        self.fault, self.inline, self.stopped, self.style_snapshots = None, False, False, 0
+        self.calls, self.events = [], []
+        self.stack = contextlib.ExitStack()
+        self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch.object(setup, 'load_setup_backup', return_value=self.state))
+        self.prepare = self.stack.enter_context(patch.object(runner, 'maybe_prepare_ios_runner'))
+        self.setup = self.stack.enter_context(patch.object(runner, '_apply_agent_setup', return_value=self.state))
+        self.restore = self.stack.enter_context(patch.object(runner, '_restore_agent_setup'))
+        self.release = self.stack.enter_context(patch.object(runner, 'release_agent_session'))
+        self.stack.enter_context(patch.object(runner, '_publish_agent_device_live'))
+        self.stack.enter_context(patch.object(runner, '_run_batched_steps', side_effect=self.batch))
+
+    def snapshot(self):
+        nodes = [{'index': 1, 'parentIndex': None}]
+        if self.tab == 'Content':
+            if self.inline:
+                nodes += [{'index': 2, 'parentIndex': 1, 'identifier': 'watermarkTextEditField', 'type': 'android.widget.EditText',
+                           'editable': True, 'hittable': True, 'value': self.text}]
+            else:
+                nodes += [{'index': 2, 'parentIndex': 1, 'identifier': 'watermarkTextContent', 'hittable': True},
+                          {'index': 3, 'parentIndex': 2, 'type': 'android.widget.TextView', 'label': self.text}]
+        else:
+            self.style_snapshots += 1
+            rect = {'x': 60, 'y': 100, 'width': 960, 'height': 800}
+            if self.fault == 'stale-ax' and self.style_snapshots == 3:
+                rect['x'] += 1
+            if self.fault == 'unstable' and self.style_snapshots == 2:
+                self.offset[0] += 8
+            nodes += [{'index': 2, 'parentIndex': 1, 'label': 'Watermark preview', 'visibleToUser': True, 'rect': rect},
+                      {'index': 3, 'parentIndex': 1, 'identifier': 'editorControl-TileMode'},
+                      {'index': 4, 'parentIndex': 3, 'label': 'Single', 'type': 'android.widget.TextView', 'selected': False}]
+        return {'appBundleId': 'me.rosuh.easywatermark.debug', 'truncated': False,
+                'visibility': {'partial': False}, 'snapshotQuality': {'state': 'healthy'}, 'nodes': nodes}
+
+    def png(self, path):
+        from PIL import ImageDraw
+        image = self.Image.new('RGB', (1080, 1000), (20, 20, 20))
+        with self.Image.open(self.state['fixtures']['A']) as source:
+            image.paste(source, (60, 180))
+        x, y = 565 + self.offset[0], 525 + self.offset[1]
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((x, y, x + 8, y + 63), fill=(255, 184, 0))
+        draw.rectangle((x, y + 55, x + 71, y + 63), fill=(255, 184, 0))
+        image.save(path)
+
+    def batch(self, cmd, rows, log, tee, on_proc, on_event, should_stop, platform, env, deadline_s=420):
+        self.assertLessEqual(deadline_s, 20)
+        for row in rows:
+            command, inp = row['command'], row['input']
+            self.calls.append((command, inp))
+            on_event(platform, {'type': 'replay_action_start', 'step': row['n'], 'command': command})
+            if command == 'fill':
+                self.text = inp['text']
+            if command == 'press' and inp.get('target', {}).get('selector') in ('role="textview" label="Style"', 'role="textview" label="Content"'):
+                self.tab = 'Style' if 'Style' in inp['target']['selector'] else 'Content'
+            if command == 'gesture':
+                self.assertEqual('pan', inp['kind'])
+                self.assertFalse(any(isinstance(v, str) for v in inp['origin'].values()))
+                if self.fault != 'no-motion':
+                    self.offset = [inp['delta']['x'], inp['delta']['y']]
+                self.stopped = self.fault == 'stop'
+            if command == 'open':
+                self.assertNotIn('relaunch', inp)
+                if self.fault == 'reopen-reset':
+                    self.offset = [0, 0]
+            if command == 'screenshot':
+                self.png(Path(inp['path']))
+            data = self.snapshot() if command == 'snapshot' else {}
+            log.write(json.dumps({'success': True, 'data': {'total': 1, 'executed': 1, 'results': [
+                {'step': 1, 'command': command, 'ok': True, 'data': data}]}}) + '\n')
+            on_event(platform, {'type': 'replay_action_stop', 'step': row['n'], 'ok': True})
+        return 0
+
+    def run_case(self):
+        return runner.run_task(self.spec, io.StringIO(), should_stop=lambda: self.stopped,
+                               on_step_event=lambda platform, event: self.events.append(event))
+
+    def test_real_pixels_phases_mapping_and_inline(self):
+        import hashlib
+        self.inline = True
+        code, _, extra = self.run_case()
+        self.assertEqual(0, code, extra)
+        proof = extra['clamp_drag']
+        self.assertEqual('evidence_complete', proof['status'])
+        self.assertTrue(proof['private_restored'])
+        self.assertEqual([0, 0], proof['session_reopen_observed']['shift_px'])
+        self.assertEqual([[19, 20], [25, 26], [31, 32]], proof['ax_brackets'])
+        mapping = [m for phase in proof['phases'] for m in phase['mapping'] if m['kind'] == 'action']
+        self.assertEqual(list(range(1, 31)), [m['step'] for m in mapping])
+        self.assertEqual([n for n in range(1, 34) if n not in (5, 6, 9)], [m['source_step'] for m in mapping])
+        for phase in proof['phases']:
+            self.assertEqual(phase['source_sha256'], hashlib.sha256(Path(phase['source']).read_bytes()).hexdigest())
+            self.assertEqual(phase['script_sha256'], hashlib.sha256(Path(phase['script']).read_bytes()).hexdigest())
+            self.assertEqual(runner._CLAMP_SOURCE_SHA256, phase['canonical_source_sha256'])
+        self.assertEqual(28, len([e for e in self.events if e.get('shot')]))
+        gesture = next(row for row in runner.parse_script(Path(proof['phases'][1]['source'])) if row['command'] == 'gesture')
+        self.assertEqual(proof['gesture']['origin'], gesture['point'])
+        self.restore.assert_called_once()
+        self.release.assert_called_once()
+
+    def test_builder_cli_console_persist_numeric_pan_and_stop(self):
+        for mode, stopped in (('cli', False), ('console', True)):
+            with self.subTest(mode=mode):
+                self.fault, self.stopped, self.style_snapshots = 'stop' if stopped else None, False, 0
+                self.offset, self.tab = [0, 0], 'Content'
+                self.calls.clear()
+                self.restore.reset_mock()
+                self.release.reset_mock()
+                built = runner._agent_device_spec('editor-clamp-drag', 'android', 'owned')
+                built['agent_device_output'] = str(self.root / (mode + '-output'))
+                task = runner._record_task('edge:editor-clamp-drag@android#agent', built)
+                rec = {'id': 'clamp-' + mode, 'state': 'running', 'started': '2026-10-10T00:00:00Z', 'tasks': [task]}
+                holder = runner.ActiveRun(rec) if mode == 'cli' else runner.RunManager()
+                if mode == 'console':
+                    holder.active = rec
+                def sdk(*args, **kwargs):
+                    self.assertIn('clamp_drag_manifest', task)
+                    result = self.batch(*args, **kwargs)
+                    if self.stopped:
+                        holder.stop_requested = True
+                    return result
+                with patch.object(runner, 'RUNS_DIR', self.root / 'records'), \
+                     patch.object(runner, 'ensure_device_ready', return_value={'id': 'owned', 'platform': 'android'}), \
+                     patch.object(runner, 'ensure_pinned_agent_device'), \
+                     patch.object(runner, '_ingest_agent_device_result', return_value={
+                         'agent_device_state': 'review_required', 'cases': [{}], 'layers': {}}), \
+                     patch.object(runner, '_run_batched_steps', side_effect=sdk):
+                    if mode == 'cli':
+                        runner._execute_task(holder, rec, task, io.StringIO())
+                    else:
+                        holder._execute_one_task(rec, task, io.StringIO())
+                    runner.finalize_record(rec)
+                    saved = json.loads((runner.RUNS_DIR / (rec['id'] + '.json')).read_text())['tasks'][0]
+                proof = saved['clamp_drag']
+                self.assertTrue(proof['private_restored'])
+                self.assertEqual(proof['manifest'], saved['clamp_drag_manifest'])
+                self.assertEqual('stopped' if stopped else 'review_required', saved['state'])
+                self.assertEqual('unverified' if stopped else 'evidence_complete', proof['status'])
+                self.assertTrue(any(command == 'gesture' for command, _ in self.calls))
+                self.restore.assert_called_once()
+                self.release.assert_called_once()
+
+    def test_fail_closed_pixels_ax_and_stop_restore(self):
+        for fault in ('no-motion', 'reopen-reset', 'stale-ax', 'unstable', 'stop'):
+            with self.subTest(fault=fault):
+                self.fault, self.stopped, self.style_snapshots = fault, False, 0
+                self.offset, self.tab = [0, 0], 'Content'
+                self.calls.clear()
+                self.restore.reset_mock()
+                self.release.reset_mock()
+                self.spec['step_evidence_root'] = str(self.root / fault)
+                code, _, extra = self.run_case()
+                self.assertEqual(130 if fault == 'stop' else 2, code)
+                self.assertEqual('unverified', extra['clamp_drag']['status'])
+                self.assertTrue(extra['clamp_drag']['private_restored'])
+                if fault in ('stale-ax', 'unstable'):
+                    self.assertNotIn('gesture', [c for c, _ in self.calls])
+                if fault == 'stop':
+                    self.assertEqual('gesture', self.calls[-1][0])
+                self.restore.assert_called_once()
+                self.release.assert_called_once()
+
+    def test_dependency_preflight_and_source_hash_refuse_before_actions(self):
+        with patch.object(runner, 'require_clamp_pixels', side_effect=ValueError('missing Pillow')):
+            code, _, extra = self.run_case()
+        self.assertEqual(2, code)
+        self.setup.assert_not_called()
+        self.prepare.assert_not_called()
+        self.assertFalse(self.calls)
+        with patch.object(runner, '_CLAMP_SOURCE_SHA256', 'changed'):
+            code, _, _ = self.run_case()
+        self.assertEqual(2, code)
+        self.assertFalse(self.calls)
+
+
 if __name__ == '__main__':
     unittest.main()

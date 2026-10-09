@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0032 testmap run engine (stdlib only). Never a CI gate.
+"""ADR-0032 testmap run engine (optional Pillow CLAMP pixels). Never a CI gate.
 
 Importable by the local console, and runnable as a foreground CLI:
 
@@ -100,6 +100,10 @@ from testmap_steps import (  # noqa: E402
     materialize_evidence_script,
     EvidenceEvents,
     record_sdk_plan_digest,
+    require_clamp_pixels,
+    clamp_pixels,
+    clamp_pan,
+    compare_clamp_pixels,
 )
 from testmap_stop import (  # noqa: E402
     RUNNER_KILL_S,
@@ -2187,6 +2191,18 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
 
 def ingest_agent_device_result(spec: dict, code: int) -> dict:
     extra = _ingest_agent_device_result(spec, code)
+    if spec.get("edge_id") == "editor-clamp-drag" and spec.get("agent_platform") == "android":
+        gate = spec.get("clamp_drag") or {"status": "unverified", "reason": "Missing real CLAMP pixel/gesture evidence"}
+        extra["clamp_drag"] = gate
+        if code != 0 or gate.get("status") != "evidence_complete" or gate.get("private_restored") is not True:
+            extra["agent_device_state"] = "uncovered" if code == 0 else "failed"
+            layers = dict(extra.get("layers") or {})
+            layers.update(business="failed", agent_observation="clamp_drag_unverified",
+                          green_from_process_zero=False, green_from_sdk_completed=False)
+            extra["layers"] = layers
+            for case in extra.get("cases") or []:
+                case.update(status="failed", layers=layers)
+        return extra
     if spec.get("edge_id") == "editor-to-template-sheet" and spec.get("agent_platform") == "android":
         gate = spec.get("template_crud") or {"status": "unverified", "reason": "Missing owned-template CRUD evidence"}
         extra["template_crud"] = gate
@@ -2859,6 +2875,185 @@ def _run_android_template_crud(spec, state, source, logf, *, tee_stdout=False,
         save()
     return code
 
+_CLAMP_SOURCE_SHA256 = "75023ee9960ba08c3d00e46abd245eba3a6dc0faa041cbe425094dcb7e72c9da"
+
+
+def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=None,
+                       on_spec=None, on_steps=None, on_step_event=None, should_stop=None):
+    from testmap_setup import load_setup_backup
+    proof = {"status": "unverified", "private_restored": False, "phases": [],
+             "scope": "Real pan and SDK session reopen; no process-death or A/B persistence claim"}
+    spec["clamp_drag"] = proof
+    root, identity = Path(spec["step_evidence_root"]), spec.get("step_evidence_task") or {}
+    folder = root / "scripts" / (_shot_name(identity, "android", 0).removesuffix(".png") + "-clamp")
+    folder.mkdir(parents=True, exist_ok=False)
+    record = folder / "clamp-drag.json"
+    spec["clamp_drag_manifest"] = proof["manifest"] = str(record)
+    cmd, env = list(spec["cmd"]), {**os.environ, **(spec.get("env") or {})}
+    deadline, code = time.monotonic() + 240, 2
+    measurements = {}
+
+    def save():
+        record.write_text(json.dumps(proof, indent=2) + "\n")
+
+    def phase(name, actions, indices, offset=0, observe=False, inspect=None):
+        inp, derived = folder / (name + ".input.json"), folder / (name + ".json")
+        with inp.open("x") as stream:
+            stream.write(json.dumps(actions, indent=2) + "\n")
+        names = {i: folder.name + "-entry-" + str(i) + ".png" if observe else _shot_name(identity, "android", offset + i)
+                 for i in range(1, len(actions) + 1)}
+        manifest = materialize_evidence_script(inp, root, derived, names)
+        manifest.update(canonical_source=str(source), canonical_source_sha256=_CLAMP_SOURCE_SHA256,
+                        phase=name, purpose="entry-observation" if observe else "business")
+        for item in manifest["mapping"]:
+            item.update(phase_step=item["step"], source_step=indices[item["step"] - 1])
+            if not observe:
+                item["step"] += offset
+        derived.with_suffix(".mapping.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        proof.setdefault("preconditions" if observe else "phases", []).append(manifest)
+        save()
+        events, snapshots = [], {}
+        def emit(event):
+            events.append(event)
+            if not observe and on_step_event:
+                on_step_event("android", event)
+        evidence = EvidenceEvents(manifest, root, emit)
+        try:
+            for row in parse_script(derived, "android"):
+                if should_stop and should_stop():
+                    raise InterruptedError("Stopped during CLAMP")
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("CLAMP transaction deadline reached")
+                for path, digest in ((source, _CLAMP_SOURCE_SHA256), (fixture, fixture_hash),
+                                     (inp, manifest["source_sha256"]), (derived, manifest["script_sha256"])):
+                    if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                        raise ValueError("CLAMP fixture/source/derived input changed")
+                item = manifest["mapping"][row["n"] - 1]
+                out = folder / (name + "-sdk-" + str(row["n"]) + ".log")
+                with out.open("x") as stream:
+                    result = _run_batched_steps(cmd, [row], _DupWrite(logf, stream), tee_stdout, on_proc,
+                        lambda _p, event: evidence(event), should_stop, "android", env,
+                        deadline_s=min(20, max(.1, deadline - time.monotonic())))
+                if result:
+                    raise InterruptedError("CLAMP action stopped") if result == 130 else ValueError("CLAMP SDK action failed")
+                if out.stat().st_size > 8 * 1024 * 1024:
+                    raise ValueError("CLAMP SDK response exceeds its bound")
+                data = _single_batch_response(out.read_text(), row["command"])
+                if row["command"] == "snapshot":
+                    snapshots[item["source_step"]] = _template_snapshot(data)
+                    proof.setdefault("snapshots", []).append({"source_step": item["source_step"], "path": str(out),
+                        "sha256": hashlib.sha256(out.read_bytes()).hexdigest()})
+                if item["kind"] == "screenshot":
+                    shot = Path(item["path"])
+                    _verify_cancel_png(shot)
+                    if inspect and item["source_step"] in snapshots:
+                        inspect(item["source_step"], snapshots[item["source_step"]], shot)
+            return snapshots
+        finally:
+            evidence.finish()
+            (folder / (name + ".events.json")).write_text(json.dumps(events, indent=2) + "\n")
+            save()
+
+    try:
+        expected = REPO_ROOT / "docs/testing/agent-device/scripts/editor-clamp-drag@android.json"
+        if source.resolve() != expected.resolve() or source.is_symlink() or hashlib.sha256(source.read_bytes()).hexdigest() != _CLAMP_SOURCE_SHA256:
+            raise ValueError("CLAMP requires its unchanged canonical source")
+        if not state or state.get("setup") != "editor" or state.get("platform") != "android":
+            raise ValueError("CLAMP requires real owned editor setup")
+        backup = load_setup_backup(Path(state["journal"]))
+        if (backup.get("phase") != "active" or any(backup.get(k) != state.get(k) for k in ("serial", "marker", "source_id", "fixtures"))
+                or state.get("serial") != spec.get("serial") or _cmd_flag(cmd, "--serial") != spec.get("serial")
+                or json.loads(Path(state["lock"]).read_text()).get("journal") != state["journal"]
+                or not re.fullmatch(r"editorclampdrag-[a-f0-9]{32}", str(state.get("marker", "")))
+                or not re.fullmatch(r"[1-9][0-9]*", str(state.get("source_id", "")))):
+            raise ValueError("CLAMP setup identity/lease is not current")
+        fixture = Path(state["fixtures"]["A"])
+        if (fixture.is_symlink() or fixture.parent != Path(state["journal"]).parent
+                or fixture.name != "ewm-suite-" + state["marker"] + "-A.png" or not 0 < fixture.stat().st_size <= 1024 * 1024):
+            raise ValueError("CLAMP fixture is not the bounded owned A file")
+        fixture_hash = hashlib.sha256(fixture.read_bytes()).hexdigest()
+        nonce = "E2E-" + state["marker"][-12:]
+        actions = json.loads(source.read_text().replace("__CLAMP_NONCE__", nonce))
+        proof.update(nonce=nonce, fixture_sha256=fixture_hash, source_id=state["source_id"], source_sha256=_CLAMP_SOURCE_SHA256)
+        save()
+        if on_spec:
+            on_spec(spec)
+        observed = phase("entry", actions[:4], [1, 2, 3, 4], observe=True)[4]
+        fields = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextEditField"]
+        compact = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextContent"]
+        if len(fields) == 1 and not compact and fields[0].get("editable") is True and fields[0].get("hittable") is True:
+            omitted = {5, 6, 9}
+        elif len(compact) == 1 and compact[0].get("hittable") is True and not fields:
+            omitted = set()
+        else:
+            raise ValueError("CLAMP Content entry is absent or ambiguous")
+        indices = [n for n in range(1, 34) if n not in omitted]
+        proof.update(entry="inline" if omitted else "compact", omitted_source_steps=sorted(omitted))
+        live_rows = parse_steps_json(json.dumps([actions[n - 1] for n in indices]), "android")
+        if on_steps:
+            on_steps("android", live_rows)
+
+        layouts = {}
+        def inspect(n, data, shot):
+            if n in (10, 11):
+                if omitted:
+                    field = _template_node(data, "watermarkTextEditField")
+                    values = {field.get("value") or field.get("text") or field.get("label")}
+                else:
+                    values = {v.get("label") for v in _template_descendants(data, _template_node(data, "watermarkTextContent"))
+                              if v.get("type") == "android.widget.TextView" and v.get("label")}
+                if values != {nonce}:
+                    raise ValueError("CLAMP visible editor text does not match the owned nonce")
+                proof["nonce_confirmed"] = True
+            if n not in (17, 19, 20, 23, 25, 26, 31, 32):
+                return
+            preview = [v for v in data["nodes"] if v.get("label") == "Watermark preview" and v.get("visibleToUser") is True]
+            if len(preview) != 1:
+                raise ValueError("CLAMP preview is absent or ambiguous")
+            single = [v for v in data["nodes"] if v.get("label") == "Single" and v.get("type") == "android.widget.TextView"]
+            if len(single) != 1:
+                raise ValueError("CLAMP Single control is absent or ambiguous")
+            tile = _template_node(data, "editorControl-TileMode")
+            layouts[n] = [{k: v.get(k) for k in ("identifier", "type", "label", "rect", "hittable", "selected")}
+                          for v in (preview[0], single[0], tile)]
+            prior = {19: 17, 20: 19, 23: 20, 25: 23, 26: 25, 31: 26, 32: 31}.get(n)
+            if prior and layouts[n] != layouts[prior]:
+                raise ValueError("CLAMP AX layout changed across its synchronized PNG")
+            if n in (20, 26, 32):
+                proof.setdefault("ax_brackets", []).append([prior, n])
+                return
+            measured = measurements[n] = clamp_pixels(shot, preview[0]["rect"], fixture)
+            proof.setdefault("pixels", {})[str(n)] = {k: v for k, v in measured.items() if not k.startswith("_")}
+            if n == 19:
+                proof["before_stable"] = compare_clamp_pixels(measurements[17], measured)
+            elif n == 25:
+                proof["after_stable"] = compare_clamp_pixels(measurements[23], measured)
+                proof["pan_observed"] = compare_clamp_pixels(measurements[19], measured, proof["gesture"]["delta"])
+            elif n == 31:
+                proof["session_reopen_observed"] = compare_clamp_pixels(measurements[25], measured)
+        first = [n for n in indices if n <= 20]
+        phase("before", [actions[n - 1] for n in first], first, inspect=inspect)
+        if not proof.get("nonce_confirmed"):
+            raise ValueError("CLAMP nonce was not observed")
+        gesture = proof["gesture"] = clamp_pan(measurements[19])
+        actions[20] = {"command": "gesture", "input": gesture}
+        position = indices.index(21)
+        authored = parse_steps_json(json.dumps([actions[20]]), "android")[0]
+        authored["n"] = position + 1
+        live_rows[position] = authored  # Same published list; completed rows are not reset.
+        second = [n for n in indices if n > 20]
+        phase("pan-reopen", [actions[n - 1] for n in second], second, len(first), inspect=inspect)
+        proof["status"], code = "evidence_complete", 0
+    except (ValueError, OSError, KeyError, TypeError, IndexError, subprocess.TimeoutExpired) as exc:
+        proof["reason"] = str(exc)
+        code = 130 if isinstance(exc, InterruptedError) else 2
+    finally:
+        if should_stop and should_stop():
+            code = 130
+        save()
+    return code
+
+
 def _close_named_session(session: str, logf=None) -> None:
     """Close one agent-device session. Never pass --shutdown."""
     if not session or session.startswith("-"):
@@ -3050,6 +3245,8 @@ def run_task(
         if str(output):
             output.mkdir(parents=True, exist_ok=True)
         try:
+            if spec.get("edge_id") == "editor-clamp-drag" and spec.get("agent_platform") == "android":
+                require_clamp_pixels()
             maybe_prepare_ios_runner(spec, logf, should_stop=should_stop)
             setup_state = _apply_agent_setup(spec, logf, should_stop=should_stop)
         except (ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
@@ -3088,21 +3285,24 @@ def run_task(
             on_steps(watch_plat, rows)
     evidence_events = None
     evidence_manifest = None
-    if spec.get("edge_id") == "editor-to-template-sheet" and watch_plat == "android":
+    if spec.get("edge_id") in {"editor-to-template-sheet", "editor-clamp-drag"} and watch_plat == "android":
+        is_clamp = spec["edge_id"] == "editor-clamp-drag"
+        proof_key = "clamp_drag" if is_clamp else "template_crud"
+        execute = _run_android_clamp if is_clamp else _run_android_template_crud
         try:
             if not script or script.suffix != ".json" or not spec.get("step_evidence_root"):
-                raise ValueError("Android template CRUD requires its JSON source and step evidence")
-            code = _run_android_template_crud(spec, setup_state, script, logf, tee_stdout=tee_stdout,
+                raise ValueError("Bounded Android case requires its JSON source and step evidence")
+            code = execute(spec, setup_state, script, logf, tee_stdout=tee_stdout,
                 on_proc=on_proc, on_spec=on_spec, on_steps=on_steps, on_step_event=on_step_event, should_stop=should_stop)
         finally:
             try:
                 _restore_agent_setup(setup_state, logf)
-                if spec.get("template_crud"):
-                    spec["template_crud"]["private_restored"] = True
+                if spec.get(proof_key):
+                    spec[proof_key]["private_restored"] = True
             finally:
                 try:
-                    if spec.get("template_crud_manifest"):
-                        Path(spec["template_crud_manifest"]).write_text(json.dumps(spec["template_crud"], indent=2) + "\n")
+                    if spec.get(proof_key + "_manifest"):
+                        Path(spec[proof_key + "_manifest"]).write_text(json.dumps(spec[proof_key], indent=2) + "\n")
                 finally:
                     release_agent_session(cmd, logf)
         extra = ingest_agent_device_result(spec, code)
@@ -3759,6 +3959,8 @@ class RunManager:
                     task_ref["step_evidence_manifest"] = updated["step_evidence_manifest"]
                 if updated.get("template_crud_manifest"):
                     task_ref["template_crud_manifest"] = updated["template_crud_manifest"]
+                if updated.get("clamp_drag_manifest"):
+                    task_ref["clamp_drag_manifest"] = updated["clamp_drag_manifest"]
                 self._remember_watch(rec)
 
         code, cases, extra = run_task(
@@ -3787,6 +3989,8 @@ class RunManager:
                 task["export_control"] = extra["export_control"]
             if extra.get("template_crud"):
                 task["template_crud"] = extra["template_crud"]
+            if extra.get("clamp_drag"):
+                task["clamp_drag"] = extra["clamp_drag"]
             task["evidence_dir"] = extra.get("evidence_dir")
             task["recordings"] = extra.get("recordings")
             task["independent_review"] = extra.get("independent_review")
@@ -4063,6 +4267,8 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
                 task_ref["step_evidence_manifest"] = updated["step_evidence_manifest"]
             if updated.get("template_crud_manifest"):
                 task_ref["template_crud_manifest"] = updated["template_crud_manifest"]
+            if updated.get("clamp_drag_manifest"):
+                task_ref["clamp_drag_manifest"] = updated["clamp_drag_manifest"]
             if updated.get("agent_device_output"):
                 task_ref["agent_device_output"] = updated["agent_device_output"]
 
@@ -4085,6 +4291,8 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
             task["export_control"] = extra["export_control"]
         if extra.get("template_crud"):
             task["template_crud"] = extra["template_crud"]
+        if extra.get("clamp_drag"):
+            task["clamp_drag"] = extra["clamp_drag"]
         task["evidence_dir"] = extra.get("evidence_dir")
         task["recordings"] = extra.get("recordings")
         task["independent_review"] = extra.get("independent_review")

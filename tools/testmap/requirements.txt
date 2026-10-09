@@ -1,0 +1,2 @@
+# Optional pixel evidence for the fixed Android CLAMP case; no root Python dependency.
+Pillow==12.3.0
