@@ -34,6 +34,9 @@ export function packets(buffer: Uint8Array): {
 export interface VideoDiagnostic {
   reason:
     | "webcodecs-unavailable"
+    | "connection-timeout"
+    | "startup-timeout"
+    | "keyframe-timeout"
     | "first-frame-timeout"
     | "frame-timeout"
     | "http-error"
@@ -45,6 +48,10 @@ export interface VideoDiagnostic {
     | "decoder-error"
     | "decoder-backlog";
   elapsedMs: number;
+  responseMs: number | null;
+  firstNalMs: number | null;
+  parametersReadyMs: number | null;
+  firstDecodeMs: number | null;
   firstPacketMs: number | null;
   firstIdrMs: number | null;
   firstOutputMs: number | null;
@@ -65,6 +72,10 @@ export function watchMedia(
   const started = performance.now();
   const elapsed = () => Math.round(performance.now() - started);
   const stats = {
+    responseMs: null as number | null,
+    firstNalMs: null as number | null,
+    parametersReadyMs: null as number | null,
+    firstDecodeMs: null as number | null,
     firstPacketMs: null as number | null,
     firstIdrMs: null as number | null,
     firstOutputMs: null as number | null,
@@ -74,7 +85,7 @@ export function watchMedia(
     maxQueue: 0,
   };
   const controller = new AbortController();
-  let videoAbort = new AbortController();
+  const videoAbort = new AbortController();
   let decoder: VideoDecoder | undefined;
   let timer: ReturnType<typeof setTimeout>;
   let watchdog: ReturnType<typeof setTimeout>;
@@ -99,7 +110,7 @@ export function watchMedia(
       const bitmap = await createImageBitmap(await res.blob());
       draw(bitmap, bitmap.width, bitmap.height);
       bitmap.close();
-      update("still");
+      if (!controller.signal.aborted) update("still");
     } catch {
       if (!controller.signal.aborted) {
         clear();
@@ -135,17 +146,22 @@ export function watchMedia(
       useStill("webcodecs-unavailable");
       return;
     }
-    arm(2000, "first-frame-timeout");
+    // Viewer wait caps, not native startup guarantees: device discovery can
+    // block HTTP, while push/forward/socket startup precedes actual video.
+    arm(10_000, "connection-timeout");
     let sps: Uint8Array | undefined;
     let pps: Uint8Array | undefined;
     let phase: VideoDiagnostic["reason"] = "stream-error";
     let ts = 0;
     let keySeen = false;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     let buffer: Uint8Array = new Uint8Array();
     try {
       const response = await fetch(`/api/device-video?${query}`, {
         signal: videoAbort.signal,
       });
+      if (controller.signal.aborted || fallback) return;
+      stats.responseMs = elapsed();
       if (!response.ok || response.status === 204 || !response.body) {
         useStill(
           "http-error",
@@ -153,10 +169,14 @@ export function watchMedia(
         );
         return;
       }
-      const reader = response.body.getReader();
+      // Same wait cap as the producer socket connection; synthetic JSON
+      // config is sent before native startup and must not count as ready.
+      arm(12_000, "startup-timeout");
+      reader = response.body.getReader();
       while (!controller.signal.aborted && !fallback) {
         phase = "stream-error";
         const next = await reader.read();
+        if (controller.signal.aborted || fallback) return;
         if (next.done) {
           useStill("stream-ended");
           return;
@@ -175,18 +195,26 @@ export function watchMedia(
             continue;
           }
           const kind = naluType(payload);
+          if (stats.firstNalMs === null) {
+            stats.firstNalMs = elapsed();
+            arm(2000, "keyframe-timeout");
+          }
           if (kind === 7) {
             sps = payload;
+            if (pps && stats.parametersReadyMs === null)
+              stats.parametersReadyMs = elapsed();
             continue;
           }
           if (kind === 8) {
             pps = payload;
+            if (sps && stats.parametersReadyMs === null)
+              stats.parametersReadyMs = elapsed();
             continue;
           }
           if (kind === 6 || kind === 9) continue;
           const key = kind === 5;
           if (key && stats.firstIdrMs === null) stats.firstIdrMs = elapsed();
-          if (!key && !keySeen) continue;
+          if (!keySeen && (!key || !sps || !pps)) continue;
           if (!decoder) {
             phase = "configure-error";
             decoder = new VideoDecoder({
@@ -209,7 +237,10 @@ export function watchMedia(
             decoder.configure({ codec: stats.codec, optimizeForLatency: true });
           }
           if (fallback) break;
-          keySeen = true;
+          if (!keySeen) {
+            keySeen = true;
+            arm(2000, "first-frame-timeout");
+          }
           const data = key
             ? concat([...(sps ? [sps] : []), ...(pps ? [pps] : []), payload])
             : payload;
@@ -221,6 +252,7 @@ export function watchMedia(
             break;
           }
           phase = "decode-error";
+          if (stats.firstDecodeMs === null) stats.firstDecodeMs = elapsed();
           decoder.decode(
             new EncodedVideoChunk({
               type: key ? "key" : "delta",
@@ -234,6 +266,15 @@ export function watchMedia(
       }
     } catch (error) {
       if (!controller.signal.aborted && !fallback) useStill(phase, error);
+    } finally {
+      if (reader) {
+        try {
+          await reader.cancel();
+        } catch {
+          // Aborting fetch may already have errored its body.
+        }
+        reader.releaseLock();
+      }
     }
   };
   update("connecting");

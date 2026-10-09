@@ -548,6 +548,10 @@ it("keeps the last video fallback details readable after the task ends", async (
       diagnose?.({
         reason: "first-frame-timeout",
         elapsedMs: 2000,
+        responseMs: 20,
+        firstNalMs: 30,
+        parametersReadyMs: null,
+        firstDecodeMs: null,
         firstPacketMs: 30,
         firstIdrMs: null,
         firstOutputMs: null,
