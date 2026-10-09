@@ -114,8 +114,10 @@ class EvidenceChecks(unittest.TestCase):
         self.assertEqual({'command': 'screenshot', 'input': {'path': str((self.run / 'steps' / 'batch.png').resolve()), 'stabilize': False}}, payload[0])
         calls = []
         def child(proc, logf, tee, **kwargs):
+            action = calls[-1]
             calls.append('complete')
-            logf.write('{"success":true}')
+            logf.write(json.dumps({'success': True, 'data': {'total': 1, 'executed': 1,
+                'results': [{'step': 1, 'command': action, 'ok': True, 'data': {}}]}}))
             return 0
         with patch.object(runner.subprocess, 'Popen', side_effect=lambda cmd, **kw: calls.append(json.loads(cmd[3])[0]['command']) or MagicMock()), patch.object(runner, '_tee_child', side_effect=child):
             self.assertEqual(0, runner._run_batched_steps(['agent-device','batch'], rows, io.StringIO(), False, None, None, None, 'ios', {}))
