@@ -8,4 +8,9 @@ press "role=\"textview\" label=\"Cancel export\""
 wait "label=\"Export cancelled.\" || label=\"导出已取消。\"" 15000
 wait absent "label=\"Share\"" 5000
 wait absent "label=\"View in gallery\"" 5000
+wait "label=\"Retry failed\"" 5000
+press "role=\"textview\" label=\"Retry failed\""
+wait "label=\"Processed 1 · Succeeded 1 · Failed 0\"" 30000
+wait "label=\"Share\"" 5000
+wait "label=\"View in gallery\"" 5000
 close

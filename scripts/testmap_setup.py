@@ -746,6 +746,7 @@ def _capture_export_control(state: dict) -> None:
                     or type(row["timestamp_ms"]) is not int):
                 raise ValueError("Invalid current-run export event")
             public["events"].append(row)
+        public["marker_absent"] = not _run_as_file(state["serial"], EXPORT_CONTROL)
         public["clock_end"] = _device_clock(state["serial"])
     except (ValueError, OSError, UnicodeError, subprocess.TimeoutExpired):
         public["capture_error"] = "Export event capture failed"

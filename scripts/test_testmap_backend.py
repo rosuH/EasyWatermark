@@ -508,6 +508,7 @@ class SetupSafetyChecks(unittest.TestCase):
                 self.assertEqual(b"old private event bytes\n", events.read_bytes())
                 public = json.loads((self.root / "evidence/export-control-events.json").read_text())
                 self.assertEqual(rows, public["events"])
+                self.assertTrue(public["marker_absent"])
                 self.assertNotIn("must not escape", json.dumps(public))
                 self.assertFalse(Path(state["lock"]).exists())
                 marker.unlink(missing_ok=True)
@@ -810,7 +811,7 @@ class CancelGateEvidenceChecks(unittest.TestCase):
             for kind, delta in [("replay_action_start", 550 if screenshot else 0), ("replay_action_stop", 600 if screenshot else 500)]:
                 stamp = self.base + m["step"] * 1000 + delta
                 self.timeline.append({"type": kind, "step": m["replay_step"], "command": "screenshot" if screenshot else m["command"], "ok": True, "ts": datetime.fromtimestamp(stamp / 1000, timezone.utc).isoformat(), "replayPath": str(self.derived)})
-        self.control = {"mode": "hold-next", "run_id": "run-1", "fixture_uri": setup.MEDIA + "/1", "clock": {"device_ms": self.base + 2000, "offset_min_ms": 1990, "offset_max_ms": 2010, "host_wall_ms": self.base, "host_monotonic_ms": 100000}, "clock_end": {"device_ms": self.base + 22000, "offset_min_ms": 1995, "offset_max_ms": 2015, "host_wall_ms": self.base + 20000, "host_monotonic_ms": 120000}, "expires_at_ms": self.base + 110000,
+        self.control = {"mode": "hold-next", "run_id": "run-1", "fixture_uri": setup.MEDIA + "/1", "marker_absent": True, "clock": {"device_ms": self.base + 2000, "offset_min_ms": 1990, "offset_max_ms": 2010, "host_wall_ms": self.base, "host_monotonic_ms": 100000}, "clock_end": {"device_ms": self.base + 22000, "offset_min_ms": 1995, "offset_max_ms": 2015, "host_wall_ms": self.base + 20000, "host_monotonic_ms": 120000}, "expires_at_ms": self.base + 110000,
                         "events": [{"run_id": "run-1", "event": event, "timestamp_ms": self.base + when + 2000} for event, when in [("ready", 1800), ("entered", 2000), ("cancelled", 6100), ("cleared", 6200)]]}
         self.write_evidence()
 
@@ -834,7 +835,10 @@ class CancelGateEvidenceChecks(unittest.TestCase):
                    lambda c: c["clock"].update(offset_max_ms=10000),
                    lambda c: c["clock_end"].update(offset_min_ms=7000, offset_max_ms=7020),
                    lambda c: c.pop("clock_end"),
-                   lambda c: c["clock_end"].update(host_wall_ms=self.base + 25000)]
+                   lambda c: c["clock_end"].update(host_wall_ms=self.base + 25000),
+                   lambda c: c.update(marker_absent=False),
+                   lambda c: c.pop("marker_absent"),
+                   lambda c: c["events"].append({"run_id": "run-1", "event": "entered", "timestamp_ms": self.base + 15000})]
         for change in changes:
             self.control = json.loads(original)
             change(self.control)
@@ -871,6 +875,40 @@ class CancelGateEvidenceChecks(unittest.TestCase):
             self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
         shot.write_bytes(original)
         self.assertEqual("evidence_complete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+
+    def test_retry_missing_actions_and_wrong_order_never_complete_evidence(self):
+        original = json.dumps(self.timeline)
+        self.assertEqual("evidence_complete", runner._cancel_gate_evidence(self.spec, 0)["retry_status"])
+        for replay_step in (21, 23, 25, 27):  # Retry press, exact counts, Share, gallery.
+            self.timeline = [e for e in json.loads(original) if not (e["step"] == replay_step and e["type"] == "replay_action_stop")]
+            self.write_evidence()
+            self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["retry_status"])
+        self.timeline = json.loads(original)
+        # Move the retry press before the original no-gallery assertion completes.
+        earlier = next(e["ts"] for e in self.timeline if e["step"] == 17 and e["type"] == "replay_action_start")
+        next(e for e in self.timeline if e["step"] == 21 and e["type"] == "replay_action_start")["ts"] = earlier
+        self.write_evidence()
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["retry_status"])
+        self.timeline = json.loads(original)
+        self.write_evidence()
+        (self.evidence / "steps/step-14.png").unlink()
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["retry_status"])
+
+    def test_completion_surface_exception_requires_both_stages_and_successful_sdk(self):
+        (self.output / "cancel-surface.txt").write_text('{"label":"Share"}')
+        task = {"edge_id": "export-cancel", "platform": "android", "state": "review_required", "exit_code": 0,
+                "evidence_dir": str(self.output), "export_control": {"status": "evidence_complete", "retry_status": "evidence_complete"},
+                "layers": {"execution": "ok", "script_checks": "executed_review_required", "agent_observation": "completed"}}
+        runner._mark_cancel_uncovered(task)
+        self.assertEqual("review_required", task["state"])
+        for change in (lambda t: t["export_control"].pop("retry_status"),
+                       lambda t: t["export_control"].update(status="incomplete"),
+                       lambda t: t.update(platform="ios"), lambda t: t.update(state="failed"),
+                       lambda t: t.update(exit_code=1), lambda t: t["layers"].update(script_checks="failed")):
+            candidate = json.loads(json.dumps(task))
+            change(candidate)
+            runner._mark_cancel_uncovered(candidate)
+            self.assertEqual("uncovered", candidate["state"])
 
     def test_device_clock_rejects_wall_jump_against_monotonic_elapsed(self):
         with patch.object(setup, "adb_shell", return_value="1700000000020000000"), patch.object(setup.time, "time_ns", side_effect=[1700000000000000000, 1700000000200000000]), patch.object(setup.time, "monotonic_ns", side_effect=[1000000000, 1020000000]):
