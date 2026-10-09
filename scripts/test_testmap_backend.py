@@ -894,6 +894,47 @@ class CancelGateEvidenceChecks(unittest.TestCase):
         (self.evidence / "steps/step-14.png").unlink()
         self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["retry_status"])
 
+    def test_all_screenshots_need_start_and_must_precede_the_next_action(self):
+        original = json.dumps(self.timeline)
+        # Both an ordinary startup shot and the cancellation endpoint need starts.
+        for replay_step in (2, 14):
+            self.timeline = [e for e in json.loads(original) if not (e["step"] == replay_step and e["type"] == "replay_action_start")]
+            self.write_evidence()
+            self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        # A valid PNG captured at the Retry success endpoint is not a cancel shot.
+        self.timeline = json.loads(original)
+        late = next(e["ts"] for e in self.timeline if e["step"] == 24 and e["type"] == "replay_action_stop")
+        for event in self.timeline:
+            if event["step"] == 14: event["ts"] = late
+        self.write_evidence()
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        # Capture may neither start before its action ends nor finish before start.
+        for event_type, boundary_step, boundary_type in [("replay_action_start", 13, "replay_action_start"), ("replay_action_stop", 13, "replay_action_stop")]:
+            self.timeline = json.loads(original)
+            boundary = next(e["ts"] for e in self.timeline if e["step"] == boundary_step and e["type"] == boundary_type)
+            next(e for e in self.timeline if e["step"] == 14 and e["type"] == event_type)["ts"] = boundary
+            self.write_evidence()
+            self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+
+    def test_non_business_png_and_close_action_cannot_be_omitted(self):
+        shot = self.evidence / "steps/step-2.png"
+        original_png = shot.read_bytes()
+        shot.unlink()
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        shot.write_bytes(original_png[:8])
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        shot.write_bytes(original_png)
+        original_timing = json.dumps(self.timeline)
+        close_step = next(e["step"] for e in self.timeline if e["command"] == "close")
+        for event_type in ("replay_action_start", "replay_action_stop"):
+            self.timeline = [e for e in json.loads(original_timing) if not (e["step"] == close_step and e["type"] == event_type)]
+            self.write_evidence()
+            self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        self.timeline = json.loads(original_timing)
+        self.write_evidence()
+        self.assertFalse((self.evidence / "steps/step-15.png").exists())
+        self.assertEqual("evidence_complete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+
     def test_completion_surface_exception_requires_both_stages_and_successful_sdk(self):
         (self.output / "cancel-surface.txt").write_text('{"label":"Share"}')
         task = {"edge_id": "export-cancel", "platform": "android", "state": "review_required", "exit_code": 0,

@@ -2084,10 +2084,21 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
             if len(matches) != 1 or (kind == "replay_action_stop" and matches[0].get("ok") is not True):
                 raise ValueError("Missing successful SDK action or screenshot")
             return datetime.fromisoformat(matches[0]["ts"].replace("Z", "+00:00")).timestamp() * 1000
-        for n in all_indices:
+        for index, row in enumerate(rows):
+            n = row["n"]
+            if actions[n]["command"] != row["command"]:
+                raise ValueError("SDK action mapping does not match the source script")
             start, end = sdk_event(n, "replay_action_start"), sdk_event(n, "replay_action_stop")
-            if start > end or sdk_event(n, "replay_action_stop", True) < end:
-                raise ValueError("Invalid SDK action/screenshot ordering")
+            next_start = (sdk_event(rows[index + 1]["n"], "replay_action_start")
+                          if index + 1 < len(rows) else float("inf"))
+            if not start <= end <= next_start:
+                raise ValueError("Invalid SDK source action ordering")
+            if row["command"] == "close":
+                continue  # A closed session has no attributable screenshot.
+            shot_start = sdk_event(n, "replay_action_start", True)
+            shot_stop = sdk_event(n, "replay_action_stop", True)
+            if not end <= shot_start <= shot_stop <= next_start:
+                raise ValueError("SDK screenshot is outside its source action interval")
             _verify_cancel_png(Path(shots[n]["path"]))
         click_start = sdk_event(indices[0], "replay_action_start")
         click_end = sdk_event(indices[0], "replay_action_stop")
