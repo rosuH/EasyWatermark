@@ -1634,8 +1634,9 @@ class AndroidTemplateCrudChecks(unittest.TestCase):
                 nodes[-2]['label'] = 'Concurrent edit'
         else:
             if self.inline:
-                nodes = [node(10, 'watermarkTextContentInline', parent=None), node(12, 'watermarkTextTemplateIcon'),
-                         node(11, 'watermarkTextEditField', self.nonce if self.applied else 'original text', kind='android.widget.EditText')]
+                field = node(11, 'watermarkTextEditField', self.nonce if self.applied else 'original text', kind='android.widget.EditText')
+                field['editable'] = True
+                nodes = [node(10, parent=None), node(12, 'watermarkTextTemplateIcon'), field]
             else:
                 nodes = [node(10, 'watermarkTextContent', parent=None),
                          node(11, label=self.nonce if self.applied else 'original text', kind='android.widget.TextView')]
@@ -1727,6 +1728,7 @@ class AndroidTemplateCrudChecks(unittest.TestCase):
 
     def test_template_inline_entry_has_exact_content_and_contiguous_global_mapping(self):
         self.inline = True
+        self.assertFalse(any(n.get('identifier') == 'watermarkTextContentInline' for n in self.snapshot()['nodes']))
         code, _, extra = self.run_case()
         self.assertEqual(0, code)
         proof = extra['template_crud']
@@ -1738,6 +1740,36 @@ class AndroidTemplateCrudChecks(unittest.TestCase):
         self.assertFalse(any(v.get('target', {}).get('selector') == 'id="watermarkTextContent"' for _, v in self.calls))
         self.assertTrue(proof['applied_exactly'])
         self.assertEqual(42, len([e for e in self.events if e.get('shot')]))
+
+    def test_template_inline_invalid_observable_controls_refuse_before_add(self):
+        self.inline = True
+        for fault in ('missing-field', 'duplicate-field', 'not-editable', 'not-hittable', 'wrong-type', 'missing-icon', 'duplicate-icon'):
+            with self.subTest(fault=fault):
+                data = self.snapshot()
+                field = next(n for n in data['nodes'] if n.get('identifier') == 'watermarkTextEditField')
+                icon = next(n for n in data['nodes'] if n.get('identifier') == 'watermarkTextTemplateIcon')
+                if fault == 'missing-field':
+                    data['nodes'].remove(field)
+                elif fault == 'duplicate-field':
+                    data['nodes'].append({**field, 'index': 20})
+                elif fault == 'missing-icon':
+                    data['nodes'].remove(icon)
+                elif fault == 'duplicate-icon':
+                    data['nodes'].append({**icon, 'index': 20, 'hittable': False})
+                else:
+                    field[{'not-editable': 'editable', 'not-hittable': 'hittable', 'wrong-type': 'type'}[fault]] = 'android.view.View' if fault == 'wrong-type' else False
+                self.spec['step_evidence_root'] = str(self.root / fault)
+                self.calls.clear()
+                self.restores.clear()
+                self.release.reset_mock()
+                with patch.object(self, 'snapshot', return_value=data):
+                    code, _, extra = self.run_case()
+                self.assertNotEqual(0, code)
+                self.assertEqual('unverified', extra['template_crud']['status'])
+                self.assertFalse(self.exists)
+                self.assertFalse(any(v.get('target', {}).get('selector') == 'id="templateEditConfirm"' for _, v in self.calls))
+                self.assertEqual([self.state], self.restores)
+                self.release.assert_called_once()
 
     def test_template_stop_cleans_only_owned_record_and_remains_stopped(self):
         self.fault = 'stop'

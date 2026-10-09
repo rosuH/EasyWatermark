@@ -2763,8 +2763,10 @@ def _run_android_template_crud(spec, state, source, logf, *, tee_stdout=False,
         icons = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextTemplateIcon" and n.get("hittable") is True]
         compact = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextContent" and n.get("hittable") is True]
         if len(icons) == 1 and not compact:
-            _template_node(observed, "watermarkTextContentInline")
-            _template_node(observed, "watermarkTextEditField")
+            _template_node(observed, "watermarkTextTemplateIcon")
+            field = _template_node(observed, "watermarkTextEditField")
+            if field.get("type") != "android.widget.EditText" or field.get("editable") is not True or field.get("hittable") is not True:
+                raise ValueError("Template inline field is not editable and hittable")
             entry, omitted = "inline", {4, 5, 20, 21, 32, 45, 46}
             actions[29] = {"command": "wait", "input": {"selector": 'id="watermarkTextEditField" visible', "timeoutMs": 10000}}
         elif len(compact) == 1 and not icons:
