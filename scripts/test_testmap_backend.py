@@ -328,6 +328,34 @@ class BackendChecks(unittest.TestCase):
                 release.assert_called_once()
                 restore.assert_called_once()
 
+    def test_json_bad_first_response_stops_and_restores_fixture(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = Path(folder) / 'case.json'
+            script.write_text(json.dumps([{'command': 'open', 'input': {'app': 'owned'}},
+                                          {'command': 'press', 'input': {'x': 1, 'y': 2}}]))
+            spec = {'builder': 'agent-device', 'agent_device_output': folder,
+                    'cmd': ['fake', 'batch', '--steps-file', str(script), '--platform', 'android']}
+            events, cleanup = [], []
+            with patch.object(runner, 'maybe_prepare_ios_runner'), \
+                 patch.object(runner, '_apply_agent_setup', return_value={'fixture': True}), \
+                 patch.object(runner.subprocess, 'Popen') as spawn, \
+                 patch.object(runner, '_tee_child', return_value=0), \
+                 patch.object(runner, '_restore_agent_setup', side_effect=lambda *args: cleanup.append('restore')) as restore, \
+                 patch.object(runner, 'release_agent_session', side_effect=lambda *args: cleanup.append('close')), \
+                 patch.object(runner, '_publish_agent_device_live'):
+                code, _, extra = runner.run_task(spec, io.StringIO(),
+                    on_step_event=lambda platform, event: events.append(event))
+            self.assertEqual(1, code)
+            self.assertEqual('failed', extra['agent_device_result']['status'])
+            spawn.assert_called_once()
+            argv = spawn.call_args.args[0]
+            self.assertEqual('open', json.loads(argv[argv.index('--steps') + 1])[0]['command'])
+            self.assertEqual(1, argv.count('--json'))
+            self.assertEqual([{'type': 'replay_action_start', 'step': 1, 'command': 'open'},
+                              {'type': 'replay_action_stop', 'step': 1, 'ok': False}], events)
+            restore.assert_called_once_with({'fixture': True}, unittest.mock.ANY)
+            self.assertEqual(['restore', 'close'], cleanup)
+
     def test_verify_streams_and_preserves_failure(self):
         cmd = 'edge:test@ios#agent'
         records = [
@@ -1770,11 +1798,14 @@ class AndroidTemplateCrudChecks(unittest.TestCase):
         manifest = next((self.root / 'run-1').glob('scripts/*/template-crud.json'))
         self.assertFalse(json.loads(manifest.read_text())['private_restored'])
 
-    def test_template_sdk_response_requires_one_actual_matching_action(self):
+    def test_single_batch_response_requires_one_actual_matching_action(self):
         valid = {'success': True, 'data': {'total': 1, 'executed': 1, 'results': [
             {'step': 1, 'command': 'open', 'ok': True, 'data': {'session': 'owned'}}]}}
-        self.assertEqual({'session': 'owned'}, runner._template_batch_response(json.dumps(valid), 'open'))
-        invalid = ['', '{broken', json.dumps(valid) + '\n' + json.dumps(valid)]
+        self.assertEqual({'session': 'owned'}, runner._single_batch_response(json.dumps(valid), 'open'))
+        self.assertTrue(runner._batch_ok('warning\n' + json.dumps(valid), 0, ' Open '))
+        self.assertFalse(runner._batch_ok(json.dumps(valid), 1, 'open'))
+        invalid = ['', '{broken', 'finished', '{"success":true}',
+                   'warning\n{"success":false}', json.dumps(valid) + '\n' + json.dumps(valid)]
         for field, value in [('executed', 0), ('total', 2), ('executed', True)]:
             changed = json.loads(json.dumps(valid))
             changed['data'][field] = value
@@ -1785,7 +1816,8 @@ class AndroidTemplateCrudChecks(unittest.TestCase):
             invalid.append(json.dumps(changed))
         for output in invalid:
             with self.subTest(output=output), self.assertRaises(ValueError):
-                runner._template_batch_response(output, 'open')
+                runner._single_batch_response(output, 'open')
+            self.assertFalse(runner._batch_ok(output, 0, 'open'))
 
     def test_template_zero_exit_without_open_response_cannot_reach_add(self):
         self.fault = 'bad-open'

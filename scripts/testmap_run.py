@@ -2309,23 +2309,19 @@ def _batch_one(cmd: list[str], step: dict) -> list[str]:
             flags.extend([tok, cmd[i + 1]])
             i += 2
             continue
-        if tok == "--json":
-            flags.append(tok)
         i += 1
     payload = json.dumps([step.get("batch_step") or {"command": step["command"], "input": step.get("input") or {}}])
-    return [cmd[0], "batch", "--steps", payload, *flags]
+    return [cmd[0], "batch", "--steps", payload, *flags, "--json"]
 
 
-def _batch_ok(text: str, code: int) -> bool:
-    raw = text.strip()
-    if raw.startswith("{"):
-        try:
-            obj = json.loads(raw)
-        except json.JSONDecodeError:
-            return code == 0
-        if isinstance(obj, dict) and "success" in obj:
-            return obj.get("success") is True and code == 0
-    return code == 0
+def _batch_ok(text: str, code: int, command: str) -> bool:
+    if code != 0:
+        return False
+    try:
+        _single_batch_response(text, command)
+    except ValueError:
+        return False
+    return True
 
 
 def _read_timing(path: Path | None, offset: int, pending: str, on_line) -> tuple[int, str]:
@@ -2439,7 +2435,7 @@ def _run_batched_steps(
         finally:
             if on_proc:
                 on_proc(None)
-        ok = _batch_ok(buf.getvalue(), code)
+        ok = _batch_ok(buf.getvalue(), code, row["command"])
         if on_step_event:
             event = {"type": "replay_action_stop", "step": row["n"], "ok": ok}
             if row.get("point"):
@@ -2523,7 +2519,7 @@ def _run_android_failure_recovery(spec, setup_state, manifest, evidence, rows, r
 _TEMPLATE_SOURCE_SHA256 = "72c3b728aaee98eb8263df4c3362473fb5191343194e633f2144958b8f2c73d4"
 
 
-def _template_batch_response(output: str, command: str) -> dict:
+def _single_batch_response(output: str, command: str) -> dict:
     # One known batch, including the runner's step header; never parse a log tail.
     candidates = []
     for match in re.finditer(r"(?m)^\{", output):
@@ -2534,16 +2530,16 @@ def _template_batch_response(output: str, command: str) -> dict:
         except ValueError:
             continue
     if len(candidates) != 1 or candidates[0].get("success") is not True:
-        raise ValueError("Template action lacks one successful SDK response")
+        raise ValueError("Batch action lacks one successful SDK response")
     batch = candidates[0].get("data", {})
     if not isinstance(batch, dict) or any(type(batch.get(key)) is not int or batch[key] != 1 for key in ("total", "executed")):
-        raise ValueError("Template batch did not execute exactly one action")
+        raise ValueError("Batch did not execute exactly one action")
     results = batch.get("results", [])
     if (not isinstance(results, list) or len(results) != 1 or not isinstance(results[0], dict)
-            or results[0].get("command") != command or results[0].get("ok") is not True
+            or results[0].get("command") != command.strip().lower() or results[0].get("ok") is not True
             or type(results[0].get("step")) is not int or results[0]["step"] != 1
             or not isinstance(results[0].get("data"), dict)):
-        raise ValueError("Template SDK result does not match its action")
+        raise ValueError("Batch SDK result does not match its action")
     return results[0]["data"]
 
 
@@ -2712,7 +2708,7 @@ def _run_android_template_crud(spec, state, source, logf, *, tee_stdout=False,
                 try:
                     if out.stat().st_size > 8 * 1024 * 1024:
                         raise ValueError("Template SDK response exceeds its bound")
-                    data = _template_batch_response(out.read_text(), row["command"])
+                    data = _single_batch_response(out.read_text(), row["command"])
                 except (ValueError, OSError):
                     evidence({"type": "replay_action_stop", "step": row["n"], "command": row["command"], "ok": False})
                     raise
