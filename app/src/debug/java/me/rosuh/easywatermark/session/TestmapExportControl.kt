@@ -21,6 +21,25 @@ internal fun testmapExportControl(
     val claim = claimControl(filesDir, image.uri.value, now())
     if (claim == null) {
         delegate.exportOne(image, config, prefs)
+    } else if (claim.mode == "observe-next") {
+        try {
+            event(filesDir, claim.runId, "ready", now())
+            event(filesDir, claim.runId, "entered", now())
+            val outcome = try {
+                delegate.exportOne(image, config, prefs)
+            } catch (cancelled: CancellationException) {
+                runCatching { event(filesDir, claim.runId, "cancelled", now()) }
+                throw cancelled
+            } catch (failure: Exception) {
+                runCatching { event(filesDir, claim.runId, "threw_exception", now()) }
+                throw failure
+            }
+            // Observation must never replace the real result with a journal write failure.
+            runCatching { event(filesDir, claim.runId, outcome.observationEvent(), now()) }
+            outcome
+        } finally {
+            runCatching { event(filesDir, claim.runId, "cleared", now()) }
+        }
     } else {
         try {
             event(filesDir, claim.runId, "ready", now())
@@ -50,7 +69,21 @@ private val controlLock = Any()
 private val runIdPattern = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,95}")
 private val fixturePattern = Regex("content://media/(external|external_primary)/images/media/[0-9]+")
 private val controlKeys = setOf("mode", "run_id", "fixture_uri", "expires_at_ms")
-private data class Claim(val runId: String, val holdMs: Long)
+private data class Claim(val runId: String, val mode: String, val holdMs: Long)
+
+/** Finite taxonomy only: never serialize messages, exception names, paths, or settings. */
+private fun ExportOutcome.observationEvent(): String = when (this) {
+    is ExportOutcome.Success -> "outcome_success"
+    is ExportOutcome.Failure -> when (failure) {
+        is ExportFailure.SourceDecode -> "outcome_source_decode"
+        is ExportFailure.Render -> "outcome_render"
+        is ExportFailure.Encode -> "outcome_encode"
+        is ExportFailure.Permission -> "outcome_permission"
+        is ExportFailure.Io -> "outcome_io"
+        is ExportFailure.Persistence -> "outcome_persistence"
+        is ExportFailure.Cancelled -> "outcome_cancelled"
+    }
+}
 
 private fun claimControl(filesDir: File, fixture: String, now: Long): Claim? = synchronized(controlLock) {
     val marker = File(filesDir, CONTROL)
@@ -70,7 +103,8 @@ private fun claimControl(filesDir: File, fixture: String, now: Long): Claim? = s
     check(bytes.size <= MAX_MARKER_BYTES) { "Invalid Testmap export control size" }
     val json = JSONObject(bytes.toString(Charsets.UTF_8))
     check(json.keys().asSequence().toSet() == controlKeys) { "Invalid Testmap export control fields" }
-    check(json.get("mode") == "hold-next") { "Invalid Testmap export control mode" }
+    val mode = json.get("mode")
+    check(mode == "hold-next" || mode == "observe-next") { "Invalid Testmap export control mode" }
     val runId = json.get("run_id")
     val uri = json.get("fixture_uri")
     val expiry = json.get("expires_at_ms")
@@ -83,7 +117,7 @@ private fun claimControl(filesDir: File, fixture: String, now: Long): Claim? = s
         expiresAt > now && expiresAt <= now + MAX_EXPIRY_MS) { "Invalid Testmap export expiry" }
     if (uri != fixture) return@synchronized null
     check(marker.delete()) { "Cannot consume Testmap export control" }
-    Claim(runId, minOf(expiresAt - now, MAX_HOLD_MS))
+    Claim(runId, mode as String, minOf(expiresAt - now, MAX_HOLD_MS))
 }
 
 private fun event(filesDir: File, runId: String, name: String, timestamp: Long) = synchronized(controlLock) {
