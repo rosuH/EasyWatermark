@@ -4,7 +4,7 @@ press label="Save"
 wait "label=\"Export to the album\""
 press value="Export to the album"
 wait "label=\"Cancel export\"" 20000
-press "label=\"Cancel export\""
+press "role=\"textview\" label=\"Cancel export\""
 wait "label=\"Export cancelled.\" || label=\"导出已取消。\"" 15000
 wait absent "label=\"Share\"" 5000
 wait absent "label=\"View in gallery\"" 5000

@@ -65,6 +65,11 @@ ANDROID_CONFIG = (
     "files/datastore/sp_water_mark_config.preferences_pb",
     "files/datastore/sp_water_mark_user_config.preferences_pb",
 )
+EXPORT_CONTROL = "files/testmap-export-control.json"
+EXPORT_EVENTS = "files/testmap-export-events.jsonl"
+EXPORT_CONTROL_PATHS = (EXPORT_CONTROL, EXPORT_EVENTS)
+EXPORT_RUN_ID = r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}"
+
 IOS_CONFIG = tuple("Documents/" + Path(path).name for path in ANDROID_CONFIG)
 
 
@@ -506,12 +511,32 @@ def read_private(serial: str, path: str) -> bytes | None:
 
 
 def write_private(serial: str, path: str, data: bytes, timeout: int = 45) -> None:
-    # Keep the prior file intact until the full replacement reaches the device.
+    # Claim before streaming. Never overwrite a previous unfinished write.
     temp = path + ".testmap-restore"
-    script = (f"mkdir -p {shlex.quote(str(Path(path).parent))} && "
-              f"cat > {shlex.quote(temp)} && mv {shlex.quote(temp)} {shlex.quote(path)}")
-    adb(serial, ["shell", f"run-as {ANDROID_PACKAGE} sh -c {shlex.quote(script)}"],
-        timeout=timeout, input_data=data)
+    if _run_as_file(serial, temp):
+        raise SetupRestoreError(f"Unfinished private write requires reviewed recovery: {temp}")
+    claim = (f"mkdir -p {shlex.quote(str(Path(path).parent))} && "
+             f"(set -C; : > {shlex.quote(temp)})")
+    adb_shell(serial, "run-as", ANDROID_PACKAGE, "sh", "-c", claim, timeout=timeout)
+    published = False
+    try:
+        script = f"cat > {shlex.quote(temp)} && mv {shlex.quote(temp)} {shlex.quote(path)}"
+        adb(serial, ["shell", f"run-as {ANDROID_PACKAGE} sh -c {shlex.quote(script)}"],
+            timeout=timeout, input_data=data)
+        published = True
+    finally:
+        if not published:
+            # A setup Stop must not suppress cleanup of the file we just claimed.
+            deadline = _CLEANUP_DEADLINE.get()
+            token = _CLEANUP_DEADLINE.set(deadline if deadline is not None else time.monotonic() + CLEANUP_CMD_TIMEOUT_S)
+            try:
+                adb_shell(serial, "run-as", ANDROID_PACKAGE, "rm", "-f", temp)
+                if _run_as_file(serial, temp):
+                    raise ValueError("Temporary private write still exists")
+            except Exception as exc:
+                raise SetupRestoreError(f"Private write temporary cleanup failed: {temp}") from exc
+            finally:
+                _CLEANUP_DEADLINE.reset(token)
 
 
 def inject_crash_gate(serial: str, version_code: str) -> dict[str, bytes | None]:
@@ -536,6 +561,11 @@ def inject_crash_gate(serial: str, version_code: str) -> dict[str, bytes | None]
 
 
 def restore_private(serial: str, backup: dict[str, bytes | None]) -> None:
+    for path in backup:
+        # Also reject residue when the original destination was absent. Its
+        # ownership cannot be guessed during recovery, so retain journal/lock.
+        if _run_as_file(serial, path + ".testmap-restore"):
+            raise SetupRestoreError(f"Unfinished private write requires reviewed recovery: {path}")
     android_force_stop(serial)
     for path, data in backup.items():
         if data is None:
@@ -641,6 +671,88 @@ def _setup_lock_path(platform: str, identity: str) -> Path:
     return SETUP_BACKUPS.resolve() / (platform + "-" + hashlib.sha256(identity.encode()).hexdigest()[:24] + ".json")
 
 
+def _device_clock(serial: str) -> dict:
+    before = time.time_ns() // 1_000_000
+    mono_before = time.monotonic_ns() // 1_000_000
+    raw = adb_shell(serial, "date", "+%s%N").strip()
+    after = time.time_ns() // 1_000_000
+    mono_after = time.monotonic_ns() // 1_000_000
+    if (not re.fullmatch(r"[0-9]{19}", raw) or after < before or after - before > 2000
+            or mono_after < mono_before or abs((after - before) - (mono_after - mono_before)) > 50):
+        raise ValueError("Cannot establish bounded device clock for export control")
+    device_ms = int(raw) // 1_000_000
+    return {"device_ms": device_ms, "offset_min_ms": device_ms - after,
+            "offset_max_ms": device_ms + 1 - before,
+            "host_wall_ms": before, "host_monotonic_ms": mono_before}
+
+
+def _protect_previous_export_control(serial: str, original: bytes | None) -> None:
+    if original is None:
+        return
+    # Never overwrite an active or unrecognised control belonging to another run.
+    try:
+        value = json.loads(original)
+        valid = (len(original) <= 4096 and isinstance(value, dict)
+                 and set(value) == {"mode", "run_id", "fixture_uri", "expires_at_ms"}
+                 and value["mode"] == "hold-next"
+                 and isinstance(value["run_id"], str) and re.fullmatch(EXPORT_RUN_ID, value["run_id"])
+                 and isinstance(value["fixture_uri"], str)
+                 and re.fullmatch(r"content://media/(external|external_primary)/images/media/[0-9]+", value["fixture_uri"])
+                 and type(value["expires_at_ms"]) is int)
+    except (ValueError, UnicodeError):
+        valid = False
+    if not valid or value["expires_at_ms"] > _device_clock(serial)["device_ms"]:
+        raise ValueError("Existing active or unrecognised export control requires reviewed recovery")
+
+
+def _arm_export_control(state: dict) -> None:
+    control = state["export_control"]
+    uri = MEDIA + "/" + str(state["source_id"])
+    if not re.fullmatch(r"content://media/(external|external_primary)/images/media/[0-9]+", uri):
+        raise ValueError("Export control requires this setup's exact MediaStore fixture")
+    clock = _device_clock(state["serial"])
+    marker = {"mode": "hold-next", "run_id": control["run_id"], "fixture_uri": uri,
+              "expires_at_ms": clock["device_ms"] + 110000}
+    control.update(fixture_uri=uri, clock=clock, expires_at_ms=marker["expires_at_ms"])
+    _save_setup(state)  # Original bytes/absence must be durable before either write.
+    write_private(state["serial"], EXPORT_EVENTS, b"")
+    payload = json.dumps(marker, separators=(",", ":")).encode()
+    write_private(state["serial"], EXPORT_CONTROL, payload)
+    if read_private(state["serial"], EXPORT_CONTROL) != payload:
+        raise ValueError("Export control write verification failed")
+    control["armed"] = True
+    _save_setup(state)
+
+
+def _capture_export_control(state: dict) -> None:
+    """Only this run's three-field events leave the private backup domain."""
+    control = state.get("export_control")
+    if not control or not control.get("armed"):
+        return
+    public = {key: control[key] for key in ("mode", "run_id", "fixture_uri", "clock", "expires_at_ms")}
+    public["events"] = []
+    try:
+        raw = read_private(state["serial"], EXPORT_EVENTS) or b""
+        if len(raw) > 16384:
+            raise ValueError("Export event journal exceeds bound")
+        for line in raw.splitlines():
+            row = json.loads(line)
+            if not isinstance(row, dict):
+                raise ValueError("Invalid export event shape")
+            if row.get("run_id") != control["run_id"]:
+                continue
+            if (set(row) != {"run_id", "event", "timestamp_ms"}
+                    or row["event"] not in {"ready", "entered", "cancelled", "watchdog", "cleared"}
+                    or type(row["timestamp_ms"]) is not int):
+                raise ValueError("Invalid current-run export event")
+            public["events"].append(row)
+        public["clock_end"] = _device_clock(state["serial"])
+    except (ValueError, OSError, UnicodeError, subprocess.TimeoutExpired):
+        public["capture_error"] = "Export event capture failed"
+    destination = Path(state["journal"]).parent / "export-control-events.json"
+    destination.write_text(json.dumps(public, indent=2) + "\n", encoding="utf-8")
+
+
 def _validate_setup(state: dict) -> None:
     platform = state.get("platform")
     identity = state.get("serial") if platform == "android" else state.get("udid")
@@ -649,13 +761,21 @@ def _validate_setup(state: dict) -> None:
         raise ValueError("Invalid backup platform/device identity")
     if state.get("setup") not in (ANDROID_SETUPS if platform == "android" else IOS_SETUPS):
         raise ValueError("Invalid backup setup")
-    allowed = set(ANDROID_CONFIG + (CRASH_PREF, CRASH_PREF + ".bak")) if platform == "android" else set(IOS_CONFIG)
+    control = state.get("export_control")
+    if control is not None and (platform != "android" or state["setup"] != "editor"
+            or not isinstance(control, dict) or control.get("mode") != "hold-next"
+            or not isinstance(control.get("run_id"), str)
+            or not re.fullmatch(EXPORT_RUN_ID, control["run_id"])):
+        raise ValueError("Invalid export control recovery scope")
+    allowed = set(ANDROID_CONFIG + (CRASH_PREF, CRASH_PREF + ".bak") + (EXPORT_CONTROL_PATHS if control else ())) if platform == "android" else set(IOS_CONFIG)
     private = state.get("private_backup")
     if not isinstance(private, dict) or not set(private).issubset(allowed):
         raise ValueError("Backup contains unsupported private paths")
     expected = set(ANDROID_CONFIG if platform == "android" else IOS_CONFIG)
     if platform == "android" and state["setup"] == "crash":
         expected.update((CRASH_PREF, CRASH_PREF + ".bak"))
+    if control:
+        expected.update(EXPORT_CONTROL_PATHS)
     if not isinstance(state.get("mutated"), bool) or (state["mutated"] and set(private) != expected):
         raise ValueError("Backup is missing preferences required for recovery")
     journal = Path(str(state.get("journal") or ""))
@@ -697,10 +817,12 @@ def _claim_setup(state: dict, folder: Path) -> None:
 
 
 def apply_setup(setup: str, *, platform: str, folder: Path, marker: str,
-                serial: str | None = None, udid: str | None = None, should_stop=None) -> dict:
+                serial: str | None = None, udid: str | None = None, should_stop=None,
+                export_cancel_run_id: str | None = None) -> dict:
     token = _SETUP_STOP.set(should_stop)
     try:
-        return _apply_setup(setup, platform=platform, folder=folder, marker=marker, serial=serial, udid=udid)
+        return _apply_setup(setup, platform=platform, folder=folder, marker=marker, serial=serial, udid=udid,
+                            export_cancel_run_id=export_cancel_run_id)
     finally:
         _SETUP_STOP.reset(token)
 
@@ -713,6 +835,7 @@ def _apply_setup(
     marker: str,
     serial: str | None = None,
     udid: str | None = None,
+    export_cancel_run_id: str | None = None,
 ) -> dict:
     """Back up before mutation; restore even when preparation itself fails."""
     platform = platform.lower()
@@ -725,18 +848,28 @@ def _apply_setup(
     # Never turn an existing user's grant into a denial (or vice versa).
     if platform == "ios" and setup == "ios":
         raise ValueError("iOS permission precondition is unmet: this setup requires changing Photos authorization, which cannot be safely restored; use an explicitly prepared dedicated test device")
+    if export_cancel_run_id is not None and (platform != "android" or setup != "editor"
+            or marker != "exportcancel" or not isinstance(export_cancel_run_id, str)
+            or not re.fullmatch(EXPORT_RUN_ID, export_cancel_run_id)):
+        raise ValueError("Export hold is restricted to the Android cancel case")
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     marker = re.sub(r"[^A-Za-z0-9]", "", marker)[:24] + "-" + uuid.uuid4().hex
     state = dict(setup=setup, platform=platform, serial=serial, udid=udid,
                  marker=marker, fixtures={}, display_backup={}, private_backup={},
                  source_id=None, damaged_remote=None)
+    if export_cancel_run_id is not None:
+        state["export_control"] = {"mode": "hold-next", "run_id": export_cancel_run_id}
     _claim_setup(state, folder)
     try:
         if platform == "android":
             require_android_ready(serial)
+            if state.get("export_control"):
+                _protect_previous_export_control(serial, read_private(serial, EXPORT_CONTROL))
             android_force_stop(serial)
             paths = ANDROID_CONFIG + ((CRASH_PREF, CRASH_PREF + ".bak") if setup == "crash" else ())
+            if state.get("export_control"):
+                paths += EXPORT_CONTROL_PATHS
             state["private_backup"] = {path: read_private(serial, path) for path in paths}
             if setup == "wide":
                 state["display_backup"] = record_display(serial)
@@ -761,6 +894,8 @@ def _apply_setup(
                 state["damaged_remote"] = damage_source(serial, fixtures["A"].name, marker, folder)
             if setup not in {"home", "crash"}:
                 android_wait_editor_ready(serial)
+            if state.get("export_control"):
+                _arm_export_control(state)
         else:
             # A failed termination is unsafe: the process may flush old prefs
             # over a restored file. Do not suppress simctl failures here.
@@ -817,6 +952,15 @@ def _restore_setup(state: dict) -> None:
         _save_setup(state)
         if state["platform"] == "android":
             serial = state["serial"]
+            capture_deadline = _CLEANUP_DEADLINE.set(min(_CLEANUP_DEADLINE.get(), time.monotonic() + CLEANUP_CMD_TIMEOUT_S))
+            try:
+                _capture_export_control(state)
+            except Exception:
+                # Evidence failure must never bypass restoration. Missing public
+                # evidence is rejected by the runner's cancel verdict.
+                pass
+            finally:
+                _CLEANUP_DEADLINE.reset(capture_deadline)
             try:
                 restore_private(serial, state["private_backup"])
             except Exception as exc:
