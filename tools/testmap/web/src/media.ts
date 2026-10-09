@@ -244,12 +244,30 @@ export function watchMedia(
           const data = key
             ? concat([...(sps ? [sps] : []), ...(pps ? [pps] : []), payload])
             : payload;
-          // Delta frames may reference queued frames. End this stream rather
-          // than skip arbitrary references and paint a corrupted live view.
+          // Cached GOPs arrive in bursts. Yield to the native decoder without
+          // dropping references or reading more packets while it is full.
           stats.maxQueue = Math.max(stats.maxQueue, decoder.decodeQueueSize);
           if (decoder.decodeQueueSize > 5) {
-            useStill("decoder-backlog");
-            break;
+            const pendingDecoder = decoder;
+            await new Promise<void>((resolve) => {
+              const ready = () => {
+                if (
+                  !videoAbort.signal.aborted &&
+                  pendingDecoder.state !== "closed" &&
+                  pendingDecoder.decodeQueueSize > 5
+                )
+                  return;
+                pendingDecoder.removeEventListener("dequeue", ready);
+                videoAbort.signal.removeEventListener("abort", ready);
+                resolve();
+              };
+              pendingDecoder.addEventListener("dequeue", ready);
+              videoAbort.signal.addEventListener("abort", ready);
+              ready();
+            });
+            // The existing output watchdog also aborts a decoder that never
+            // drains. Hiding/leaving the view cancels this same wait.
+            if (videoAbort.signal.aborted) break;
           }
           phase = "decode-error";
           if (stats.firstDecodeMs === null) stats.firstDecodeMs = elapsed();
