@@ -6,11 +6,15 @@ wait absent id="aboutBack" 5000
 wait absent id="openSourceBack" 5000
 press id="sharedComposeSaveButton"
 wait id="sharedComposeExportPrimary"
-press label="导出到相册"
-wait "label=\"Cancel export\"" 20000
-press "label=\"Cancel export\""
+press id="sharedComposeExportPrimary"
+wait id="sharedComposeExportCancel" 20000
+press id="sharedComposeExportCancel"
 wait "label=\"Export cancelled.\" || label=\"导出已取消。\"" 15000
 wait absent "label=\"Share\"" 5000
 wait absent "label=\"分享\"" 5000
 wait absent "label=\"View in gallery\"" 5000
+wait id="sharedComposeExportRetryFailed"
+press id="sharedComposeExportRetryFailed"
+wait "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 1 · Failed 0\" visible" 90000
+wait "id=\"sharedComposeExportPrimary\" label=\"Share\" visible" 15000
 close
