@@ -24,5 +24,5 @@ press label="Save"
 wait "label=\"Output format\""
 press value="PNG"
 press value="Export to the album"
-wait text "succeeded"
+wait "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 1 · Failed 0\"" 90000
 close

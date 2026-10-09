@@ -601,7 +601,70 @@ def damage_source(serial: str, remote_name: str, marker: str, folder: Path) -> s
 
 
 def restore_source(serial: str, local: Path, remote: str) -> None:
-    adb(serial, ["push", str(local), remote])
+    adb(serial, ["push", str(local), remote], timeout=5)
+
+
+def repair_failure_source(state: dict, *, serial: str, run_id: str, should_stop=None) -> dict:
+    """Restore only this active Android failure fixture, once, without restarting the app."""
+    _validate_setup(state)
+    journal, lock = Path(state["journal"]), Path(state["lock"])
+    if journal.is_symlink() or lock.is_symlink() or not journal.is_file() or not lock.is_file():
+        raise ValueError("Failure source recovery requires its active journal and lock")
+    saved = load_setup_backup(journal)
+    if (json.loads(lock.read_text()).get("journal") != str(journal)
+            or any(saved.get(key) != state.get(key) for key in
+                   ("phase", "platform", "setup", "serial", "marker", "fixtures", "source_id", "damaged_remote", "source_recovery"))):
+        raise ValueError("Failure source recovery does not own this setup")
+    control = state.get("source_recovery") or {}
+    if (state["platform"] != "android" or state["setup"] != "failure" or state["phase"] != "active" or state.get("mutated") is not True
+            or state["serial"] != serial or control.get("run_id") != run_id
+            or not re.fullmatch(EXPORT_RUN_ID, run_id) or control.get("status") != "armed"
+            or not re.fullmatch(r"exportfailurerec-[a-f0-9]{32}", state["marker"])):
+        raise ValueError("Failure source recovery scope or one-shot state is invalid")
+    local = Path(state["fixtures"]["A"])
+    remote = f"/sdcard/{FIXTURE_FOLDER}/{local.name}"
+    if state["damaged_remote"] != remote or local.is_symlink() or not local.is_file():
+        raise ValueError("Failure source path is not this run's regular fixture")
+    if not 0 < local.stat().st_size <= 1024 * 1024:
+        raise ValueError("Failure fixture exceeds its size bound")
+    valid = local.read_bytes()
+    damaged = f"EWM deliberate source decode failure {state['marker']}".encode()
+    if (len(valid) != control.get("size") or hashlib.sha256(valid).hexdigest() != control.get("valid_sha256")
+            or hashlib.sha256(damaged).hexdigest() != control.get("damaged_sha256")):
+        raise ValueError("Failure fixture identity changed")
+    source_id = str(state.get("source_id") or "")
+    if not re.fullmatch(r"[0-9]+", source_id):
+        raise ValueError("Failure fixture has no exact MediaStore identity")
+    def check_identity():
+        where = f"_id={source_id} AND _display_name='{local.name}' AND relative_path='{FIXTURE_FOLDER}/'"
+        raw = adb_shell(serial, "content", "query", "--uri", MEDIA, "--projection", "_id", "--where", where, timeout=5)
+        if re.findall(r"Row: \d+ _id=(\d+)", raw) != [source_id]:
+            raise ValueError("Failure fixture MediaStore identity changed")
+        safe = adb_shell(serial, "sh", "-c", f"test -f {remote} && test ! -L {remote} && echo regular", timeout=5)
+        if safe != "regular":
+            raise ValueError("Failure fixture remote is not a regular file")
+    token = _SETUP_STOP.set(should_stop)
+    started = time.monotonic_ns()
+    try:
+        check_identity()
+        current = adb(serial, ["exec-out", "head", "-c", "1048577", remote], binary=True, timeout=5)
+        if current != damaged:
+            raise ValueError("Failure fixture no longer contains this run's damaged bytes")
+        control["status"] = "restoring_source"
+        _save_setup(state)  # Consume before the write; never silently retry a partial repair.
+        restore_source(serial, local, remote)
+        check_identity()
+        restored = adb(serial, ["exec-out", "head", "-c", "1048577", remote], binary=True, timeout=5)
+        if restored != valid:
+            raise ValueError("Failure fixture restored bytes do not match")
+        control["status"] = "source_restored"
+        _save_setup(state)
+        return {"run_id": run_id, "serial": serial, "source_id": source_id,
+                "valid_sha256": control["valid_sha256"], "damaged_sha256": control["damaged_sha256"],
+                "readback_sha256": hashlib.sha256(restored).hexdigest(),
+                "started_monotonic_ns": started, "finished_monotonic_ns": time.monotonic_ns()}
+    finally:
+        _SETUP_STOP.reset(token)
 
 
 def require_android_ready(serial: str) -> None:
@@ -943,12 +1006,12 @@ def _claim_setup(state: dict, folder: Path) -> None:
 def apply_setup(setup: str, *, platform: str, folder: Path, marker: str,
                 serial: str | None = None, udid: str | None = None, should_stop=None,
                 export_cancel_run_id: str | None = None, ios_export_run_id: str | None = None,
-                ios_export_mode: str | None = None) -> dict:
+                ios_export_mode: str | None = None, failure_run_id: str | None = None) -> dict:
     token = _SETUP_STOP.set(should_stop)
     try:
         return _apply_setup(setup, platform=platform, folder=folder, marker=marker, serial=serial, udid=udid,
                             export_cancel_run_id=export_cancel_run_id, ios_export_run_id=ios_export_run_id,
-                            ios_export_mode=ios_export_mode)
+                            ios_export_mode=ios_export_mode, failure_run_id=failure_run_id)
     finally:
         _SETUP_STOP.reset(token)
 
@@ -963,6 +1026,7 @@ def _apply_setup(
     udid: str | None = None,
     export_cancel_run_id: str | None = None,
     ios_export_run_id: str | None = None, ios_export_mode: str | None = None,
+    failure_run_id: str | None = None,
 ) -> dict:
     """Back up before mutation; restore even when preparation itself fails."""
     platform = platform.lower()
@@ -971,6 +1035,9 @@ def _apply_setup(
         raise ValueError(f"Unsupported setup {setup!r} for {platform}")
     if not (serial if platform == "android" else udid):
         raise ValueError(f"{platform} setup requires an explicit device")
+    if failure_run_id is not None and (platform != "android" or setup != "failure"
+            or marker != "exportfailurerec" or not re.fullmatch(EXPORT_RUN_ID, failure_run_id)):
+        raise ValueError("Source repair is restricted to the Android failure case")
     # simctl privacy cannot reliably read and restore all authorization states.
     # Never turn an existing user's grant into a denial (or vice versa).
     if platform == "ios" and setup == "ios":
@@ -1025,6 +1092,15 @@ def _apply_setup(
                 state["source_id"] = source_id
                 android_share_in(serial, source_id)
             if setup == "failure":
+                if failure_run_id is not None:
+                    valid = fixtures["A"].read_bytes()
+                    if not 0 < len(valid) <= 1024 * 1024:
+                        raise ValueError("Failure fixture exceeds its size bound")
+                    state["damaged_remote"] = f"/sdcard/{FIXTURE_FOLDER}/{fixtures['A'].name}"
+                    state["source_recovery"] = {"run_id": failure_run_id, "status": "armed", "size": len(valid),
+                        "valid_sha256": hashlib.sha256(valid).hexdigest(),
+                        "damaged_sha256": hashlib.sha256(f"EWM deliberate source decode failure {marker}".encode()).hexdigest()}
+                    _save_setup(state)
                 state["damaged_remote"] = damage_source(serial, fixtures["A"].name, marker, folder)
             if setup not in {"home", "crash"}:
                 android_wait_editor_ready(serial)
