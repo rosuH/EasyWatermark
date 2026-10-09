@@ -1,9 +1,0 @@
-context platform=android
-open me.rosuh.easywatermark.debug
-press label="Style"
-wait label="TileMode"
-press 640 1960
-wait label="Single"
-press "label=\"Watermark preview\""
-wait "label=\"Watermark preview\""
-close

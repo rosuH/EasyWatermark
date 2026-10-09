@@ -1,0 +1,267 @@
+[
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Content\""
+      }
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextContent\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextContent\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextEditField\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "fill",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextEditField\""
+      },
+      "text": "__CLAMP_NONCE__"
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextConfirm\""
+      }
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Style\""
+      }
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"editorOption-TileMode\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"editorControl-TileMode\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Single\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "gesture",
+    "input": {
+      "kind": "pan",
+      "origin": {
+        "x": "__CLAMP_X__",
+        "y": "__CLAMP_Y__"
+      },
+      "delta": {
+        "x": "__CLAMP_DX__",
+        "y": "__CLAMP_DY__"
+      },
+      "durationMs": 600,
+      "pointerCount": 1
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "close",
+    "input": {}
+  },
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "close",
+    "input": {}
+  }
+]

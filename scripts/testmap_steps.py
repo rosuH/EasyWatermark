@@ -8,6 +8,110 @@ import hashlib
 import re
 from pathlib import Path
 
+
+def require_clamp_pixels():
+    """Optional leaf dependency; callers check before changing device state."""
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise ValueError("CLAMP pixels require: python3 -m pip install -r tools/testmap/requirements.txt") from exc
+    if Image.__version__ != "12.3.0":
+        raise ValueError("CLAMP pixels require Pillow 12.3.0: python3 -m pip install -r tools/testmap/requirements.txt")
+    return Image
+
+
+def clamp_pixels(path: Path, rect: dict, fixture: Path) -> dict:
+    """Measure only the owned A fixture's white photo interior, never UI chrome."""
+    import math
+    Image = require_clamp_pixels()
+    if any(type(rect.get(k)) not in (int, float) or not math.isfinite(rect[k]) for k in ("x", "y", "width", "height")):
+        raise ValueError("CLAMP preview rectangle is invalid")
+    with Image.open(fixture) as source:
+        sw, sh = source.size
+        if source.format != "PNG" or min(sw, sh) < 128 or sw * sh > 16_000_000:
+            raise ValueError("CLAMP owned fixture dimensions/format refused")
+        source.load()
+        # Exact source bands distinguish this fixture from user pictures and B/C.
+        if any(source.convert("RGB").getpixel((sw // 2, y)) != rgb for y, rgb in (
+                (20, (25, 77, 128)), (sh // 2, (255, 255, 255)), (sh - 20, (232, 183, 70)))):
+            raise ValueError("CLAMP source is not fixture A")
+    with Image.open(path) as opened:
+        if opened.format != "PNG" or opened.width * opened.height > 16_000_000:
+            raise ValueError("CLAMP screenshot format/size refused")
+        image = opened.convert("RGB")
+    x, y, width, height = (rect[k] for k in ("x", "y", "width", "height"))
+    if min(width, height) <= 0 or x < 0 or y < 0 or x + width > image.width or y + height > image.height:
+        raise ValueError("CLAMP preview lies outside the screenshot")
+    scale = min(width / sw, height / sh)
+    fit = [x + (width - sw * scale) / 2, y + (height - sh * scale) / 2, sw * scale, sh * scale]
+    left, top, fw, fh = fit
+    # Samples stay clear of the center/right watermark and antialiased band edges.
+    for sx in (.08, .25, .90):
+        for sy, rgb in ((20 / sh, (25, 77, 128)), (.20, (255, 255, 255)), ((sh - 20) / sh, (232, 183, 70))):
+            actual = image.getpixel((round(left + sx * fw), round(top + sy * fh)))
+            if max(abs(a - b) for a, b in zip(actual, rgb)) > 5:
+                raise ValueError("CLAMP screenshot does not register to owned A")
+    white = [math.ceil(left + 4), math.ceil(top + 56 * scale + 4),
+             math.floor(left + fw - 4), math.floor(top + (sh - 56) * scale - 4)]
+    points = set()
+    raster = image.load()
+    for py in range(white[1], white[3]):
+        for px in range(white[0], white[2]):
+            r, g, b = raster[px, py]
+            if r >= 200 and g >= 90 and r - g >= 12 and g - b >= 25 and r - b >= 45:
+                points.add((px, py))
+                if len(points) > 100_000:
+                    raise ValueError("CLAMP glyph mask exceeds its bound")
+    if len(points) < 20:
+        raise ValueError("CLAMP has no measurable gold glyph pixels")
+    box = [min(p[0] for p in points), min(p[1] for p in points),
+           max(p[0] for p in points) + 1, max(p[1] for p in points) + 1]
+    bw, bh = box[2] - box[0], box[3] - box[1]
+    if (min(bw, bh) < 24 or bw > fw * .45 or bh > fh * .45
+            or box[0] <= white[0] + 3 or box[1] <= white[1] + 3
+            or box[2] >= white[2] - 3 or box[3] >= white[3] - 3):
+        raise ValueError("CLAMP glyph is clipped, too small, or not localized")
+    return {"png": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "image_size": list(image.size), "source_size": [sw, sh], "fit": fit, "white": white, "bbox": box,
+            "pixel_count": len(points), "_mask": points}
+
+
+def clamp_pan(before: dict) -> dict:
+    """An interior of the visible glyph bbox is strictly inside its raster cell."""
+    x0, y0, x1, y1 = before["bbox"]
+    left, top, fw, fh = before["fit"]
+    if x0 < left + fw * .48 or y0 < top + fh * .48 or min(x1 - x0, y1 - y0) < 48:
+        raise ValueError("CLAMP initial cell/drag-start margin is not established")
+    dx, dy = round(fw * .12), round(fh * .10)
+    if min(dx, dy) < 24 or x1 + dx >= before["white"][2] - 4 or y1 + dy >= before["white"][3] - 4:
+        raise ValueError("CLAMP lacks safe room for the whole gesture")
+    return {"kind": "pan", "origin": {"x": round((x0 + x1) / 2), "y": round((y0 + y1) / 2)},
+            "delta": {"x": dx, "y": dy}, "durationMs": 600, "pointerCount": 1}
+
+
+def compare_clamp_pixels(before: dict, after: dict, delta: dict | None = None) -> dict:
+    if before["image_size"] != after["image_size"] or any(abs(a - b) > 1 for a, b in zip(before["fit"], after["fit"])):
+        raise ValueError("CLAMP preview geometry changed")
+    a, b = before["bbox"], after["bbox"]
+    shift = [round((b[i] + b[i + 2] - a[i] - a[i + 2]) / 2) for i in (0, 1)]
+    if delta is None:
+        if max(map(abs, shift)) > 2:
+            raise ValueError("CLAMP position did not remain stable")
+    elif any(not .5 * delta[key] <= shift[i] <= 1.1 * delta[key] for i, key in enumerate(("x", "y"))):
+        # Compose consumes touch slop; compare visible motion, not exact SDK delta.
+        raise ValueError("CLAMP glyph did not move with the real pan")
+    if any(abs((b[i + 2] - b[i]) - (a[i + 2] - a[i])) > max(4, (a[i + 2] - a[i]) * .08) for i in (0, 1)):
+        raise ValueError("CLAMP glyph shape dimensions changed")
+    moved = {(x + shift[0], y + shift[1]) for x, y in before["_mask"]}
+    target = after["_mask"]
+    def coverage(source, dest):
+        expanded = {(x + dx, y + dy) for x, y in dest for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+        return len(source & expanded) / len(source)
+    similarity = min(coverage(moved, target), coverage(target, moved))
+    if similarity < .65:
+        raise ValueError("CLAMP translated glyph pixels do not match")
+    return {"shift_px": shift, "pixel_similarity": round(similarity, 4)}
+
 _SKIP = {"context", "env"}
 _POINT_CMDS = {"press", "click", "tap", "longpress", "swipe", "gesture"}
 
@@ -394,6 +498,11 @@ def _json_point(inp: dict) -> dict | None:
     point = _xy(inp.get("x"), inp.get("y"))
     if point:
         return point
+    origin = inp.get("origin") if isinstance(inp.get("origin"), dict) else None
+    if origin:
+        point = _xy(origin.get("x"), origin.get("y"))
+        if point:
+            return point
     start = inp.get("start") if isinstance(inp.get("start"), dict) else None
     if start:
         point = _xy(start.get("x"), start.get("y"))
