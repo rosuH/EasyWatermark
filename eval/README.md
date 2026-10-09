@@ -10,12 +10,14 @@ After a **product** code change or new requirement, before asking to merge or sh
 
 1. `scripts/e2e-select.sh` (or a git range).
 2. Run suggested host scripts when they are not docs-only.
-3. Run selected `#agent` edges **3 times** (`EWM_AGENT_REPEATS`, min 1) via `scripts/e2e-verify.sh --change '…' --run`.
+3. Run selected `#agent` edges **3 times** (`EWM_AGENT_REPEATS`, min 1) via `scripts/e2e-verify.sh --change '…' --run --android-device '<authorized-serial>' --ios-device '<authorized-udid>'`. Supply the exact device ID for each selected platform; omit flags for unselected platforms.
 4. Fill stability / UI / optional perf in the generated `docs/testmap/runs/<ts>-<sha>-verify.md`.
 5. Human Confirm on the console. Agent must not mint it.
 6. Only then ask the owner to merge.
 
 `scripts/e2e-verify.sh --change '…'` writes the report stub without executing devices. `--run` executes agent repeats and fills the stability table. A failed runner, missing execution, or mixed/failed repetitions keeps the report blocked; a later successful attempt does not erase an earlier failure. Known coverage gaps remain explicit in the report and require the owner to accept the limitation.
+
+Formal execution rejects missing, empty, or `auto` device bindings before starting a runner. The existing resolver checks each ID on its selected platform and rejects unknown or wrong-platform devices, so this entry point cannot silently choose a connected phone through `auto`. It runs the selected platforms sequentially through the existing CLI with `--device` and `TESTMAP_NO_EXPAND=1`. Each platform keeps its own run record and device metadata; one verify report combines all selected tasks, repetitions, failures, and evidence. Do not shut down other live devices to influence selection.
 
 Single-edge debug (`跑 pick-to-editor`) is Mode A in `e2e-testmap` and is **not** a merge gate.
 

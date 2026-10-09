@@ -341,11 +341,120 @@ class BackendChecks(unittest.TestCase):
                 self.assertTrue(tee_stdout)
                 output.write('testmap run 20261002T000000-abcdef12\n')
                 return code
-            with patch.object(verify.subprocess, 'Popen'), patch.object(verify, '_tee_child', tee), patch.object(verify, 'load_run', return_value=record):
-                rows = verify.collect_stability([{'cmd': cmd}], 1, True)
+            with patch.object(verify, 'resolve_device', side_effect=lambda platform, request: {'id': request}), patch.object(verify.subprocess, 'Popen'), patch.object(verify, '_tee_child', tee), patch.object(verify, 'load_run', return_value=record):
+                rows = verify.collect_stability([{'cmd': cmd, 'platform': 'ios'}], 1, True, ios_device='qa-udid')
             self.assertEqual(verdict, rows[0]['verdict'])
-        with tempfile.TemporaryDirectory() as folder, patch.object(verify, 'select_report', return_value={'agent': [{'cmd': cmd}]}), patch.object(verify, 'render_report', return_value='report'), patch.object(verify, 'collect_stability', return_value=[{'verdict': 'flake'}]), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(2, verify.main(['--change', 'test', '--run', '--sha', 'test', '--out', str(Path(folder)/'verify.md')]))
+        selected = [{'cmd': cmd, 'platform': 'ios'}]
+        with tempfile.TemporaryDirectory() as folder, patch.object(verify, 'select_report', return_value={'agent': selected}), patch.object(verify, 'render_report', return_value='report'), patch.object(verify, 'collect_stability', return_value=[{'verdict': 'flake'}]) as collect, contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(2, verify.main(['--change', 'test', '--run', '--sha', 'test', '--repeats', '3', '--ios-device', 'qa-udid', '--out', str(Path(folder)/'verify.md')]))
+            collect.assert_called_once_with(selected, 3, True, android_device=None, ios_device='qa-udid')
+
+    def test_verify_binds_both_platforms_without_losing_selected_attempts(self):
+        selected = [{'cmd': f'edge:test-{n}@{platform}#agent', 'platform': platform}
+                    for platform, count in [('android', 25), ('ios', 22)] for n in range(count)]
+        run_ids = ['20261010T000000-abcdef12', '20261010T000001-abcdef12']
+        records = [{
+            'state': 'review_required',
+            'tasks': [{'id': item['cmd'], 'state': 'review_required', 'evidence_dir': f'{run_id}/{k}'}
+                      for item in selected if item['platform'] == platform for k in range(3)],
+        } for platform, run_id in zip(['android', 'ios'], run_ids)]
+        outputs = iter(run_ids)
+        def tee(proc, output, tee_stdout):
+            output.write(f'testmap run {next(outputs)}\n')
+            return 0
+        with patch.object(verify, 'resolve_device', side_effect=lambda platform, request: {'id': request}) as resolve, patch.object(verify.subprocess, 'Popen') as spawn, patch.object(verify, '_tee_child', tee), patch.object(verify, 'load_run', side_effect=records):
+            rows = verify.collect_stability(selected, 3, True, android_device='emulator-5556', ios_device='qa-udid')
+        self.assertEqual([('android', 'emulator-5556'), ('ios', 'qa-udid')], [call.args for call in resolve.call_args_list])
+        self.assertEqual(2, spawn.call_count)
+        for call, platform, device in zip(spawn.call_args_list, ['android', 'ios'], ['emulator-5556', 'qa-udid']):
+            argv = call.args[0]
+            self.assertEqual(device, argv[argv.index('--device') + 1])
+            self.assertEqual('verify', argv[argv.index('--source') + 1])
+            self.assertEqual('3', argv[argv.index('--repeat') + 1])
+            self.assertEqual([item['cmd'] for item in selected if item['platform'] == platform], argv[argv.index('--repeat') + 2:])
+            self.assertEqual('1', call.kwargs['env']['TESTMAP_NO_EXPAND'])
+            with patch.dict(os.environ, call.kwargs['env']):
+                self.assertEqual(argv[argv.index('--repeat') + 2:], runner.expand_mobile_parallel(argv[argv.index('--repeat') + 2:], 'physical-serial'))
+        self.assertEqual(47, len(rows))
+        self.assertEqual(141, sum(row['ok'] for row in rows))
+        for item, row in zip(selected, rows):
+            self.assertEqual('stable', row['verdict'])
+            self.assertEqual([run_ids[0 if item['platform'] == 'android' else 1]] * 3, row['run_ids'])
+            self.assertEqual(3, len(row['evidence']))
+
+    def test_verify_requires_all_bindings_before_resolution_or_spawn(self):
+        selected = [{'cmd': f'edge:test@{platform}#agent', 'platform': platform} for platform in ['android', 'ios']]
+        for invalid in [None, '', ' ', 'auto', ' AUTO ']:
+            with patch.object(verify, 'resolve_device') as resolve, patch.object(verify.subprocess, 'Popen') as spawn:
+                with self.assertRaisesRegex(ValueError, '--ios-device'):
+                    verify.collect_stability(selected, 3, True, android_device='emulator-5556', ios_device=invalid)
+                resolve.assert_not_called()
+                spawn.assert_not_called()
+        with patch.object(verify, 'resolve_device') as resolve, patch.object(verify.subprocess, 'Popen') as spawn:
+            rows = verify.collect_stability(selected, 3, False)
+            self.assertEqual(['not_run', 'not_run'], [row['verdict'] for row in rows])
+            self.assertEqual([], verify.collect_stability([], 3, True))
+            resolve.assert_not_called()
+            spawn.assert_not_called()
+        with patch.object(verify, 'select_report', return_value={'agent': selected}), patch.object(verify, 'resolve_device') as resolve, patch.object(verify.subprocess, 'Popen') as spawn, contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(2, verify.main(['--change', 'test', '--sha', 'test', '--run', '--android-device', 'emulator-5556']))
+            resolve.assert_not_called()
+            spawn.assert_not_called()
+
+    def test_verify_uses_existing_resolver_to_refuse_unknown_or_wrong_platform(self):
+        devices = sys.modules[verify.resolve_device.__module__]
+        catalog = {'android': [{'id': 'emulator-5556'}], 'ios': [{'id': 'qa-udid'}]}
+        selected = [{'cmd': f'edge:test@{platform}#agent', 'platform': platform} for platform in ['android', 'ios']]
+        for invalid in ['unknown-udid', 'emulator-5556']:
+            with patch.object(devices, 'list_devices', return_value=catalog), patch.object(verify.subprocess, 'Popen') as spawn:
+                with self.assertRaisesRegex(ValueError, 'unknown ios device'):
+                    verify.collect_stability(selected, 3, True, android_device='emulator-5556', ios_device=invalid)
+                spawn.assert_not_called()
+        with patch.object(verify, 'resolve_device') as resolve, patch.object(verify.subprocess, 'Popen') as spawn:
+            with self.assertRaisesRegex(ValueError, 'invalid selected agent platform'):
+                verify.collect_stability([{'cmd': 'edge:test@ios#agent', 'platform': 'android'}], 3, True, android_device='emulator-5556')
+            resolve.assert_not_called()
+            spawn.assert_not_called()
+
+    def test_verify_lane_failure_survives_success_in_other_lane(self):
+        selected = [{'cmd': f'edge:test@{platform}#agent', 'platform': platform} for platform in ['android', 'ios']]
+        outputs = iter([(2, '20261010T000000-abcdef12'), (0, '20261010T000001-abcdef12')])
+        def tee(proc, output, tee_stdout):
+            code, run_id = next(outputs)
+            output.write(f'testmap run {run_id}\n')
+            return code
+        records = [{'state': state, 'tasks': [{'id': item['cmd'], 'state': 'review_required'}]}
+                   for item, state in zip(selected, ['failed', 'review_required'])]
+        with patch.object(verify, 'resolve_device', side_effect=lambda platform, request: {'id': request}), patch.object(verify.subprocess, 'Popen'), patch.object(verify, '_tee_child', tee), patch.object(verify, 'load_run', side_effect=records):
+            rows = verify.collect_stability(selected, 1, True, android_device='emulator-5556', ios_device='qa-udid')
+        self.assertEqual(['block', 'stable'], [row['verdict'] for row in rows])
+        self.assertNotEqual(rows[0]['run_ids'], rows[1]['run_ids'])
+
+    def test_verify_second_spawn_failure_preserves_first_lane_evidence(self):
+        selected = [{'cmd': f'edge:test@{platform}#agent', 'platform': platform} for platform in ['android', 'ios']]
+        def tee(proc, output, tee_stdout):
+            output.write('testmap run 20261010T000000-abcdef12\n')
+            return 0
+        record = {'state': 'review_required', 'tasks': [{'id': selected[0]['cmd'], 'state': 'review_required'}]}
+        with patch.object(verify, 'resolve_device', side_effect=lambda platform, request: {'id': request}), patch.object(verify.subprocess, 'Popen', side_effect=[object(), OSError('cannot spawn')]), patch.object(verify, '_tee_child', tee), patch.object(verify, 'load_run', return_value=record), contextlib.redirect_stderr(io.StringIO()):
+            rows = verify.collect_stability(selected, 1, True, android_device='emulator-5556', ios_device='qa-udid')
+        self.assertEqual(['stable', 'block'], [row['verdict'] for row in rows])
+        self.assertEqual(['20261010T000000-abcdef12'], rows[0]['run_ids'])
+        self.assertEqual([], rows[1]['run_ids'])
+
+    def test_verify_refuses_avd_alias_even_in_second_lane_before_any_spawn(self):
+        devices = sys.modules[verify.resolve_device.__module__]
+        catalog = {'android': [
+            {'id': 'emulator-5556', 'avd': 'QA_AVD'},
+            {'id': 'emulator-5558', 'avd': 'QA_AVD'},
+        ], 'ios': [{'id': 'qa-udid'}]}
+        for platforms in [['android'], ['ios', 'android']]:
+            selected = [{'cmd': f'edge:test@{platform}#agent', 'platform': platform} for platform in platforms]
+            with patch.object(devices, 'list_devices', return_value=catalog) as inventory, patch.object(verify.subprocess, 'Popen') as spawn:
+                with self.assertRaisesRegex(ValueError, '--android-device requires an exact device ID, not an alias; use emulator-5556'):
+                    verify.collect_stability(selected, 3, True, android_device='QA_AVD', ios_device='qa-udid')
+                self.assertEqual(len(platforms), inventory.call_count)
+                spawn.assert_not_called()
 
 
 # Fake command-line tools use only this test's temporary directories. They do
