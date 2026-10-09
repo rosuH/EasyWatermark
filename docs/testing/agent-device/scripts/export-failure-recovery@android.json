@@ -1,13 +1,13 @@
 [
   {"command": "open", "input": {"app": "me.rosuh.easywatermark.debug"}},
   {"command": "press", "input": {"target": {"kind": "selector", "selector": "id=\"sharedComposeSaveButton\""}}},
-  {"command": "wait", "input": {"selector": "id=\"sharedComposeExportPrimary\"", "timeoutMs": 15000}},
-  {"command": "press", "input": {"target": {"kind": "selector", "selector": "id=\"sharedComposeExportPrimary\""}}},
-  {"command": "wait", "input": {"selector": "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 0 · Failed 1\"", "timeoutMs": 30000}},
-  {"command": "wait", "input": {"absent": "id=\"sharedComposeExportPrimary\" label=\"Share\"", "timeoutMs": 5000}},
-  {"command": "wait", "input": {"selector": "id=\"sharedComposeExportRetryFailed\"", "timeoutMs": 15000}},
-  {"command": "press", "input": {"target": {"kind": "selector", "selector": "id=\"sharedComposeExportRetryFailed\""}}},
-  {"command": "wait", "input": {"selector": "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 1 · Failed 0\"", "timeoutMs": 90000}},
-  {"command": "wait", "input": {"selector": "id=\"sharedComposeExportPrimary\" label=\"Share\"", "timeoutMs": 15000}},
+  {"command": "wait", "input": {"selector": "label=\"Export to the album\"", "timeoutMs": 15000}},
+  {"command": "press", "input": {"target": {"kind": "selector", "selector": "label=\"Export to the album\""}}},
+  {"command": "wait", "input": {"selector": "label=\"Processed 1 · Succeeded 0 · Failed 1\"", "timeoutMs": 30000}},
+  {"command": "wait", "input": {"absent": "label=\"Share\"", "timeoutMs": 5000}},
+  {"command": "wait", "input": {"selector": "role=\"textview\" label=\"Retry failed\"", "timeoutMs": 15000}},
+  {"command": "press", "input": {"target": {"kind": "selector", "selector": "role=\"textview\" label=\"Retry failed\""}}},
+  {"command": "wait", "input": {"selector": "label=\"Processed 1 · Succeeded 1 · Failed 0\"", "timeoutMs": 90000}},
+  {"command": "wait", "input": {"selector": "label=\"Share\"", "timeoutMs": 15000}},
   {"command": "close", "input": {}}
 ]
