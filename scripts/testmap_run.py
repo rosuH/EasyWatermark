@@ -2451,7 +2451,7 @@ def _run_android_failure_recovery(spec, setup_state, manifest, evidence, rows, r
             ("open", {"app": "me.rosuh.easywatermark.debug"}),
             ("press", {"target": {"kind": "selector", "selector": 'id="sharedComposeSaveButton"'}}),
             ("wait", {"selector": 'label="Export to the album"', "timeoutMs": 15000}),
-            ("press", {"target": {"kind": "selector", "selector": 'label="Export to the album"'}}),
+            ("press", {"target": {"kind": "selector", "selector": 'role="textview" label="Export to the album"'}}),
             ("wait", {"selector": 'label="Processed 1 · Succeeded 0 · Failed 1"', "timeoutMs": 30000}),
             ("wait", {"absent": 'label="Share"', "timeoutMs": 5000}),
             ("wait", {"selector": 'role="textview" label="Retry failed"', "timeoutMs": 15000}),
