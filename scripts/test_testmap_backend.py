@@ -932,22 +932,48 @@ class SetupSafetyChecks(unittest.TestCase):
         path.write_bytes(b'original before slow setup')
         (self.root / 'hang-start').touch()
         stop_requested = threading.Event()
+        hang_reached = threading.Event()
+        precondition_failed = threading.Event()
+        requested_at = []
         def request_stop():
             deadline = time.monotonic() + 8
             while not (self.root / 'start-waiting').exists() and time.monotonic() < deadline:
                 time.sleep(.02)
-            stop_requested.set()
+            if (self.root / 'start-waiting').exists():
+                hang_reached.set()
+                requested_at.append(time.monotonic())
+                stop_requested.set()
+            else:
+                precondition_failed.set()
+        def should_stop():
+            if precondition_failed.is_set():
+                raise AssertionError('fake am start hang was not reached within 8s')
+            return stop_requested.is_set()
         worker = threading.Thread(target=request_stop)
         worker.start()
-        started = time.monotonic()
         try:
             with self.assertRaises(InterruptedError):
-                setup.apply_setup('home', platform='android', folder=self.root / 'evidence', marker='stop', serial='fake-serial', should_stop=stop_requested.is_set)
+                try:
+                    setup.apply_setup('home', platform='android', folder=self.root / 'evidence', marker='stop', serial='fake-serial', should_stop=should_stop)
+                finally:
+                    ended_at = time.monotonic()  # Includes rollback; excludes the subsequent join.
         finally:
             worker.join(timeout=10)
-        self.assertLess(time.monotonic() - started, 5)
+        self.assertFalse(worker.is_alive())
+        self.assertTrue(hang_reached.is_set())
+        self.assertFalse(precondition_failed.is_set())
+        self.assertEqual(1, len(requested_at))
+        # This measures Stop response, not the preceding fixture/setup preparation.
+        self.assertLess(ended_at - requested_at[0], 5)
         self.assertEqual(b'original before slow setup', path.read_bytes())
         self.assertFalse(list((self.root / 'locks').glob('*.json')))
+        journals = list((self.root / 'evidence').glob('setup-backup-*.json'))
+        self.assertEqual(1, len(journals))
+        restored = setup.load_setup_backup(journals[0])
+        self.assertEqual('restored', restored['phase'])
+        self.assertFalse(restored.get('restore_errors'))
+        self.assertFalse(list(self.root.rglob('*.testmap-restore')))
+        self.assertFalse(list((self.root / 'evidence').glob('*.tmp')))
 
     def test_reviewed_backup_rejects_unrelated_paths_before_device_access(self):
         state = self.apply()
@@ -1276,6 +1302,170 @@ class CancelGateEvidenceChecks(unittest.TestCase):
             spec["edge_id"] = "editor-style-then-export"
             runner._apply_agent_setup(spec, io.StringIO())
             self.assertNotIn("export_cancel_run_id", apply.call_args.kwargs)
+
+
+class AndroidFailureRecoveryChecks(unittest.TestCase):
+    """Only local synthetic files and mocked device I/O; never a connected device."""
+
+    def setUp(self):
+        import hashlib
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.stack = contextlib.ExitStack()
+        self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch.object(setup, 'SETUP_BACKUPS', self.root / 'locks'))
+        self.marker = 'exportfailurerec-' + 'a' * 32
+        self.local = setup.write_png(self.root / f'ewm-suite-{self.marker}-A.png', 2, 2, lambda y: b'\x00\x80\xff' * 2)
+        self.valid = self.local.read_bytes()
+        self.damaged = f'EWM deliberate source decode failure {self.marker}'.encode()
+        self.remote_bytes = self.damaged
+        self.state = dict(setup='failure', platform='android', serial='fake-serial', udid=None,
+                          marker=self.marker, fixtures={'A': str(self.local)}, display_backup={},
+                          private_backup={name: None for name in setup.ANDROID_CONFIG}, source_id='1',
+                          damaged_remote=f'/sdcard/{setup.FIXTURE_FOLDER}/{self.local.name}',
+                          source_recovery={'run_id': 'run-1', 'status': 'armed', 'size': len(self.valid),
+                                           'valid_sha256': hashlib.sha256(self.valid).hexdigest(),
+                                           'damaged_sha256': hashlib.sha256(self.damaged).hexdigest()})
+        setup._claim_setup(self.state, self.root)
+        self.state.update(phase='active', mutated=True)
+        setup._save_setup(self.state)
+        self.media_id = '1'
+        def shell(serial, *args, **kwargs):
+            self.assertEqual('fake-serial', serial)
+            callback = setup._SETUP_STOP.get()
+            if callback and callback(): raise InterruptedError('stopped')
+            if args[:2] == ('content', 'query'):
+                self.assertIn(f"_id=1 AND _display_name='{self.local.name}'", args[-1])
+                return f'Row: 0 _id={self.media_id}'
+            self.assertEqual(('sh', '-c'), args[:2])
+            return 'regular'
+        self.stack.enter_context(patch.object(setup, 'adb_shell', side_effect=shell))
+        self.stack.enter_context(patch.object(setup, 'adb', side_effect=lambda *a, **kw: self.remote_bytes))
+        def restore(serial, local, remote):
+            self.assertEqual(('fake-serial', self.local, self.state['damaged_remote']), (serial, local, remote))
+            self.remote_bytes = local.read_bytes()
+        self.restore = self.stack.enter_context(patch.object(setup, 'restore_source', side_effect=restore))
+
+    def repair(self, **kwargs):
+        return setup.repair_failure_source(self.state, serial='fake-serial', run_id='run-1', **kwargs)
+
+    def test_failure_source_restores_exact_bytes_once_and_preserves_journal(self):
+        proof = self.repair()
+        self.assertEqual(self.valid, self.remote_bytes)
+        self.assertEqual(proof['valid_sha256'], proof['readback_sha256'])
+        self.assertEqual('source_restored', setup.load_setup_backup(Path(self.state['journal']))['source_recovery']['status'])
+        self.assertTrue(Path(self.state['lock']).is_file())  # Preference rollback still belongs to finally.
+        with self.assertRaisesRegex(ValueError, 'one-shot'): self.repair()
+        self.restore.assert_called_once()
+
+    def test_failure_source_refuses_identity_drift_or_stop_before_write(self):
+        for kind in ('local', 'remote', 'media', 'serial', 'run', 'journal', 'lock', 'stop'):
+            with self.subTest(kind=kind):
+                self.local.write_bytes(b'changed' if kind == 'local' else self.valid)
+                self.remote_bytes = b'foreign bytes' if kind == 'remote' else self.damaged
+                self.media_id = '2' if kind == 'media' else '1'
+                setup._save_setup(self.state)
+                if kind == 'journal':
+                    data = json.loads(Path(self.state['journal']).read_text())
+                    data['phase'] = 'restored'
+                    Path(self.state['journal']).write_text(json.dumps(data))
+                Path(self.state['lock']).write_text(json.dumps({'journal': 'other' if kind == 'lock' else self.state['journal']}))
+                with self.assertRaises((ValueError, InterruptedError)):
+                    setup.repair_failure_source(self.state, serial='other' if kind == 'serial' else 'fake-serial',
+                                                run_id='other' if kind == 'run' else 'run-1', should_stop=lambda: kind == 'stop')
+                self.restore.assert_not_called()
+
+    def test_failure_source_readback_failure_consumes_repair_and_never_retries(self):
+        self.restore.side_effect = lambda *a: None
+        with self.assertRaisesRegex(ValueError, 'restored bytes'): self.repair()
+        self.assertEqual('restoring_source', setup.load_setup_backup(Path(self.state['journal']))['source_recovery']['status'])
+        with self.assertRaisesRegex(ValueError, 'one-shot'): self.repair()
+        self.restore.assert_called_once()
+
+    def batch_fixture(self):
+        source = runner.REPO_ROOT / 'docs/testing/agent-device/scripts/export-failure-recovery@android.json'
+        root = self.root / 'run-1'
+        derived = root / 'scripts' / 'failure.json'
+        manifest = runner.materialize_evidence_script(source, root, derived, {n: f'step-{n}.png' for n in range(1, 12)})
+        evidence = runner.EvidenceEvents(manifest, root, lambda event: None)
+        spec = {'edge_id': 'export-failure-recovery', 'agent_platform': 'android',
+                'serial': 'fake-serial', 'step_evidence_root': str(root)}
+        return spec, manifest, evidence, runner.parse_script(derived, 'android')
+
+    def test_failure_batch_repairs_between_failure_shots_and_real_retry(self):
+        for missing_shot, stopped, broken_restore in [(False, False, False), (True, False, False), (False, True, False), (False, False, True)]:
+            with self.subTest(missing_shot=missing_shot, stopped=stopped, broken_restore=broken_restore), tempfile.TemporaryDirectory() as folder:
+                # A distinct evidence root prevents reuse of a previous step image.
+                old_root, self.root = self.root, Path(folder)
+                spec, manifest, evidence, rows = self.batch_fixture()
+                self.root = old_root
+                calls = []
+                def run_batch(batch):
+                    calls.append(('batch', batch[0]['n'], batch[-1]['n']))
+                    for row in batch:
+                        if row['command'] == 'screenshot':
+                            if missing_shot: continue
+                            setup.write_png(Path(row['input']['path']), 2, 2, lambda y: b'\x00\x80\xff' * 2)
+                        evidence({'type': 'replay_action_stop', 'step': row['n'], 'command': row['command'], 'ok': True})
+                    return 0
+                def repair(*args, **kwargs):
+                    self.assertEqual(set(range(1, 8)), evidence.evidenced)
+                    calls.append(('repair',))
+                    if broken_restore: raise ValueError('readback mismatch')
+                    return {'run_id': 'run-1'}
+                with patch.object(runner, 'repair_failure_source', side_effect=repair):
+                    code = runner._run_android_failure_recovery(spec, self.state, manifest, evidence, rows,
+                                                               run_batch, lambda: stopped, io.StringIO())
+                if missing_shot or stopped or broken_restore:
+                    self.assertNotEqual(0, code)
+                    self.assertNotIn(('batch', 15, 21), calls)
+                    self.assertEqual('unverified', spec['source_recovery']['status'])
+                else:
+                    self.assertEqual(0, code)
+                    self.assertEqual([('batch', 1, 14), ('repair',), ('batch', 15, 21)], calls)
+                    self.assertEqual('evidence_complete', spec['source_recovery']['status'])
+
+    def test_failure_sdk_zero_without_repair_or_rollback_is_uncovered(self):
+        spec = {'edge_id': 'export-failure-recovery', 'agent_platform': 'android'}
+        for control in (None, {'status': 'evidence_complete', 'private_restored': False}):
+            spec['source_recovery'] = control
+            with patch.object(runner, '_ingest_agent_device_result', return_value={'agent_device_state': 'review_required', 'layers': {}, 'cases': [{}]}):
+                extra = runner.ingest_agent_device_result(spec, 0)
+            self.assertEqual('uncovered', extra['agent_device_state'])
+            self.assertEqual('failed', extra['cases'][0]['status'])
+
+    def test_failure_runner_wires_repair_then_rollback_and_records_evidence(self):
+        source = runner.REPO_ROOT / 'docs/testing/agent-device/scripts/export-failure-recovery@android.json'
+        output = self.root / 'output'
+        spec = {'builder': 'agent-device', 'edge_id': 'export-failure-recovery', 'agent_platform': 'android',
+                'serial': 'fake-serial', 'agent_device_output': str(output), 'step_evidence_root': str(self.root / 'run-1'),
+                'step_evidence_task': {'edge': 'export-failure-recovery', 'repeat': {'k': 1, 'n': 1}},
+                'cmd': ['fake-sdk', 'batch', '--steps-file', str(source), '--platform', 'android', '--serial', 'fake-serial', '--session', 'owned']}
+        calls = []
+        def batch(cmd, rows, logf, tee_stdout, on_proc, on_step_event, should_stop, platform, env):
+            calls.append(('batch', rows[0]['n'], rows[-1]['n']))
+            for row in rows:
+                if row['command'] == 'screenshot':
+                    setup.write_png(Path(row['input']['path']), 2, 2, lambda y: b'\x00\x80\xff' * 2)
+                on_step_event(platform, {'type': 'replay_action_stop', 'step': row['n'], 'command': row['command'], 'ok': True})
+            return 0
+        def repair(*args, **kwargs):
+            calls.append(('repair',))
+            return self.repair()
+        with patch.object(runner, 'maybe_prepare_ios_runner'), patch.object(runner, '_apply_agent_setup', return_value=self.state), \
+             patch.object(runner, '_run_batched_steps', side_effect=batch), patch.object(runner, 'repair_failure_source', side_effect=repair), \
+             patch.object(runner, '_restore_agent_setup', side_effect=lambda *a: calls.append(('rollback',))), \
+             patch.object(runner, 'release_agent_session'), patch.object(runner, '_publish_agent_device_live'), \
+             patch.object(runner, '_ingest_agent_device_result', return_value={'agent_device_state': 'review_required', 'cases': [], 'layers': {}}):
+            code, _, extra = runner.run_task(spec, io.StringIO())
+        self.assertEqual(0, code)
+        self.assertEqual([('batch', 1, 14), ('repair',), ('batch', 15, 21), ('rollback',)], calls)
+        proof = json.loads((output / 'android-failure-recovery.json').read_text())
+        self.assertTrue(proof['private_restored'])
+        self.assertEqual('evidence_complete', extra['export_control']['status'])
+        self.assertLessEqual(proof['failure_observed_monotonic_ns'], proof['repair']['started_monotonic_ns'])
+        self.assertLessEqual(proof['repair']['finished_monotonic_ns'], proof['retry_dispatch_monotonic_ns'])
 
 
 if __name__ == '__main__':

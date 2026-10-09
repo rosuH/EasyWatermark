@@ -82,6 +82,7 @@ from testmap_setup import (  # noqa: E402
     apply_setup,
     ios_installed,
     product_version,
+    repair_failure_source,
     restore_setup,
 )
 from testmap_devices import (  # noqa: E402
@@ -1762,6 +1763,8 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         if not run_id:
             raise ValueError("Android export cancel requires a run identity")
         cancel_options["export_cancel_run_id"] = run_id
+    if edge_id == "export-failure-recovery" and platform == "android":
+        cancel_options["failure_run_id"] = Path(str(spec.get("step_evidence_root") or "")).name
     if platform == "ios" and edge_id in {"export-cancel", "export-failure-recovery"}:
         cancel_options.update(ios_export_run_id=Path(str(spec.get("step_evidence_root") or "")).name,
                               ios_export_mode="hold-next" if edge_id == "export-cancel" else "fail-next")
@@ -2182,6 +2185,18 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
 
 def ingest_agent_device_result(spec: dict, code: int) -> dict:
     extra = _ingest_agent_device_result(spec, code)
+    if spec.get("edge_id") == "export-failure-recovery" and spec.get("agent_platform") == "android":
+        gate = spec.get("source_recovery") or {"status": "unverified", "reason": "Missing synchronous source repair evidence"}
+        extra["export_control"] = gate
+        if code != 0 or gate.get("status") != "evidence_complete" or gate.get("private_restored") is not True:
+            extra["agent_device_state"] = "uncovered" if code == 0 else "failed"
+            layers = dict(extra.get("layers") or {})
+            layers.update(business="failed", agent_observation="source_repair_unverified",
+                          green_from_process_zero=False, green_from_sdk_completed=False)
+            extra["layers"] = layers
+            for case in extra.get("cases") or []:
+                case.update(status="failed", layers=layers)
+        return extra
     if not ((spec.get("edge_id") == "export-cancel" and spec.get("agent_platform") in {"android", "ios"})
             or (spec.get("edge_id") == "export-failure-recovery" and spec.get("agent_platform") == "ios")):
         return extra
@@ -2418,6 +2433,74 @@ def _run_batched_steps(
         if not ok:
             return code or 1
     return 0
+
+
+def _run_android_failure_recovery(spec, setup_state, manifest, evidence, rows, run_batch, should_stop, logf):
+    """This one case has a synchronous fixture repair boundary before its real Retry."""
+    import hashlib
+    gate = {"status": "unverified", "mode": "damaged-source", "platform": "android",
+            "method": "serial-sdk-batch", "private_restored": False}
+    spec["source_recovery"] = gate
+    try:
+        source = REPO_ROOT / "docs/testing/agent-device/scripts/export-failure-recovery@android.json"
+        if not setup_state or not manifest or evidence is None or Path(manifest["source"]) != source:
+            raise ValueError("Android failure recovery requires its setup and inline SDK evidence")
+        raw = source.read_bytes()
+        actions = json.loads(raw)
+        expected = [
+            ("open", {"app": "me.rosuh.easywatermark.debug"}),
+            ("press", {"target": {"kind": "selector", "selector": 'id="sharedComposeSaveButton"'}}),
+            ("wait", {"selector": 'id="sharedComposeExportPrimary"', "timeoutMs": 15000}),
+            ("press", {"target": {"kind": "selector", "selector": 'id="sharedComposeExportPrimary"'}}),
+            ("wait", {"selector": 'id="sharedComposeExportCounts" label="Processed 1 · Succeeded 0 · Failed 1"', "timeoutMs": 30000}),
+            ("wait", {"absent": 'id="sharedComposeExportPrimary" label="Share"', "timeoutMs": 5000}),
+            ("wait", {"selector": 'id="sharedComposeExportRetryFailed"', "timeoutMs": 15000}),
+            ("press", {"target": {"kind": "selector", "selector": 'id="sharedComposeExportRetryFailed"'}}),
+            ("wait", {"selector": 'id="sharedComposeExportCounts" label="Processed 1 · Succeeded 1 · Failed 0"', "timeoutMs": 90000}),
+            ("wait", {"selector": 'id="sharedComposeExportPrimary" label="Share"', "timeoutMs": 15000}),
+            ("close", {}),
+        ]
+        if actions != [{"command": command, "input": value} for command, value in expected]:
+            raise ValueError("Android failure/Retry script no longer matches its bounded evidence contract")
+        derived = Path(manifest["script"])
+        if (hashlib.sha256(raw).hexdigest() != manifest["source_sha256"]
+                or hashlib.sha256(derived.read_bytes()).hexdigest() != manifest["script_sha256"]
+                or len(rows) != 21):
+            raise ValueError("Android failure source/derived evidence identity changed")
+        # Seven actions and their seven awaited screenshots precede the Retry press.
+        split = next(m["replay_step"] - 1 for m in manifest["mapping"] if m["step"] == 8 and m["kind"] == "action")
+        def require_shots(last):
+            if not set(range(1, last + 1)).issubset(evidence.evidenced):
+                raise ValueError("Failure/Retry has missing synchronous step evidence")
+            for item in manifest["mapping"]:
+                if item["kind"] == "screenshot" and item["step"] <= last:
+                    _verify_cancel_png(Path(item["path"]))
+        code = run_batch(rows[:split])
+        if code:
+            gate["reason"] = "Initial failure actions or screenshots failed"
+            return code
+        require_shots(7)
+        gate["failure_observed_monotonic_ns"] = time.monotonic_ns()
+        if should_stop and should_stop():
+            raise InterruptedError("Stopped before fixture repair")
+        run_id = Path(spec["step_evidence_root"]).name
+        gate["repair"] = repair_failure_source(setup_state, serial=spec["serial"], run_id=run_id, should_stop=should_stop)
+        if should_stop and should_stop():
+            raise InterruptedError("Stopped before Retry")
+        gate["retry_dispatch_monotonic_ns"] = time.monotonic_ns()
+        code = run_batch(rows[split:])
+        if code:
+            gate["reason"] = "Real Retry actions or screenshots failed"
+            return code
+        require_shots(10)
+        gate.update(status="evidence_complete", retry_status="evidence_complete", run_id=run_id,
+                    source_sha256=manifest["source_sha256"], script_sha256=manifest["script_sha256"],
+                    success_observed_monotonic_ns=time.monotonic_ns())
+        return 0
+    except (ValueError, OSError, KeyError, TypeError, StopIteration, subprocess.TimeoutExpired) as exc:
+        gate["reason"] = str(exc)
+        logf.write(f"Android failure recovery refused: {exc}\n")
+        return 130 if isinstance(exc, InterruptedError) else 2
 
 
 def _close_named_session(session: str, logf=None) -> None:
@@ -2672,12 +2755,16 @@ def run_task(
     env.update(spec.get("env") or {})
     if spec.get("builder") == "agent-device" and rows and script and script.suffix == ".json":
         try:
-            code = _run_batched_steps(
-                cmd, parse_script(Path(evidence_manifest["script"]), watch_plat) if evidence_manifest else rows,
-                logf, tee_stdout, on_proc,
-                (lambda _plat, event: evidence_events(event)) if evidence_events else on_step_event,
-                should_stop, watch_plat, env
-            )
+            def run_batch(batch_rows):
+                return _run_batched_steps(cmd, batch_rows, logf, tee_stdout, on_proc,
+                    (lambda _plat, event: evidence_events(event)) if evidence_events else on_step_event,
+                    should_stop, watch_plat, env)
+            batch_rows = parse_script(Path(evidence_manifest["script"]), watch_plat) if evidence_manifest else rows
+            if spec.get("edge_id") == "export-failure-recovery" and watch_plat == "android":
+                code = _run_android_failure_recovery(spec, setup_state, evidence_manifest, evidence_events,
+                                                     batch_rows, run_batch, should_stop, logf)
+            else:
+                code = run_batch(batch_rows)
         finally:
             try:
                 if not (should_stop and should_stop()) and spec.get("edge_id") == "export-cancel":
@@ -2685,6 +2772,9 @@ def run_task(
             finally:
                 try:
                     _restore_agent_setup(setup_state, logf)
+                    if spec.get("source_recovery"):
+                        spec["source_recovery"]["private_restored"] = True
+                        (output / "android-failure-recovery.json").write_text(json.dumps(spec["source_recovery"], indent=2) + "\n")
                 finally:
                     if evidence_events is not None:
                         evidence_events.finish()
