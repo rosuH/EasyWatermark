@@ -7,7 +7,9 @@ wait absent id="openSourceBack" 5000
 press id="sharedComposeSaveButton"
 wait id="sharedComposeExportPrimary"
 press id="sharedComposeExportPrimary"
+wait "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 0 · Failed 1\" visible" 30000
 wait id="sharedComposeExportRetryFailed"
 press id="sharedComposeExportRetryFailed"
-wait "id=\"sharedComposeExportCounts\" visible"
+wait "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 1 · Failed 0\" visible" 90000
+wait "id=\"sharedComposeExportPrimary\" label=\"Share\" visible" 15000
 close

@@ -339,7 +339,7 @@
         "android": "docs/testing/agent-device/scripts/export-failure-recovery@android.ad",
         "ios": "docs/testing/agent-device/scripts/export-failure-recovery@ios.ad"
       },
-      "honesty": "Fault injection and source restore are harness (setup=failure). The script only waits for Retry failed and taps it. A replay pass is not a product pass."
+      "honesty": "Android uses the existing damaged-source setup and source restore. iOS Simulator uses one bounded debug-only fail-next for a private nonce-bearing fixture, not an OS storage fault. iOS requires exact ready/entered/failed/cleared events, Processed 1 / Succeeded 0 / Failed 1, then a real Retry of the same fixture through the normal export port with Processed 1 / Succeeded 1 / Failed 0 and Share. All actions, step screenshots, paired clock evidence and private restoration are required; missing evidence stays uncovered. Photos add-only must be pre-authorized on the dedicated simulator. SDK zero is not a product pass or Human Confirm. On iOS, successful counts and Share establish real render Retry only, not Photos save. The gate keeps photos_status=pending_independent_device_evidence; Photos persistence requires separate run-bound device evidence and does not grant Human Confirm."
     },
     {
       "id": "android-crash-recovery",
@@ -663,7 +663,7 @@
         "android": "docs/testing/agent-device/scripts/export-cancel@android.ad",
         "ios": "docs/testing/agent-device/scripts/export-cancel@ios.ad"
       },
-      "honesty": "Android uses a debug-only, one-run MediaStore fixture hold with a bounded watchdog and private control/event backup restoration. Evidence requires a real Cancel press, cancellation and no-Share assertions, and entered/cancelled/cleared events without watchdog. In the same session, Retry failed must then export the same fixture through the normal port, with Succeeded 1 / Failed 0, Share and View in gallery visible; the earlier no-Share cancellation assertions stay mandatory. SDK process zero is not a product pass. iOS has no controlled slow-export precondition and remains uncovered."
+      "honesty": "Debug-only, one-run control holds only the setup fixture, with a bounded watchdog and original private bytes/absence restored. Android binds the generated MediaStore URI; iOS Simulator binds a nonce-bearing private PNG through the existing editor seed. Evidence requires a real Cancel press, cancellation and no-Share/no-gallery assertions, exact ready/entered/cancelled/cleared events without watchdog, valid step screenshots and bounded device/SDK timing. In the same session Retry failed must export the same fixture through the normal port: Processed 1 / Succeeded 1 / Failed 0 and Share, plus View in gallery on Android only. iOS requires pre-authorized Photos add-only on a dedicated simulator. Missing either stage remains uncovered; SDK zero is not product pass or Human Confirm. On iOS, successful counts and Share establish real render Retry only, not Photos save. The gate keeps photos_status=pending_independent_device_evidence; Photos persistence requires separate run-bound device evidence and does not grant Human Confirm."
     },
     {
       "id": "editor-style-then-export",
