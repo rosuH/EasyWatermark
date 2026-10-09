@@ -115,7 +115,9 @@ def adb_bin() -> str:
 def _run(argv, *, timeout=45, input_data=None, binary=False):
     deadline = _CLEANUP_DEADLINE.get()
     if deadline is not None:
-        timeout = min(timeout, CLEANUP_CMD_TIMEOUT_S, deadline - time.monotonic())
+        # Required restore I/O shares the remaining budget. Optional evidence
+        # and failed-write cleanup already establish their own shorter deadline.
+        timeout = min(timeout, deadline - time.monotonic())
         if timeout <= 0:
             raise TimeoutError("Setup restore deadline exceeded; retained backup requires recovery")
     should_stop = _SETUP_STOP.get() if deadline is None else None
@@ -533,7 +535,8 @@ def write_private(serial: str, path: str, data: bytes, timeout: int = 45) -> Non
         if not published:
             # A setup Stop must not suppress cleanup of the file we just claimed.
             deadline = _CLEANUP_DEADLINE.get()
-            token = _CLEANUP_DEADLINE.set(deadline if deadline is not None else time.monotonic() + CLEANUP_CMD_TIMEOUT_S)
+            cleanup_deadline = time.monotonic() + CLEANUP_CMD_TIMEOUT_S
+            token = _CLEANUP_DEADLINE.set(min(deadline, cleanup_deadline) if deadline is not None else cleanup_deadline)
             try:
                 adb_shell(serial, "run-as", ANDROID_PACKAGE, "rm", "-f", temp)
                 if _run_as_file(serial, temp):

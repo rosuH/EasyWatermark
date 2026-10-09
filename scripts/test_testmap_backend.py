@@ -576,13 +576,22 @@ elif args[0] == 'shell':
             sys.exit('deliberate failure after cat before mv')
         if (root / 'fail-temp-cleanup').exists() and operation[:2] == ['rm', '-f'] and operation[-1].endswith('.testmap-restore'):
             sys.exit('deliberate temp cleanup failure')
+        if (root / 'delay-temp-cleanup').exists() and operation[:2] == ['rm', '-f'] and operation[-1].endswith('.testmap-restore'):
+            (root / 'temp-cleanup-started').touch()
+            import time
+            time.sleep(2.2)
         code = subprocess.run(operation, cwd=root / 'android', input=sys.stdin.buffer.read(), stdout=sys.stdout.buffer).returncode
         sys.exit(code)
     elif command[:2] == ['getprop', 'ro.build.version.sdk']: print('37')
     elif command[:2] == ['pm', 'path']: print('package:/fake.apk')
     elif command[:2] == ['dumpsys', 'package']: print('versionCode=123')
     elif command[:2] == ['content', 'query']: print('Row: 0 _id=1')
-    elif command[:2] == ['content', 'delete']: pass
+    elif command[:2] == ['content', 'delete']:
+        delay = root / 'delete-delay'
+        if delay.exists():
+            (root / 'delete-started').touch()
+            import time
+            time.sleep(float(delay.read_text()))
     elif command[:1] == ['wm']:
         if len(command) == 2: print('Physical ' + command[1] + ': 1080x1920')
     elif command[:1] == ['mkdir']:
@@ -977,6 +986,58 @@ class SetupSafetyChecks(unittest.TestCase):
         (self.root / 'fail-restore').unlink()
         setup.restore_setup(setup.load_setup_backup(Path(state['journal'])))
         self.assertEqual(b'original', path.read_bytes())
+
+    def test_mandatory_delete_uses_remaining_restore_budget_and_timeout_retains_lease(self):
+        path = self.root / 'android' / setup.ANDROID_CONFIG[0]
+        path.write_bytes(b'original before slow delete')
+        delay = self.root / 'delete-delay'
+        delay.write_text('2.2')  # A valid provider operation longer than the old 2s cap.
+        state = self.apply()
+        setup.restore_setup(state)
+        self.assertTrue((self.root / 'delete-started').is_file())
+        self.assertEqual(b'original before slow delete', path.read_bytes())
+        self.assertEqual('restored', setup.load_setup_backup(Path(state['journal']))['phase'])
+        self.assertFalse(Path(state['lock']).exists())
+        self.assertFalse(list((self.root / 'sdcard' / setup.FIXTURE_FOLDER).glob('*')))
+        self.assertFalse(list(self.root.rglob('*.testmap-restore')))
+        self.assertFalse(list((self.root / 'evidence').glob('*.tmp')))
+
+        (self.root / 'delete-started').unlink()
+        delay.write_text('30')
+        state = self.apply()
+        started = time.monotonic()
+        with patch.object(setup, 'RESTORE_BUDGET_S', 4):
+            with self.assertRaises(setup.SetupRestoreError):
+                setup.restore_setup(state)
+        self.assertLess(time.monotonic() - started, 6)
+        self.assertTrue((self.root / 'delete-started').is_file())
+        retained = setup.load_setup_backup(Path(state['journal']))
+        self.assertEqual('restoring', retained['phase'])
+        self.assertTrue(retained['restore_errors'])
+        self.assertTrue(Path(state['lock']).exists())
+        self.assertEqual(b'original before slow delete', path.read_bytes())
+        with self.assertRaisesRegex(ValueError, 'Unfinished setup'):
+            self.apply()
+        delay.unlink()
+        setup.restore_setup(retained)  # Explicit reviewed recovery can finish.
+        self.assertFalse(Path(state['lock']).exists())
+
+    def test_failed_write_temp_cleanup_keeps_its_short_subdeadline(self):
+        path = self.root / 'android' / setup.ANDROID_CONFIG[0]
+        path.write_bytes(b'original saved in journal')
+        state = self.apply()
+        (self.root / 'fail-before-mv').touch()
+        (self.root / 'delay-temp-cleanup').touch()
+        with self.assertRaisesRegex(setup.SetupRestoreError, 'temporary cleanup failed'):
+            setup.restore_setup(state)
+        self.assertTrue((self.root / 'temp-cleanup-started').is_file())
+        self.assertTrue(Path(str(path) + '.testmap-restore').exists())
+        self.assertTrue(Path(state['lock']).exists())
+        retained = setup.load_setup_backup(Path(state['journal']))
+        self.assertEqual('restoring', retained['phase'])
+        self.assertEqual(b'original saved in journal', retained['private_backup'][setup.ANDROID_CONFIG[0]])
+        with self.assertRaisesRegex(ValueError, 'Unfinished setup'):
+            self.apply()
 
     def test_ios_roundtrip_preserves_tmp_saved_state_and_permissions(self):
         path = self.root / 'ios' / setup.IOS_CONFIG[0]

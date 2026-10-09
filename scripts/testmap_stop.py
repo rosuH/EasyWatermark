@@ -20,8 +20,8 @@ CHILD_TERM_S = 5
 # Suite: wall-clock deadline for fixture restore after children are dead.
 # Independent restore steps share this deadline; they are not N × per-call timeout.
 RESTORE_BUDGET_S = 8
-# Per-command cap inside the restore/evidence deadline. Never the 45s interactive
-# timeout. A hung screencap cannot skip restore because cancel restores first.
+# Subdeadline for optional evidence and failed-write cleanup, within restore.
+# Mandatory restore I/O shares RESTORE_BUDGET_S rather than this shorter cap.
 CLEANUP_CMD_TIMEOUT_S = 2
 # Runner: wait this long after SIGTERM before SIGKILL so finally can finish.
 RUNNER_TERM_S = CHILD_TERM_S + RESTORE_BUDGET_S + 2
