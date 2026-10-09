@@ -14,89 +14,6 @@ function packet(kind: number) {
   return concat([size, payload]);
 }
 
-it.each([1, 5])(
-  "falls back on decoder backlog before decoding NAL %s",
-  async (kind) => {
-    vi.useFakeTimers();
-    const decode = vi.fn();
-    const close = vi.fn();
-    class Decoder {
-      state = "configured";
-      get decodeQueueSize() {
-        return decode.mock.calls.length ? 6 : 0;
-      }
-      configure() {}
-      decode = decode;
-      close() {
-        this.state = "closed";
-        close();
-      }
-    }
-    vi.stubGlobal("VideoDecoder", Decoder);
-    vi.stubGlobal(
-      "EncodedVideoChunk",
-      class {
-        constructor(public init: unknown) {}
-      },
-    );
-    const read = vi.fn().mockResolvedValue({
-      done: false,
-      value: concat([packet(7), packet(8), packet(5), packet(kind), packet(1)]),
-    });
-    let videoSignal: AbortSignal | undefined;
-    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
-      if (url.startsWith("/api/device-video")) {
-        videoSignal = init.signal as AbortSignal;
-        return {
-          ok: true,
-          status: 200,
-          body: {
-            getReader: () => ({ read, cancel: vi.fn(), releaseLock: vi.fn() }),
-          },
-        };
-      }
-      if (url.startsWith("/api/device-frame"))
-        return { ok: false, status: 204 };
-      throw new Error(`Unexpected mock request ${url}`);
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    const clearRect = vi.fn();
-    const canvas = {
-      getContext: () => ({ clearRect }),
-      width: 100,
-      height: 100,
-    } as unknown as HTMLCanvasElement;
-    const update = vi.fn();
-    const diagnose = vi.fn();
-    const stop = watchMedia(canvas, "android", "mock", update, diagnose);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(decode).toHaveBeenCalledTimes(1);
-    expect(diagnose).toHaveBeenCalledTimes(1);
-    expect(diagnose.mock.calls[0][0]).toMatchObject({
-      reason: "decoder-backlog",
-      firstPacketMs: 0,
-      firstIdrMs: 0,
-      firstOutputMs: null,
-      decodeCount: 1,
-      outputCount: 0,
-      maxQueue: 6,
-    });
-    expect(close).toHaveBeenCalledTimes(1);
-    expect(videoSignal?.aborted).toBe(true);
-    expect(read).toHaveBeenCalledTimes(1);
-    expect(
-      fetchMock.mock.calls.filter(([url]) =>
-        url.startsWith("/api/device-frame"),
-      ),
-    ).toHaveLength(1);
-    expect(update).not.toHaveBeenCalledWith("video");
-    expect(update).toHaveBeenLastCalledWith("disconnected");
-    stop();
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  },
-);
-
 it("records the decoder's real error once, before the fallback's fetch result", async () => {
   vi.useFakeTimers();
   class Decoder {
@@ -172,7 +89,7 @@ it("records the decoder's real error once, before the fallback's fetch result", 
 });
 
 // Real stream semantics, controlled time and decoder callbacks; no device access.
-function streamFixture(connect = true) {
+function streamFixture(connect = true, queued = false) {
   vi.useFakeTimers();
   let input!: ReadableStreamDefaultController<Uint8Array>;
   let output!: (frame: VideoFrame) => void;
@@ -185,11 +102,18 @@ function streamFixture(connect = true) {
   });
   const decode = vi.fn();
   const close = vi.fn();
-  class Decoder {
+  let instance!: Decoder;
+  class Decoder extends EventTarget {
     state = "configured";
     decodeQueueSize = 0;
     constructor(callbacks: { output: (frame: VideoFrame) => void }) {
+      super();
+      instance = this;
       output = callbacks.output;
+      if (queued)
+        decode.mockImplementation(() => {
+          this.decodeQueueSize++;
+        });
     }
     configure() {}
     decode = decode;
@@ -245,6 +169,11 @@ function streamFixture(connect = true) {
     fetchMock,
     config,
     signal: () => signal,
+    decoder: () => instance,
+    drain: () => {
+      instance.decodeQueueSize = 0;
+      instance.dispatchEvent(new Event("dequeue"));
+    },
     output: () => {
       const frame = { displayWidth: 10, displayHeight: 20, close: vi.fn() };
       output(frame as unknown as VideoFrame);
@@ -359,3 +288,92 @@ it("cancels a pending startup read without fallback or later polling", async () 
   expect(f.fetchMock).toHaveBeenCalledTimes(1);
   expect(f.decode).not.toHaveBeenCalled();
 });
+
+it("decodes a cached GOP burst in order, waiting for native capacity without dropping frames", async () => {
+  const f = streamFixture(true, true);
+  const nals = Array.from({ length: 13 }, (_, n) => {
+    const bytes = packet(n === 0 ? 5 : 1);
+    bytes[bytes.length - 1] = n;
+    return bytes;
+  });
+  await vi.advanceTimersByTimeAsync(0);
+  f.input.enqueue(concat([packet(7), packet(8), ...nals]));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(f.decode).toHaveBeenCalledTimes(6);
+  const remove = vi.spyOn(f.decoder(), "removeEventListener");
+  const add = vi.spyOn(f.decoder(), "addEventListener");
+  expect(f.diagnose).not.toHaveBeenCalled();
+  f.drain();
+  f.output();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(f.decode).toHaveBeenCalledTimes(12);
+  f.drain();
+  f.output();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(f.decode.mock.calls.map(([chunk]) => chunk.init)).toEqual(
+    nals.map((nal, n) => ({
+      type: n === 0 ? "key" : "delta",
+      timestamp: n * 33333,
+      data:
+        n === 0
+          ? concat([packet(7).slice(4), packet(8).slice(4), nal.slice(4)])
+          : nal.slice(4),
+    })),
+  );
+  expect(f.update).toHaveBeenLastCalledWith("video");
+  expect(f.diagnose).not.toHaveBeenCalled();
+  expect(remove).toHaveBeenCalledTimes(2);
+  expect(add).toHaveBeenCalledTimes(1);
+  f.stop();
+  await vi.advanceTimersByTimeAsync(3000);
+  expect(f.body.locked).toBe(false);
+  expect(f.close).toHaveBeenCalledOnce();
+  expect(f.fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it.each(["watchdog", "leave-view"])(
+  "releases a decoder capacity wait on %s",
+  async (exit) => {
+    const f = streamFixture(true, true);
+    await vi.advanceTimersByTimeAsync(0);
+    f.input.enqueue(
+      concat([
+        packet(7),
+        packet(8),
+        packet(5),
+        ...Array.from({ length: 8 }, () => packet(1)),
+      ]),
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.decode).toHaveBeenCalledTimes(6);
+    const remove = vi.spyOn(f.decoder(), "removeEventListener");
+    const removeAbort = vi.spyOn(f.signal(), "removeEventListener");
+    if (exit === "leave-view") f.stop();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(f.decode).toHaveBeenCalledTimes(6);
+    expect(f.close).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledExactlyOnceWith(
+      "dequeue",
+      expect.any(Function),
+    );
+    expect(removeAbort).toHaveBeenCalledWith("abort", expect.any(Function));
+    expect(f.signal().aborted).toBe(true);
+    expect(f.body.locked).toBe(false);
+    if (exit === "watchdog") {
+      expect(f.diagnose).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          reason: "first-frame-timeout",
+          decodeCount: 6,
+          outputCount: 0,
+          maxQueue: 6,
+        }),
+      );
+    } else expect(f.diagnose).not.toHaveBeenCalled();
+    f.stop();
+    const count = f.fetchMock.mock.calls.length;
+    f.drain();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(f.decode).toHaveBeenCalledTimes(6);
+    expect(f.fetchMock).toHaveBeenCalledTimes(count);
+  },
+);
