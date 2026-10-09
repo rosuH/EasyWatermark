@@ -2450,14 +2450,14 @@ def _run_android_failure_recovery(spec, setup_state, manifest, evidence, rows, r
         expected = [
             ("open", {"app": "me.rosuh.easywatermark.debug"}),
             ("press", {"target": {"kind": "selector", "selector": 'id="sharedComposeSaveButton"'}}),
-            ("wait", {"selector": 'id="sharedComposeExportPrimary"', "timeoutMs": 15000}),
-            ("press", {"target": {"kind": "selector", "selector": 'id="sharedComposeExportPrimary"'}}),
-            ("wait", {"selector": 'id="sharedComposeExportCounts" label="Processed 1 · Succeeded 0 · Failed 1"', "timeoutMs": 30000}),
-            ("wait", {"absent": 'id="sharedComposeExportPrimary" label="Share"', "timeoutMs": 5000}),
-            ("wait", {"selector": 'id="sharedComposeExportRetryFailed"', "timeoutMs": 15000}),
-            ("press", {"target": {"kind": "selector", "selector": 'id="sharedComposeExportRetryFailed"'}}),
-            ("wait", {"selector": 'id="sharedComposeExportCounts" label="Processed 1 · Succeeded 1 · Failed 0"', "timeoutMs": 90000}),
-            ("wait", {"selector": 'id="sharedComposeExportPrimary" label="Share"', "timeoutMs": 15000}),
+            ("wait", {"selector": 'label="Export to the album"', "timeoutMs": 15000}),
+            ("press", {"target": {"kind": "selector", "selector": 'label="Export to the album"'}}),
+            ("wait", {"selector": 'label="Processed 1 · Succeeded 0 · Failed 1"', "timeoutMs": 30000}),
+            ("wait", {"absent": 'label="Share"', "timeoutMs": 5000}),
+            ("wait", {"selector": 'role="textview" label="Retry failed"', "timeoutMs": 15000}),
+            ("press", {"target": {"kind": "selector", "selector": 'role="textview" label="Retry failed"'}}),
+            ("wait", {"selector": 'label="Processed 1 · Succeeded 1 · Failed 0"', "timeoutMs": 90000}),
+            ("wait", {"selector": 'label="Share"', "timeoutMs": 15000}),
             ("close", {}),
         ]
         if actions != [{"command": command, "input": value} for command, value in expected]:
