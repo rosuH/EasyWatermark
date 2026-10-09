@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import hashlib
 import io
 import json
 import os
@@ -94,6 +95,7 @@ from testmap_steps import (  # noqa: E402
     apply_timing_line,
     apply_event,
     parse_script,
+    parse_steps_json,
     public_steps,
     materialize_evidence_script,
     EvidenceEvents,
@@ -2185,6 +2187,19 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
 
 def ingest_agent_device_result(spec: dict, code: int) -> dict:
     extra = _ingest_agent_device_result(spec, code)
+    if spec.get("edge_id") == "editor-to-template-sheet" and spec.get("agent_platform") == "android":
+        gate = spec.get("template_crud") or {"status": "unverified", "reason": "Missing owned-template CRUD evidence"}
+        extra["template_crud"] = gate
+        if (code != 0 or gate.get("status") != "evidence_complete"
+                or gate.get("cleanup") != "verified_deleted" or gate.get("private_restored") is not True):
+            extra["agent_device_state"] = "uncovered" if code == 0 else "failed"
+            layers = dict(extra.get("layers") or {})
+            layers.update(business="failed", agent_observation="template_crud_unverified",
+                          green_from_process_zero=False, green_from_sdk_completed=False)
+            extra["layers"] = layers
+            for case in extra.get("cases") or []:
+                case.update(status="failed", layers=layers)
+        return extra
     if spec.get("edge_id") == "export-failure-recovery" and spec.get("agent_platform") == "android":
         gate = spec.get("source_recovery") or {"status": "unverified", "reason": "Missing synchronous source repair evidence"}
         extra["export_control"] = gate
@@ -2385,6 +2400,7 @@ def _run_batched_steps(
     should_stop,
     platform: str,
     env: dict,
+    deadline_s: float = 420,
 ) -> int:
     """One agent-device batch per step so the runner sees start and stop."""
     for row in rows:
@@ -2419,7 +2435,7 @@ def _run_batched_steps(
             on_proc(proc)
         buf = io.StringIO()
         try:
-            code = _tee_child(proc, _DupWrite(logf, buf), tee_stdout, deadline_s=420)
+            code = _tee_child(proc, _DupWrite(logf, buf), tee_stdout, deadline_s=deadline_s)
         finally:
             if on_proc:
                 on_proc(None)
@@ -2502,6 +2518,348 @@ def _run_android_failure_recovery(spec, setup_state, manifest, evidence, rows, r
         logf.write(f"Android failure recovery refused: {exc}\n")
         return 130 if isinstance(exc, InterruptedError) else 2
 
+
+
+_TEMPLATE_SOURCE_SHA256 = "72c3b728aaee98eb8263df4c3362473fb5191343194e633f2144958b8f2c73d4"
+
+
+def _template_batch_response(output: str, command: str) -> dict:
+    # One known batch, including the runner's step header; never parse a log tail.
+    candidates = []
+    for match in re.finditer(r"(?m)^\{", output):
+        try:
+            value, _ = json.JSONDecoder().raw_decode(output[match.start():])
+            if isinstance(value, dict) and "success" in value:
+                candidates.append(value)
+        except ValueError:
+            continue
+    if len(candidates) != 1 or candidates[0].get("success") is not True:
+        raise ValueError("Template action lacks one successful SDK response")
+    batch = candidates[0].get("data", {})
+    if not isinstance(batch, dict) or any(type(batch.get(key)) is not int or batch[key] != 1 for key in ("total", "executed")):
+        raise ValueError("Template batch did not execute exactly one action")
+    results = batch.get("results", [])
+    if (not isinstance(results, list) or len(results) != 1 or not isinstance(results[0], dict)
+            or results[0].get("command") != command or results[0].get("ok") is not True
+            or type(results[0].get("step")) is not int or results[0]["step"] != 1
+            or not isinstance(results[0].get("data"), dict)):
+        raise ValueError("Template SDK result does not match its action")
+    return results[0]["data"]
+
+
+def _template_snapshot(data: dict) -> dict:
+    if (data.get("appBundleId") != "me.rosuh.easywatermark.debug"
+            or data.get("truncated") is not False or data.get("visibility", {}).get("partial") is not False
+            or data.get("snapshotQuality", {}).get("state") != "healthy"
+            or not isinstance(data.get("nodes"), list)):
+        raise ValueError("Template snapshot is incomplete or belongs to another app")
+    return data
+
+
+def _template_tag(node: dict) -> str:
+    return str(node.get("identifier") or "").removeprefix("me.rosuh.easywatermark.debug:id/")
+
+
+def _template_node(data: dict, tag: str) -> dict:
+    nodes = [node for node in data["nodes"] if _template_tag(node) == tag]
+    if len(nodes) != 1:
+        raise ValueError("Template identifier is absent or ambiguous: " + tag)
+    return nodes[0]
+
+
+def _template_descendants(data: dict, root: dict) -> list[dict]:
+    parents = {node["index"]: node.get("parentIndex") for node in data["nodes"]}
+    if len(parents) != len(data["nodes"]):
+        raise ValueError("Ambiguous template tree indices")
+    def inside(node):
+        index, seen = node["index"], set()
+        while index in parents and index not in seen:
+            if index == root["index"]:
+                return True
+            seen.add(index)
+            index = parents[index]
+        return False
+    return [node for node in data["nodes"] if inside(node)]
+
+
+def _template_rows(data: dict) -> list[dict]:
+    body = _template_node(data, "templateListSheet")
+    _template_node(data, "templateAddButton")
+    nodes = _template_descendants(data, body)
+    rows = sorted((node for node in nodes if re.fullmatch(r"templateRow-[1-9][0-9]*", _template_tag(node))),
+                  key=lambda node: node["rect"]["y"])
+    if len({_template_tag(node) for node in rows}) != len(rows):
+        raise ValueError("Duplicate template row IDs")
+    if rows:
+        viewport = next((node for node in nodes if node["index"] == rows[0].get("parentIndex")), {})
+        top = viewport.get("rect", {}).get("y")
+        if top is None or abs(rows[0]["rect"]["y"] - top) > 2 or rows[0].get("hittable") is not True:
+            raise ValueError("Template list is not observably at its first row")
+    elif not any(node.get("label") == "Look pretty empty" for node in nodes):
+        raise ValueError("No rows without the actual empty-list state")
+    return rows
+
+
+def _template_bind(data: dict, nonce: str, row_id: str | None = None) -> str:
+    rows = _template_rows(data)
+    matches = [node for node in rows if node.get("label") == nonce]
+    if len(matches) != 1 or matches[0] is not rows[0]:
+        raise ValueError("Owned nonce must bind uniquely to the first template row")
+    found = _template_tag(matches[0]).removeprefix("templateRow-")
+    if row_id is not None and found != row_id:
+        raise ValueError("Owned template row ID changed")
+    if _template_node(data, "templateDeleteButton-" + found).get("hittable") is not True:
+        raise ValueError("Owned template Delete is not actionable")
+    return found
+
+
+def _template_prefix(rows: list[dict]) -> list[tuple[str, str]]:
+    return [(_template_tag(node), hashlib.sha256(str(node.get("label", "")).encode()).hexdigest())
+            for node in rows]
+
+
+def _template_absent(data: dict, nonce: str, row_id: str, baseline: list) -> None:
+    rows = _template_rows(data)
+    if any(node.get("label") == nonce or _template_tag(node) == "templateRow-" + row_id for node in rows):
+        raise ValueError("Owned template remains after Delete")
+    current = _template_prefix(rows)
+    # Fresh process/list, creation_date DESC, and the owned row was first. This is
+    # a checked visible-prefix invariant, NOT a claim to have scanned the database.
+    if bool(current) != bool(baseline) or current != baseline[:len(current)]:
+        raise ValueError("Template prefix changed or does not prove owned-row absence")
+
+
+def _run_android_template_crud(spec, state, source, logf, *, tee_stdout=False,
+                               on_proc=None, on_spec=None, on_steps=None, on_step_event=None, should_stop=None) -> int:
+    from testmap_setup import load_setup_backup
+    proof = {"status": "unverified", "private_restored": False, "cleanup": "not_needed",
+             "phases": [], "method": "serial-sdk-batch", "absence_basis": "fresh-process sorted visible prefix; not a database scan"}
+    spec["template_crud"] = proof
+    row_id, baseline, may_exist, removed = None, None, False, False
+    root = Path(spec["step_evidence_root"])
+    identity = spec.get("step_evidence_task") or {}
+    folder = root / "scripts" / (_shot_name(identity, "android", 0).removesuffix(".png") + "-crud")
+    folder.mkdir(parents=True, exist_ok=False)
+    record = folder / "template-crud.json"
+    spec["template_crud_manifest"] = str(record)
+    proof["manifest"] = str(record)
+    deadline = time.monotonic() + 240
+    source_hash = ""
+    cmd = list(spec["cmd"])
+    env = {**os.environ, **(spec.get("env") or {})}
+    code = 2
+
+    def save():
+        record.write_text(json.dumps(proof, indent=2) + "\n")
+
+    def phase(name, actions, offset, *, cleanup=False, precondition=False, inspect=None, source_steps=None):
+        if hashlib.sha256(source.read_bytes()).hexdigest() != source_hash:
+            raise ValueError("Template canonical source changed during execution")
+        inp, derived = folder / (name + ".input.json"), folder / (name + ".json")
+        with inp.open("x") as stream:
+            json.dump(actions, stream, indent=2)
+            stream.write("\n")
+        names = {i: _shot_name(identity, "android", offset + i) if not (cleanup or precondition)
+                 else folder.name + "-" + name + "-" + str(i) + ".png" for i in range(1, len(actions) + 1)}
+        manifest = materialize_evidence_script(inp, root, derived, names)
+        manifest.update(canonical_source=str(source), canonical_source_sha256=source_hash, phase=name,
+                        purpose="owned-cleanup" if cleanup else "entry-observation" if precondition else "business")
+        for item in manifest["mapping"]:
+            item["phase_step"] = item["step"]
+            item["source_step"] = (source_steps or list(range(offset + 1, offset + len(actions) + 1)))[item["step"] - 1]
+            if not (cleanup or precondition):
+                item["step"] += offset
+        derived.with_suffix(".mapping.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        proof.setdefault("cleanup_phases" if cleanup else "preconditions" if precondition else "phases", []).append(manifest)
+        save()
+        events = []
+        def emit(event):
+            events.append(event)
+            if not (cleanup or precondition) and on_step_event:
+                on_step_event("android", event)
+        evidence = EvidenceEvents(manifest, root, emit)
+        captured = {}
+        try:
+            for row in parse_script(derived, "android"):
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("Template transaction deadline reached")
+                if not cleanup and should_stop and should_stop():
+                    raise InterruptedError("Stopped during template CRUD")
+                if any(hashlib.sha256(path.read_bytes()).hexdigest() != digest for path, digest in (
+                        (source, source_hash), (inp, manifest["source_sha256"]), (derived, manifest["script_sha256"]))):
+                    raise ValueError("Template source/derived input changed")
+                item = manifest["mapping"][row["n"] - 1]
+                if not (cleanup or precondition) and item["kind"] == "action" and item["source_step"] == 14:
+                    nonlocal may_exist
+                    may_exist = True
+                    proof["cleanup"] = "pending"
+                    save()  # Before the real Add confirmation, including lost responses.
+                out = folder / (name + "-sdk-" + str(row["n"]) + ".log")
+                pending_stops = []
+                def relay(_platform, event):
+                    if event.get("type") == "replay_action_stop":
+                        pending_stops.append(event)
+                    else:
+                        evidence(event)
+                with out.open("x") as stream:
+                    result = _run_batched_steps(cmd, [row], _DupWrite(logf, stream), tee_stdout, on_proc,
+                        relay,
+                        None if cleanup else should_stop, "android", env,
+                        deadline_s=min(20, max(.1, deadline - time.monotonic())))
+                if result:
+                    evidence({"type": "replay_action_stop", "step": row["n"], "command": row["command"], "ok": False})
+                    raise InterruptedError("Template action stopped") if result == 130 else ValueError("Template SDK action failed: " + str(result))
+                try:
+                    if out.stat().st_size > 8 * 1024 * 1024:
+                        raise ValueError("Template SDK response exceeds its bound")
+                    data = _template_batch_response(out.read_text(), row["command"])
+                except (ValueError, OSError):
+                    evidence({"type": "replay_action_stop", "step": row["n"], "command": row["command"], "ok": False})
+                    raise
+                for event in pending_stops:
+                    evidence(event)
+                if row["command"] == "snapshot":
+                    captured[item["source_step"]] = _template_snapshot(data)
+                    proof.setdefault("bindings", []).append({"step": item["step"], "purpose": manifest["purpose"],
+                        "source_step": item["source_step"],
+                        "snapshot": str(out), "sha256": hashlib.sha256(out.read_bytes()).hexdigest()})
+                if item["kind"] == "screenshot":
+                    _verify_cancel_png(Path(item["path"]))
+                    if inspect and item["source_step"] in captured:
+                        inspect(item["source_step"], captured[item["source_step"]])
+            return captured
+        finally:
+            evidence.finish()
+            (folder / (name + ".events.json")).write_text(json.dumps(events, indent=2) + "\n")
+            save()
+
+    try:
+        expected = REPO_ROOT / "docs/testing/agent-device/scripts/editor-to-template-sheet@android.json"
+        if source.resolve() != expected.resolve() or source.is_symlink():
+            raise ValueError("Template case source is not its canonical JSON")
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        if source_hash != _TEMPLATE_SOURCE_SHA256:
+            raise ValueError("Template source no longer matches the bounded CRUD contract")
+        if not state or state.get("setup") != "editor" or state.get("platform") != "android":
+            raise ValueError("Template CRUD needs its real editor setup")
+        backup = load_setup_backup(Path(state["journal"]))
+        if (backup.get("phase") != "active" or backup.get("marker") != state.get("marker")
+                or backup.get("serial") != spec.get("serial")
+                or _cmd_flag(cmd, "--serial") != spec.get("serial")
+                or backup.get("source_id") != state.get("source_id")
+                or json.loads(Path(state["lock"]).read_text()).get("journal") != state["journal"]
+                or not re.fullmatch(r"[A-Za-z0-9]+-[0-9a-f]{32}", str(state.get("marker", "")))
+                or not re.fullmatch(r"[1-9][0-9]*", str(state.get("source_id", "")))):
+            raise ValueError("Template setup identity/lease is not current")
+        nonce = "EWM " + state["marker"]
+        uri = "content://media/external_primary/images/media/" + str(state["source_id"])
+        raw = source.read_text().replace("__TESTMAP_NONCE__", nonce).replace("__TESTMAP_FIXTURE_URI__", uri)
+        actions = json.loads(raw)
+        proof.update(source=str(source), source_sha256=source_hash, nonce=nonce, fixture_uri=uri)
+        save()
+        if on_spec:
+            on_spec(spec)
+
+        # Observe the real Content layout before freezing either business phase.
+        # This is a finite entry choice, not a replay DSL or a display override.
+        observed = phase("entry-observation", actions[:3] + [actions[9]], 0,
+                         precondition=True, source_steps=[1, 2, 3, 0])[0]
+        icons = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextTemplateIcon" and n.get("hittable") is True]
+        compact = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextContent" and n.get("hittable") is True]
+        if len(icons) == 1 and not compact:
+            _template_node(observed, "watermarkTextContentInline")
+            _template_node(observed, "watermarkTextEditField")
+            entry, omitted = "inline", {4, 5, 20, 21, 32, 45, 46}
+            actions[29] = {"command": "wait", "input": {"selector": 'id="watermarkTextEditField" visible', "timeoutMs": 10000}}
+        elif len(compact) == 1 and not icons:
+            entry, omitted = "compact", set()
+        else:
+            raise ValueError("Template editor entry is absent or ambiguous")
+        proof.update(entry=entry, omitted_source_steps=sorted(omitted))
+        def selected(start, end):
+            indices = [n for n in range(start, end + 1) if n not in omitted]
+            return [actions[n - 1] for n in indices], indices
+        if on_steps:
+            on_steps("android", parse_steps_json(json.dumps(selected(1, 52)[0]), "android"))
+
+        def inspect_first(n, data):
+            nonlocal baseline, row_id
+            if n == 10:
+                rows = _template_rows(data)
+                if any(node.get("label") == nonce for node in rows):
+                    raise ValueError("Template nonce already exists")
+                baseline = _template_prefix(rows)
+            if n == 26:
+                row_id = _template_bind(data, nonce)
+                # Newest-first must preserve the visible original prefix.
+                tail = _template_prefix(_template_rows(data)[1:])
+                if tail != baseline[:len(tail)]:
+                    raise ValueError("Template prefix changed concurrently")
+                proof["row_id"] = row_id
+                proof["persisted_after_relaunch"] = True
+        first, first_indices = selected(1, 26)
+        phase("add-persist", first, 0, inspect=inspect_first, source_steps=first_indices)
+        if row_id is None or baseline is None:
+            raise ValueError("Template phase one did not establish ownership")
+        second, second_indices = selected(27, 52)
+        resolved = json.loads(json.dumps(second).replace("__TESTMAP_ROW_ID__", row_id))
+
+        def inspect_second(n, data):
+            nonlocal removed
+            if n == 31:
+                if entry == "inline":
+                    field = _template_node(data, "watermarkTextEditField")
+                    values = {field.get("value") or field.get("text") or field.get("label")}
+                else:
+                    values = {node.get("label") for node in _template_descendants(data, _template_node(data, "watermarkTextContent"))
+                              if node.get("type") == "android.widget.TextView" and node.get("label")}
+                if values != {nonce}:
+                    raise ValueError("Editor content does not exactly match the applied template")
+                proof["applied_exactly"] = True
+            elif n == 37:
+                _template_bind(data, nonce, row_id)
+                tail = _template_prefix(_template_rows(data)[1:])
+                if tail != baseline[:len(tail)]:
+                    raise ValueError("Template prefix changed before Delete")
+            elif n == 51:
+                _template_absent(data, nonce, row_id, baseline)
+                removed = True
+                proof["cleanup"] = "verified_deleted"
+        phase("use-delete-persist", resolved, len(first), inspect=inspect_second, source_steps=second_indices)
+        proof["status"] = "evidence_complete"
+        code = 0
+    except (ValueError, OSError, KeyError, TypeError, IndexError, subprocess.TimeoutExpired) as exc:
+        proof["reason"] = str(exc)
+        code = 130 if isinstance(exc, InterruptedError) else 2
+    finally:
+        if may_exist and not removed:
+            # Stop blocks business actions. Only finite, identity-checked compensation remains.
+            deadline = time.monotonic() + 60
+            try:
+                locate, locate_indices = selected(1, 10)
+                found = phase("cleanup-locate", locate, 0, cleanup=True, source_steps=locate_indices)[10]
+                matches = [node for node in _template_rows(found) if node.get("label") == nonce]
+                if not matches:
+                    if row_id is None:
+                        raise ValueError("Cannot establish cleanup absence without an owned row binding")
+                    _template_absent(found, nonce, row_id, baseline)
+                else:
+                    row_id = _template_bind(found, nonce, row_id)
+                    proof["row_id"] = row_id
+                    save()
+                    delete, delete_indices = selected(38, 51)
+                    cleanup_actions = json.loads(json.dumps(delete).replace("__TESTMAP_ROW_ID__", row_id))
+                    final = phase("cleanup-delete", cleanup_actions, 0, cleanup=True, source_steps=delete_indices)[51]
+                    _template_absent(final, nonce, row_id, baseline)
+                proof["cleanup"] = "verified_deleted"
+            except (ValueError, OSError, KeyError, TypeError, IndexError, subprocess.TimeoutExpired) as exc:
+                proof.update(cleanup="failed", cleanup_reason=str(exc))
+                if code != 130:
+                    code = 2
+        if should_stop and should_stop():
+            code = 130
+        save()
+    return code
 
 def _close_named_session(session: str, logf=None) -> None:
     """Close one agent-device session. Never pass --shutdown."""
@@ -2732,6 +3090,26 @@ def run_task(
             on_steps(watch_plat, rows)
     evidence_events = None
     evidence_manifest = None
+    if spec.get("edge_id") == "editor-to-template-sheet" and watch_plat == "android":
+        try:
+            if not script or script.suffix != ".json" or not spec.get("step_evidence_root"):
+                raise ValueError("Android template CRUD requires its JSON source and step evidence")
+            code = _run_android_template_crud(spec, setup_state, script, logf, tee_stdout=tee_stdout,
+                on_proc=on_proc, on_spec=on_spec, on_steps=on_steps, on_step_event=on_step_event, should_stop=should_stop)
+        finally:
+            try:
+                _restore_agent_setup(setup_state, logf)
+                if spec.get("template_crud"):
+                    spec["template_crud"]["private_restored"] = True
+            finally:
+                try:
+                    if spec.get("template_crud_manifest"):
+                        Path(spec["template_crud_manifest"]).write_text(json.dumps(spec["template_crud"], indent=2) + "\n")
+                finally:
+                    release_agent_session(cmd, logf)
+        extra = ingest_agent_device_result(spec, code)
+        _publish_agent_device_live(spec)
+        return code, extra.get("cases") or [], extra
     if rows and script and script.suffix in {".ad", ".json"} and spec.get("step_evidence_root"):
         root = Path(spec["step_evidence_root"])
         identity = spec.get("step_evidence_task") or {}
@@ -3381,6 +3759,8 @@ class RunManager:
                     task_ref["device"] = updated["device"]
                 if updated.get("step_evidence_manifest"):
                     task_ref["step_evidence_manifest"] = updated["step_evidence_manifest"]
+                if updated.get("template_crud_manifest"):
+                    task_ref["template_crud_manifest"] = updated["template_crud_manifest"]
                 self._remember_watch(rec)
 
         code, cases, extra = run_task(
@@ -3407,6 +3787,8 @@ class RunManager:
             task["layers"] = extra.get("layers")
             if extra.get("export_control"):
                 task["export_control"] = extra["export_control"]
+            if extra.get("template_crud"):
+                task["template_crud"] = extra["template_crud"]
             task["evidence_dir"] = extra.get("evidence_dir")
             task["recordings"] = extra.get("recordings")
             task["independent_review"] = extra.get("independent_review")
@@ -3681,6 +4063,8 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
                     active.devices[str(task_ref.get("platform") or "")] = dev
             if updated.get("step_evidence_manifest"):
                 task_ref["step_evidence_manifest"] = updated["step_evidence_manifest"]
+            if updated.get("template_crud_manifest"):
+                task_ref["template_crud_manifest"] = updated["template_crud_manifest"]
             if updated.get("agent_device_output"):
                 task_ref["agent_device_output"] = updated["agent_device_output"]
 
@@ -3701,6 +4085,8 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
         task["layers"] = extra.get("layers")
         if extra.get("export_control"):
             task["export_control"] = extra["export_control"]
+        if extra.get("template_crud"):
+            task["template_crud"] = extra["template_crud"]
         task["evidence_dir"] = extra.get("evidence_dir")
         task["recordings"] = extra.get("recordings")
         task["independent_review"] = extra.get("independent_review")

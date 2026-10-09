@@ -153,10 +153,10 @@
         "ios": true
       },
       "script": {
-        "android": "docs/testing/agent-device/scripts/editor-to-template-sheet@android.ad",
+        "android": "docs/testing/agent-device/scripts/editor-to-template-sheet@android.json",
         "ios": "docs/testing/agent-device/scripts/editor-to-template-sheet@ios.ad"
       },
-      "honesty": "Create/apply use a unique env TEMPLATE string. Multiple Delete buttons share a label, so the script does not press Delete; only this-run content is asserted. Do not assume an empty template list."
+      "honesty": "Android uses a setup-owned nonce and two immutable serial SDK batch phases: real Add, process relaunch with the same owned fixture URI, unique content-to-row-ID binding, real Use with exact editor text, fresh same-ID/content verification, real Delete, and another process relaunch. Deletion uses a checked creation_date-descending visible-prefix invariant, not a full database scan; ambiguity, incomplete snapshots or prefix changes fail closed. Source/phase/derived hashes, global step mappings and awaited PNGs remain distinct; batch mode has no replay planDigest. Failure/Stop compensates only the owned nonce/ID within a finite budget; failed cleanup affects the result, and private restoration/session close always run. iOS retains its existing script and has no new CRUD acceptance claim. SDK zero is not product acceptance or Human Confirm."
     },
     {
       "id": "editor-to-text-edit-sheet",
