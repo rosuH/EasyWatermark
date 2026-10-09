@@ -132,6 +132,7 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_po
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_cancelled
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
@@ -1571,9 +1572,17 @@ fun launchDesktopWindow() = application {
                         .coerceAtLeast(exportJobState.successCount + exportJobState.failureCount),
                     totalCount = exportJobState.totalCount.takeIf { it > 0 } ?: exportTotalFixed,
                 )
+                val shareFile = if (exportItems.isEmpty()) lastSavedFile else {
+                    exportItems.asReversed().firstNotNullOfOrNull { info ->
+                        if (info.jobState is me.rosuh.easywatermark.data.model.JobState.Success) {
+                            (info.result?.data as? MediaRef)?.value?.let(::File)
+                        } else null
+                    }
+                }
+                val canShareOutputs = recovery.canShare && shareFile != null
                 val primaryLabel = when {
                     recovery.isExporting -> stringResource(Res.string.dialog_save_exporting)
-                    recovery.isFinished -> stringResource(Res.string.share)
+                    canShareOutputs -> stringResource(Res.string.share)
                     // Desktop is folder export, not phone album.
                     else -> stringResource(Res.string.desktop_export)
                 }
@@ -1583,7 +1592,9 @@ fun launchDesktopWindow() = application {
                         recovery.processedCount,
                         recovery.totalCount.coerceAtLeast(1),
                     )
-                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                    recovery.isCancelled ->
+                        stringResource(Res.string.dialog_save_error_cancelled)
+                    recovery.isAllSuccess ->
                         stringResource(
                             Res.string.dialog_save_export_done_success,
                             recovery.successCount,
@@ -1646,8 +1657,10 @@ fun launchDesktopWindow() = application {
                 } else {
                     ""
                 }
-                // No Saved-to-destination paint; keep generic error as a11y residual only.
+                // Show cancellation or failure without destination prose.
                 val outcomeDetailLine = when {
+                    recovery.isCancelled ->
+                        stringResource(Res.string.dialog_save_error_cancelled)
                     recovery.isAllFailed ->
                         stringResource(Res.string.dialog_save_error_generic)
                     else -> ""
@@ -1753,9 +1766,9 @@ fun launchDesktopWindow() = application {
                         }
                     },
                     onExportClick = {
-                        if (exportJobState.isFinished) {
+                        if (canShareOutputs) {
                             // E09 share substitute: reveal folder of last real save (never preview).
-                            val file = lastSavedFile
+                            val file = shareFile
                             if (file != null && Desktop.isDesktopSupported()) {
                                 try {
                                     Desktop.getDesktop().open(file.parentFile ?: file)

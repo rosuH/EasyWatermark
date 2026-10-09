@@ -88,6 +88,7 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_po
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_cancelled
 import me.rosuh.easywatermark.shared.generated.resources.share
 import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_allow_all_photos
 import me.rosuh.easywatermark.shared.generated.resources.tips_ios_library_read_upsell_continue
@@ -1574,8 +1575,12 @@ class IosProductRootHost(
                         .coerceAtLeast(exportJob.successCount + exportJob.failureCount),
                     totalCount = exportJob.totalCount.takeIf { it > 0 } ?: exportTotal,
                 )
+                val sharePath = exportItems.asReversed().firstNotNullOfOrNull { info ->
+                    if (info.jobState is JobState.Success) (info.result?.data as? MediaRef)?.value else null
+                }
+                val canShareOutputs = recovery.canShare && sharePath != null
                 val primaryLabel = when {
-                    finished -> stringResource(Res.string.share)
+                    canShareOutputs -> stringResource(Res.string.share)
                     exporting -> stringResource(Res.string.dialog_save_exporting)
                     else -> stringResource(Res.string.dialog_export_to_gallery)
                 }
@@ -1585,7 +1590,9 @@ class IosProductRootHost(
                         recovery.processedCount,
                         recovery.totalCount.coerceAtLeast(1),
                     )
-                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                    recovery.isCancelled ->
+                        stringResource(Res.string.dialog_save_error_cancelled)
+                    recovery.isAllSuccess ->
                         stringResource(
                             Res.string.dialog_save_export_done_success,
                             recovery.successCount,
@@ -1645,8 +1652,10 @@ class IosProductRootHost(
                 } else {
                     ""
                 }
-                // No Saved-to-destination paint; keep generic error as a11y residual only.
+                // Show cancellation or failure without destination prose.
                 val outcomeDetailLine = when {
+                    recovery.isCancelled ->
+                        stringResource(Res.string.dialog_save_error_cancelled)
                     recovery.isAllFailed ->
                         stringResource(Res.string.dialog_save_error_generic)
                     else -> ""
@@ -1709,10 +1718,7 @@ class IosProductRootHost(
                     selectedFormat = outputFormat,
                     quality = outputQuality,
                     primaryActionLabel = primaryLabel,
-                    primaryActionEnabled = when {
-                        finished -> true
-                        else -> !exporting && !isBusy
-                    },
+                    primaryActionEnabled = !exporting && (canShareOutputs || !isBusy),
                     // iOS has no in-app gallery; after save, primary becomes Share (E09/E10).
                     showOpenGallery = false,
                     exportListSubtitle = resultSummaryText,
@@ -1752,12 +1758,8 @@ class IosProductRootHost(
                         }
                     },
                     onExportClick = {
-                        if (finished) {
-                            val path = outputPath
-                                ?: exportItems.firstNotNullOfOrNull { info ->
-                                    (info.result?.data as? MediaRef)?.value
-                                }
-                            if (path != null) onShare(path)
+                        if (canShareOutputs) {
+                            sharePath?.let(onShare)
                         } else {
                             runIosExportBatch()
                         }

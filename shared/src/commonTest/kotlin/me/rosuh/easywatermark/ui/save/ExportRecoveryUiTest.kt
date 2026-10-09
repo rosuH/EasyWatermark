@@ -12,6 +12,44 @@ import kotlin.test.assertTrue
  */
 class ExportRecoveryUiTest {
 
+    @Test
+    fun cancelledSingleItem_isVisibleRetryableAndCannotShare_evenWhenAllItemsProcessed() {
+        val cancelled = ExportRecoveryUi.fromJob(false, true, 0, 0, 1, 1)
+        assertTrue(cancelled.isCancelled)
+        assertTrue(cancelled.showRetryFailed)
+        assertFalse(cancelled.canShare)
+        assertFalse(cancelled.isAllSuccess)
+        assertEquals("Export cancelled (0 of 1 saved)", ExportRecoveryUi.summaryLine(cancelled))
+    }
+
+    @Test
+    fun cancelledBatch_keepsPriorSuccessShareableAndRemainingItemsRetryable() {
+        val cancelled = ExportRecoveryUi.fromJob(false, true, 1, 1, 3, 4)
+        assertTrue(cancelled.isCancelled)
+        assertTrue(cancelled.isPartial)
+        assertTrue(cancelled.canShare)
+        assertTrue(cancelled.showRetryFailed)
+        assertFalse(cancelled.isAllSuccess)
+        assertEquals("Export cancelled (1 of 4 saved)", ExportRecoveryUi.summaryLine(cancelled))
+    }
+
+    @Test
+    fun cancelBeforeFirstItemAndEmptyFinishedJobRemainDistinct() {
+        val cancelled = ExportRecoveryUi.fromJob(false, true, 0, 0, 0, 2)
+        assertTrue(cancelled.isCancelled)
+        assertTrue(cancelled.showRetryFailed)
+        assertFalse(cancelled.canShare)
+        val empty = ExportRecoveryUi.fromJob(false, true, 0, 0, 0, 0)
+        assertFalse(empty.isCancelled)
+        assertFalse(empty.showRetryFailed)
+        assertFalse(empty.canShare)
+        val failed = ExportRecoveryUi.fromJob(false, true, 0, 2, 2, 2)
+        assertFalse(failed.isCancelled)
+        assertFalse(failed.canShare)
+        assertTrue(failed.showRetryFailed)
+        assertFalse(ExportRecoveryUi.fromJob(true, false, 1, 0, 1, 2).canShare)
+    }
+
     /** U1 — Cancel control only while exporting. */
     @Test
     fun u1_showCancel_onlyWhileExporting() {
