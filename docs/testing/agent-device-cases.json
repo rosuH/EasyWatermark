@@ -663,7 +663,7 @@
         "android": "docs/testing/agent-device/scripts/export-cancel@android.ad",
         "ios": "docs/testing/agent-device/scripts/export-cancel@ios.ad"
       },
-      "honesty": "Android uses a debug-only, one-run MediaStore fixture hold with a bounded watchdog and private control/event backup restoration. Evidence requires a real Cancel press, cancellation and no-Share assertions, and entered/cancelled/cleared events without watchdog; SDK process zero is not a product pass. iOS has no controlled slow-export precondition and remains uncovered."
+      "honesty": "Android uses a debug-only, one-run MediaStore fixture hold with a bounded watchdog and private control/event backup restoration. Evidence requires a real Cancel press, cancellation and no-Share assertions, and entered/cancelled/cleared events without watchdog. In the same session, Retry failed must then export the same fixture through the normal port, with Succeeded 1 / Failed 0, Share and View in gallery visible; the earlier no-Share cancellation assertions stay mandatory. SDK process zero is not a product pass. iOS has no controlled slow-export precondition and remains uncovered."
     },
     {
       "id": "editor-style-then-export",
