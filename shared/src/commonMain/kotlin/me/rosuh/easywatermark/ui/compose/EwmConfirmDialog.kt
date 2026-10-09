@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.window.DialogProperties
+import me.rosuh.easywatermark.ui.ewmTestTagsAsResourceId
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 
 /**
@@ -32,7 +33,7 @@ fun EwmConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        modifier = modifier.ewmTestTagsAsResourceId(),
         properties = properties,
         shape = EwmTheme.panel.dialogShape,
         containerColor = EwmTheme.panel.containerColor,

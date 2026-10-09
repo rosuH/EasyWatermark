@@ -7,6 +7,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import me.rosuh.easywatermark.ui.ewmTestTagsAsResourceId
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 
 /**
@@ -26,7 +27,7 @@ fun EwmModalBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        modifier = modifier.ewmTestTagsAsResourceId(),
         sheetState = sheetState,
         shape = EwmTheme.panel.shape,
         containerColor = EwmTheme.panel.containerColor,

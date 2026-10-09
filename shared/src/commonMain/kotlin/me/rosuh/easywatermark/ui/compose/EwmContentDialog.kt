@@ -32,6 +32,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import me.rosuh.easywatermark.ui.ewmTestTagsAsResourceId
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
@@ -90,7 +91,7 @@ fun EwmContentDialog(
         properties = properties,
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().ewmTestTagsAsResourceId(),
             contentAlignment = Alignment.Center,
         ) {
             AnimatedVisibility(
