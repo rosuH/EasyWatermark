@@ -74,6 +74,7 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_filename_po
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_counts
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_where
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_cancelled
 import me.rosuh.easywatermark.shared.generated.resources.dialog_title_exist_confirm
 import me.rosuh.easywatermark.shared.generated.resources.recovery_mode_closed
 import me.rosuh.easywatermark.shared.generated.resources.share
@@ -404,7 +405,9 @@ class MainActivity : ComponentActivity() {
                             // Export port returns MediaRef; convert at the Android Intent edge.
                             fun currentOutputUris(): List<Uri> =
                                 viewModel.launchScreenUiStateFlow.value.selectedImageList.mapNotNull { image ->
-                                    uriFromExportResultData(image.result?.data)
+                                    if (image.jobState is me.rosuh.easywatermark.data.model.JobState.Success) {
+                                        uriFromExportResultData(image.result?.data)
+                                    } else null
                                 }
                             val shareExports: () -> Unit = {
                                 val outputUris = currentOutputUris()
@@ -741,7 +744,9 @@ class MainActivity : ComponentActivity() {
                                         recovery.processedCount,
                                         recovery.totalCount.coerceAtLeast(1),
                                     )
-                                    recovery.isFinished && recovery.failureCount == 0 && recovery.successCount > 0 ->
+                                    recovery.isCancelled ->
+                                        cmpStringResource(Res.string.dialog_save_error_cancelled)
+                                    recovery.isAllSuccess ->
                                         cmpStringResource(
                                             Res.string.dialog_save_export_done_success,
                                             recovery.successCount,
@@ -786,7 +791,7 @@ class MainActivity : ComponentActivity() {
                                     Res.string.dialog_save_filename_policy_android,
                                 )
                                 // Icon counts: structured ints (total/success/fail). No Processed prose.
-                                // outcomeDetailLine: a11y-only residual for all-failed; never Saved-to-destination.
+                                // Visible cancellation/failure, without Saved-to-destination prose.
                                 val exportCountTotal =
                                     if (recovery.isExporting || recovery.isFinished) {
                                         recovery.totalCount.coerceAtLeast(exportImages.size.coerceAtLeast(1))
@@ -808,6 +813,8 @@ class MainActivity : ComponentActivity() {
                                     ""
                                 }
                                 val outcomeDetailLine = when {
+                                    recovery.isCancelled ->
+                                        cmpStringResource(Res.string.dialog_save_error_cancelled)
                                     recovery.isAllFailed ->
                                         cmpStringResource(Res.string.dialog_save_error_generic)
                                     else -> ""
@@ -820,6 +827,7 @@ class MainActivity : ComponentActivity() {
                                         (if (saveExportState.isSaving) 1 else 0) +
                                         (if (saveExportState.isFinished) 2 else 0)
                                 val exportWidthDp = LocalConfiguration.current.screenWidthDp
+                                val canShareOutputs = recovery.canShare && currentOutputUris().isNotEmpty()
                                 SaveExportSheetAndroid(
                                     imageCount = exportImages.size,
                                     images = exportImages,
@@ -839,7 +847,7 @@ class MainActivity : ComponentActivity() {
                                     exportFailureCount = exportCountFailure,
                                     primaryActionLabel = when {
                                         saveExportState.isSaving -> cmpStringResource(Res.string.dialog_save_exporting)
-                                        saveExportState.isFinished -> cmpStringResource(Res.string.share)
+                                        canShareOutputs -> cmpStringResource(Res.string.share)
                                         else -> cmpStringResource(Res.string.dialog_export_to_gallery)
                                     },
                                     primaryActionEnabled = !saveExportState.isSaving,
@@ -868,7 +876,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     },
                                     onExportClick = {
-                                        if (saveExportState.isFinished) {
+                                        if (canShareOutputs) {
                                             shareExports()
                                         } else {
                                             if (exportImages.isEmpty()) {
