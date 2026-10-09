@@ -288,7 +288,7 @@ private object IosAppServicesHolder {
         val session = WatermarkSessionViewModel(
             waterMarkRepo = waterMarkRepo,
             userConfigRepo = userConfigRepo,
-            exportPipeline = IosExportPipelinePort(),
+            exportPipeline = withIosTestmapExportControl(IosExportPipelinePort()),
         )
         IosAppServices(
             waterMarkRepo = waterMarkRepo,

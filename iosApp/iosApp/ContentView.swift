@@ -45,6 +45,9 @@ final class IosProductRootBox: ObservableObject {
             try? await Task.sleep(nanoseconds: 20_000_000)
         }
         guard let host else { return }
+#if DEBUG
+        if await applyTestmapExportFixtureIfPresent(host: host, scene: scene) { return }
+#endif
         if host.isInEditor() {
             _ = host.applyStoreCaptureScene(scene: scene)
             return
@@ -78,6 +81,47 @@ final class IosProductRootBox: ObservableObject {
             NSLog("store-seed failed: %@", error.localizedDescription)
         }
     }
+
+#if DEBUG
+    /// Only the simulator's existing seed action can import this fixed, run-owned fixture.
+    /// Kotlin validates the finite control, expiry and nonce at the actual export entry.
+    private func applyTestmapExportFixtureIfPresent(host: IosProductRootHost, scene: String) async -> Bool {
+        guard scene == "editor",
+              let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        else { return false }
+        let control = documents.appendingPathComponent("testmap-export-control.json")
+        let manager = FileManager.default
+        guard manager.fileExists(atPath: control.path)
+                || (try? manager.destinationOfSymbolicLink(atPath: control.path)) != nil
+        else { return false }
+        do {
+            func readBounded(_ url: URL, limit: Int) throws -> Data {
+                let attributes = try manager.attributesOfItem(atPath: url.path)
+                guard attributes[.type] as? FileAttributeType == .typeRegular,
+                      let size = attributes[.size] as? NSNumber,
+                      size.intValue > 0, size.intValue <= limit
+                else { throw CocoaError(.fileReadCorruptFile) }
+                let file = try FileHandle(forReadingFrom: url)
+                defer { try? file.close() }
+                guard let data = try file.read(upToCount: limit + 1), !data.isEmpty, data.count <= limit
+                else { throw CocoaError(.fileReadCorruptFile) }
+                return data
+            }
+            _ = try readBounded(control, limit: 4096)
+            let bytes = try readBounded(documents.appendingPathComponent("testmap-export-fixture.png"), limit: 1_048_576)
+            let generation = IosPickGenerationGate.shared.nextPhotoGeneration()
+            try await host.deliverPickedPhotoAndAwait(
+                bytes: bytes.toKotlinByteArray(), append: false, renderPreview: true,
+                pickGeneration: generation
+            )
+            _ = host.applyStoreCaptureScene(scene: scene)
+        } catch {
+            // Do not fall back to personal store samples or expose file contents on a bad control.
+            NSLog("Testmap export fixture preparation failed")
+        }
+        return true
+    }
+#endif
 #endif
 
     func presentShare(path: String) {

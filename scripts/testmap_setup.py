@@ -70,6 +70,11 @@ EXPORT_EVENTS = "files/testmap-export-events.jsonl"
 EXPORT_CONTROL_PATHS = (EXPORT_CONTROL, EXPORT_EVENTS)
 EXPORT_RUN_ID = r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}"
 
+IOS_EXPORT_CONTROL = "Documents/testmap-export-control.json"
+IOS_EXPORT_EVENTS = "Documents/testmap-export-events.jsonl"
+IOS_EXPORT_FIXTURE = "Documents/testmap-export-fixture.png"
+IOS_EXPORT_PATHS = (IOS_EXPORT_CONTROL, IOS_EXPORT_EVENTS, IOS_EXPORT_FIXTURE)
+
 IOS_CONFIG = tuple("Documents/" + Path(path).name for path in ANDROID_CONFIG)
 
 
@@ -686,6 +691,114 @@ def _device_clock(serial: str) -> dict:
             "host_wall_ms": before, "host_monotonic_ms": mono_before}
 
 
+def _ios_device_clock(udid: str) -> dict:
+    # simctl spawn shares the host kernel's POSIX clock. Python monotonic uses a
+    # different macOS origin, so it is used only for the independent jump guard.
+    mono_before = time.monotonic_ns() // 1_000_000
+    hm0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+    before = time.time_ns() // 1_000_000
+    hm1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+    raw = simctl(udid, "spawn", udid, "/usr/bin/perl", "-MTime::HiRes=time,clock_gettime,CLOCK_MONOTONIC", "-e",
+                 'my $m0=clock_gettime(CLOCK_MONOTONIC); my $w=time(); my $m1=clock_gettime(CLOCK_MONOTONIC); printf("%d %d %d\\n", $m0*1000, $w*1000, $m1*1000);').strip()
+    hm2 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+    after = time.time_ns() // 1_000_000
+    hm3 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+    mono_after = time.monotonic_ns() // 1_000_000
+    if not re.fullmatch(r"[0-9]+ [0-9]{13} [0-9]+", raw):
+        raise ValueError("Cannot establish paired iOS Simulator clock")
+    dm0, device_ms, dm1 = map(int, raw.split())
+    host_low, host_high = max(before - hm1, after - hm3), min(before - hm0, after - hm2)
+    if (not hm0 <= hm1 <= dm0 <= dm1 <= hm2 <= hm3 or host_low > host_high
+            or not 0 <= after - before <= 2000 or mono_after < mono_before
+            or abs((after - before) - (mono_after - mono_before)) > 50):
+        raise ValueError("Unbounded or discontinuous iOS Simulator clock")
+    return {"device_ms": device_ms, "offset_min_ms": device_ms - dm1 - host_high - 2,
+            "offset_max_ms": device_ms - dm0 - host_low + 2,
+            "host_wall_ms": before, "host_monotonic_ms": mono_before,
+            "scope": "simulator-only-shared-posix-monotonic",
+            "host_pair_before": [hm0, before, hm1], "device_pair": [dm0, device_ms, dm1],
+            "host_pair_after": [hm2, after, hm3]}
+
+
+def _ios_private_path(root: Path, name: str) -> Path:
+    if name not in IOS_CONFIG + IOS_EXPORT_PATHS:
+        raise ValueError("Unsupported iOS private path")
+    path = root / name
+    if root.is_symlink() or path.parent.is_symlink() or path.is_symlink() or (path.exists() and not path.is_file()):
+        raise ValueError("Unsafe iOS private path")
+    return path
+
+
+def _read_ios_private(root: Path, name: str) -> bytes | None:
+    path = _ios_private_path(root, name)
+    return path.read_bytes() if path.exists() else None
+
+
+def _ios_temp(path: Path) -> Path:
+    temporary = path.with_name(path.name + ".testmap-restore")
+    if temporary.exists() or temporary.is_symlink():
+        raise SetupRestoreError("Existing iOS temporary file requires reviewed recovery")
+    return temporary
+
+
+def _write_ios_private(root: Path, name: str, data: bytes) -> None:
+    path = _ios_private_path(root, name)
+    temporary = _ios_temp(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    owned = False
+    try:
+        with temporary.open("xb") as stream:
+            owned = True
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if owned:
+            temporary.unlink(missing_ok=True)  # Cleanup failure must retain journal/lock.
+
+
+def _protect_ios_export_control(udid: str, original: bytes | None) -> None:
+    if original is None:
+        return
+    try:
+        value = json.loads(original)
+        valid = (len(original) <= 4096 and isinstance(value, dict)
+                 and set(value) == {"mode", "run_id", "fixture_id", "expires_at_ms"}
+                 and value["mode"] in {"hold-next", "fail-next"}
+                 and isinstance(value["run_id"], str) and re.fullmatch(EXPORT_RUN_ID, value["run_id"])
+                 and value["fixture_id"] == "testmap-export-fixture"
+                 and type(value["expires_at_ms"]) is int)
+    except (ValueError, UnicodeError):
+        valid = False
+    if not valid or value["expires_at_ms"] > _ios_device_clock(udid)["device_ms"]:
+        raise ValueError("Existing active or unrecognised iOS export control requires reviewed recovery")
+
+
+def _arm_ios_export_control(state: dict, root: Path) -> None:
+    control = state["export_control"]
+    fixture = Path(state["journal"]).parent / f"ewm-suite-{state['marker']}-A.png"
+    write_png(fixture, 240, 160, lambda y: bytes((25, 77, 128)) * 240)
+    png = fixture.read_bytes()
+    png = png[:-12] + _png_chunk(b"tEXt", b"testmap-run\0" + (control["run_id"] + ":" + uuid.uuid4().hex).encode()) + png[-12:]
+    fixture.write_bytes(png)
+    state["fixtures"] = {"A": str(fixture.resolve())}
+    clock = _ios_device_clock(state["udid"])
+    marker = {"mode": control["mode"], "run_id": control["run_id"], "fixture_id": "testmap-export-fixture",
+              "expires_at_ms": clock["device_ms"] + 110000}
+    control.update(fixture_id=marker["fixture_id"], fixture_sha256=hashlib.sha256(png).hexdigest(),
+                   clock=clock, expires_at_ms=marker["expires_at_ms"])
+    _save_setup(state)
+    _write_ios_private(root, IOS_EXPORT_FIXTURE, png)
+    _write_ios_private(root, IOS_EXPORT_EVENTS, b"")
+    payload = json.dumps(marker, separators=(",", ":")).encode()
+    _write_ios_private(root, IOS_EXPORT_CONTROL, payload)
+    if _read_ios_private(root, IOS_EXPORT_CONTROL) != payload or _read_ios_private(root, IOS_EXPORT_FIXTURE) != png:
+        raise ValueError("iOS export control write verification failed")
+    control["armed"] = True
+    _save_setup(state)
+
+
 def _protect_previous_export_control(serial: str, original: bytes | None) -> None:
     if original is None:
         return
@@ -729,10 +842,13 @@ def _capture_export_control(state: dict) -> None:
     control = state.get("export_control")
     if not control or not control.get("armed"):
         return
-    public = {key: control[key] for key in ("mode", "run_id", "fixture_uri", "clock", "expires_at_ms")}
+    ios = state["platform"] == "ios"
+    identity_keys = ("fixture_id", "fixture_sha256") if ios else ("fixture_uri",)
+    public = {key: control[key] for key in ("mode", "run_id", "clock", "expires_at_ms") + identity_keys}
     public["events"] = []
     try:
-        raw = read_private(state["serial"], EXPORT_EVENTS) or b""
+        raw = (_read_ios_private(Path(state["container"]), IOS_EXPORT_EVENTS) if ios
+               else read_private(state["serial"], EXPORT_EVENTS)) or b""
         if len(raw) > 16384:
             raise ValueError("Export event journal exceeds bound")
         for line in raw.splitlines():
@@ -742,12 +858,19 @@ def _capture_export_control(state: dict) -> None:
             if row.get("run_id") != control["run_id"]:
                 continue
             if (set(row) != {"run_id", "event", "timestamp_ms"}
-                    or row["event"] not in {"ready", "entered", "cancelled", "watchdog", "cleared"}
+                    or row["event"] not in {"ready", "entered", "cancelled", "failed", "watchdog", "cleared"}
                     or type(row["timestamp_ms"]) is not int):
                 raise ValueError("Invalid current-run export event")
             public["events"].append(row)
-        public["marker_absent"] = not _run_as_file(state["serial"], EXPORT_CONTROL)
-        public["clock_end"] = _device_clock(state["serial"])
+        if ios:
+            root = Path(state["container"])
+            public["marker_absent"] = _read_ios_private(root, IOS_EXPORT_CONTROL) is None
+            fixture = _read_ios_private(root, IOS_EXPORT_FIXTURE)
+            public["fixture_matches"] = fixture is not None and hashlib.sha256(fixture).hexdigest() == control["fixture_sha256"]
+            public["clock_end"] = _ios_device_clock(state["udid"])
+        else:
+            public["marker_absent"] = not _run_as_file(state["serial"], EXPORT_CONTROL)
+            public["clock_end"] = _device_clock(state["serial"])
     except (ValueError, OSError, UnicodeError, subprocess.TimeoutExpired):
         public["capture_error"] = "Export event capture failed"
     destination = Path(state["journal"]).parent / "export-control-events.json"
@@ -763,12 +886,12 @@ def _validate_setup(state: dict) -> None:
     if state.get("setup") not in (ANDROID_SETUPS if platform == "android" else IOS_SETUPS):
         raise ValueError("Invalid backup setup")
     control = state.get("export_control")
-    if control is not None and (platform != "android" or state["setup"] != "editor"
-            or not isinstance(control, dict) or control.get("mode") != "hold-next"
+    if control is not None and (state["setup"] != "editor"
+            or not isinstance(control, dict) or control.get("mode") not in ({"hold-next"} if platform == "android" else {"hold-next", "fail-next"})
             or not isinstance(control.get("run_id"), str)
             or not re.fullmatch(EXPORT_RUN_ID, control["run_id"])):
         raise ValueError("Invalid export control recovery scope")
-    allowed = set(ANDROID_CONFIG + (CRASH_PREF, CRASH_PREF + ".bak") + (EXPORT_CONTROL_PATHS if control else ())) if platform == "android" else set(IOS_CONFIG)
+    allowed = set(ANDROID_CONFIG + (CRASH_PREF, CRASH_PREF + ".bak") + (EXPORT_CONTROL_PATHS if control else ())) if platform == "android" else set(IOS_CONFIG + (IOS_EXPORT_PATHS if control else ()))
     private = state.get("private_backup")
     if not isinstance(private, dict) or not set(private).issubset(allowed):
         raise ValueError("Backup contains unsupported private paths")
@@ -776,7 +899,7 @@ def _validate_setup(state: dict) -> None:
     if platform == "android" and state["setup"] == "crash":
         expected.update((CRASH_PREF, CRASH_PREF + ".bak"))
     if control:
-        expected.update(EXPORT_CONTROL_PATHS)
+        expected.update(EXPORT_CONTROL_PATHS if platform == "android" else IOS_EXPORT_PATHS)
     if not isinstance(state.get("mutated"), bool) or (state["mutated"] and set(private) != expected):
         raise ValueError("Backup is missing preferences required for recovery")
     journal = Path(str(state.get("journal") or ""))
@@ -819,11 +942,13 @@ def _claim_setup(state: dict, folder: Path) -> None:
 
 def apply_setup(setup: str, *, platform: str, folder: Path, marker: str,
                 serial: str | None = None, udid: str | None = None, should_stop=None,
-                export_cancel_run_id: str | None = None) -> dict:
+                export_cancel_run_id: str | None = None, ios_export_run_id: str | None = None,
+                ios_export_mode: str | None = None) -> dict:
     token = _SETUP_STOP.set(should_stop)
     try:
         return _apply_setup(setup, platform=platform, folder=folder, marker=marker, serial=serial, udid=udid,
-                            export_cancel_run_id=export_cancel_run_id)
+                            export_cancel_run_id=export_cancel_run_id, ios_export_run_id=ios_export_run_id,
+                            ios_export_mode=ios_export_mode)
     finally:
         _SETUP_STOP.reset(token)
 
@@ -837,6 +962,7 @@ def _apply_setup(
     serial: str | None = None,
     udid: str | None = None,
     export_cancel_run_id: str | None = None,
+    ios_export_run_id: str | None = None, ios_export_mode: str | None = None,
 ) -> dict:
     """Back up before mutation; restore even when preparation itself fails."""
     platform = platform.lower()
@@ -853,6 +979,11 @@ def _apply_setup(
             or marker != "exportcancel" or not isinstance(export_cancel_run_id, str)
             or not re.fullmatch(EXPORT_RUN_ID, export_cancel_run_id)):
         raise ValueError("Export hold is restricted to the Android cancel case")
+    if (ios_export_run_id is not None or ios_export_mode is not None) and (
+            platform != "ios" or setup != "editor" or export_cancel_run_id is not None
+            or (marker, ios_export_mode) not in {("exportcancel", "hold-next"), ("exportfailurerec", "fail-next")}
+            or not isinstance(ios_export_run_id, str) or not re.fullmatch(EXPORT_RUN_ID, ios_export_run_id)):
+        raise ValueError("iOS export control is restricted to the two export edge cases")
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     marker = re.sub(r"[^A-Za-z0-9]", "", marker)[:24] + "-" + uuid.uuid4().hex
@@ -861,6 +992,8 @@ def _apply_setup(
                  source_id=None, damaged_remote=None)
     if export_cancel_run_id is not None:
         state["export_control"] = {"mode": "hold-next", "run_id": export_cancel_run_id}
+    if ios_export_run_id is not None:
+        state["export_control"] = {"mode": ios_export_mode, "run_id": ios_export_run_id}
     _claim_setup(state, folder)
     try:
         if platform == "android":
@@ -898,24 +1031,23 @@ def _apply_setup(
             if state.get("export_control"):
                 _arm_export_control(state)
         else:
-            # A failed termination is unsafe: the process may flush old prefs
-            # over a restored file. Do not suppress simctl failures here.
-            ios_terminate(udid)
             root = Path(simctl(udid, "get_app_container", udid, IOS_BUNDLE, "data").strip())
-            if not root.is_absolute() or not root.is_dir():
+            if not root.is_absolute() or not root.is_dir() or root.is_symlink():
                 raise ValueError("iOS data container is unavailable")
             state["container"] = str(root.resolve())
-            for name in IOS_CONFIG:
-                path = root / name
-                if path.is_symlink() or (path.exists() and not path.is_file()):
-                    raise ValueError(f"Unsafe preference path: {path}")
-                state["private_backup"][name] = path.read_bytes() if path.exists() else None
+            if state.get("export_control"):
+                _protect_ios_export_control(udid, _read_ios_private(root, IOS_EXPORT_CONTROL))
+            ios_terminate(udid)
+            paths = IOS_CONFIG + (IOS_EXPORT_PATHS if state.get("export_control") else ())
+            for name in paths:
+                _ios_temp(_ios_private_path(root, name))
+                state["private_backup"][name] = _read_ios_private(root, name)
             state.update(phase="prepared", mutated=True)
             _save_setup(state)
             for name in IOS_CONFIG:
-                (root / name).unlink(missing_ok=True)
-            # tmp, Saved Application State, Photos permissions and the library
-            # are not needed for this setup and are deliberately preserved.
+                _ios_private_path(root, name).unlink(missing_ok=True)
+            if state.get("export_control"):
+                _arm_ios_export_control(state, root)
         state["phase"] = "active"
         _save_setup(state)
         return state
@@ -982,22 +1114,26 @@ def _restore_setup(state: dict) -> None:
         else:
             try:
                 ios_terminate(state["udid"])
-                root = Path(simctl(state["udid"], "get_app_container", state["udid"], IOS_BUNDLE, "data").strip()).resolve()
+                root = Path(simctl(state["udid"], "get_app_container", state["udid"], IOS_BUNDLE, "data").strip())
+                if not root.is_absolute() or not root.is_dir() or root.is_symlink():
+                    raise ValueError("Unsafe iOS restore container")
+                root = root.resolve()
                 if str(root) != state["container"]:
                     raise ValueError("iOS data container changed; refusing to restore into a different install")
+                for name in state["private_backup"]:
+                    _ios_temp(_ios_private_path(root, name))
+                try:
+                    _capture_export_control(state)
+                except Exception:
+                    pass  # Missing evidence is rejected; recovery remains mandatory.
                 for name, data in state["private_backup"].items():
-                    path = root / name
-                    if path.is_symlink():
-                        raise ValueError(f"Unsafe restore path: {path}")
+                    path = _ios_private_path(root, name)
                     if data is None:
                         path.unlink(missing_ok=True)
                     else:
-                        path.parent.mkdir(parents=True, exist_ok=True)
-                        tmp = path.with_name(path.name + ".testmap-restore")
-                        tmp.write_bytes(data)
-                        os.replace(tmp, path)
-                    if (path.read_bytes() if path.exists() else None) != data:
-                        raise ValueError(f"Preference restore byte mismatch: {path}")
+                        _write_ios_private(root, name, data)
+                    if _read_ios_private(root, name) != data:
+                        raise ValueError("iOS private restore byte mismatch")
             except Exception as exc:
                 errors.append(str(exc))
     if errors:

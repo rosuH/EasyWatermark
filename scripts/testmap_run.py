@@ -1730,6 +1730,8 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
     if not setup:
         return None
     platform = spec.get("agent_platform") or spec.get("needs_device")
+    if platform == "ios" and spec.get("edge_id") == "export-failure-recovery" and setup == "failure":
+        setup = "editor"
     if platform == "android" and setup not in ANDROID_SETUPS:
         return None
     if platform == "ios" and setup not in IOS_SETUPS:
@@ -1760,6 +1762,9 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         if not run_id:
             raise ValueError("Android export cancel requires a run identity")
         cancel_options["export_cancel_run_id"] = run_id
+    if platform == "ios" and edge_id in {"export-cancel", "export-failure-recovery"}:
+        cancel_options.update(ios_export_run_id=Path(str(spec.get("step_evidence_root") or "")).name,
+                              ios_export_mode="hold-next" if edge_id == "export-cancel" else "fail-next")
     state = apply_setup(
         str(setup),
         platform=str(platform),
@@ -1919,11 +1924,12 @@ def _mark_cancel_uncovered(task: dict) -> None:
         return
     control = task.get("export_control") or {}
     layers = task.get("layers") or {}
-    if (task.get("platform") == "android" and task["state"] in {"review_required", "passed"}
+    if (task.get("platform") in {"android", "ios"} and task["state"] in {"review_required", "passed"}
             and task.get("exit_code") == 0 and layers.get("execution") == "ok"
             and layers.get("script_checks") == "executed_review_required"
             and layers.get("agent_observation") == "completed"
-            and control.get("status") == control.get("retry_status") == "evidence_complete"):
+            and control.get("status") == control.get("retry_status") == "evidence_complete"
+            and (task.get("platform") != "ios" or (control.get("platform") == "ios" and control.get("mode") == "hold-next"))):
         return  # This completion surface follows an evidenced cancellation and Retry.
     surface = _cancel_surface_text(task)
     if surface and any(token in surface for token in _CANCEL_COMPLETION):
@@ -1932,13 +1938,13 @@ def _mark_cancel_uncovered(task: dict) -> None:
 
 
 _IOS_EXPORT_UNCOVERED = {
-    "export-failure-recovery": "iOS 上没有可以触发导出失败的接缝",
-    "export-cancel": "iOS 上没有可以触发慢速导出或取消的接缝",
+    "export-failure-recovery": "iOS 受控失败及真实 Retry 证据未完整",
+    "export-cancel": "iOS 受控取消及真实 Retry 证据未完整",
 }
 
 
 def _mark_ios_export_uncovered(task: dict) -> None:
-    """These iOS edges cannot be forced. They are gaps, not failures."""
+    """Only complete scoped control and real Retry evidence close these iOS gaps."""
     if task.get("platform") != "ios":
         return
     reason = _IOS_EXPORT_UNCOVERED.get(str(task.get("edge_id") or ""))
@@ -1946,12 +1952,20 @@ def _mark_ios_export_uncovered(task: dict) -> None:
         return
     if task.get("state") not in {"failed", "review_required", "passed", "uncovered"}:
         return
+    control, layers = task.get("export_control") or {}, task.get("layers") or {}
+    if (task["state"] in {"review_required", "passed"} and task.get("exit_code") == 0
+            and layers.get("execution") == "ok" and layers.get("script_checks") == "executed_review_required"
+            and layers.get("agent_observation") == "completed"
+            and control.get("status") == control.get("retry_status") == "evidence_complete"
+            and control.get("platform") == "ios"
+            and control.get("mode") == ("hold-next" if task.get("edge_id") == "export-cancel" else "fail-next")):
+        return
     task["state"] = "uncovered"
     task["note"] = reason
 
 
 def _verify_cancel_png(path: Path) -> None:
-    """Decode the bounded, non-interlaced 8-bit PNGs emitted by Android SDK shots."""
+    """Decode the bounded, non-interlaced 8-bit PNGs emitted by SDK shots."""
     import struct
     import zlib
     if path.stat().st_size > 32 * 1024 * 1024:
@@ -2001,21 +2015,30 @@ def _verify_cancel_png(path: Path) -> None:
 
 def _cancel_gate_evidence(spec: dict, code: int) -> dict:
     """Validate real SDK actions against the bounded, fixture-scoped gate."""
+    platform = spec.get("agent_platform", "android")
+    failure = platform == "ios" and spec.get("edge_id") == "export-failure-recovery"
     output = Path(spec["agent_device_output"])
     public_path = output / "export-control-events.json"
     verdict = {"status": "incomplete", "retry_status": "incomplete", "evidence": str(public_path)}
+    if platform == "ios":
+        # Successful render counts and Share do not establish Photos persistence.
+        verdict["photos_status"] = "pending_independent_device_evidence"
     try:
         if code != 0:
             raise ValueError("SDK cancel script did not complete")
         control = json.loads(public_path.read_text())
         run_id = Path(str(spec.get("step_evidence_root") or "")).name
-        if (not isinstance(control, dict) or control.get("run_id") != run_id or control.get("mode") != "hold-next"
+        if (not isinstance(control, dict) or control.get("run_id") != run_id or control.get("mode") != ("fail-next" if failure else "hold-next")
                 or control.get("capture_error")):
             raise ValueError("Current-run gate evidence is missing or invalid")
+        if platform == "ios" and (control.get("fixture_id") != "testmap-export-fixture"
+                or control.get("fixture_matches") is not True
+                or not re.fullmatch(r"[a-f0-9]{64}", str(control.get("fixture_sha256", "")))):
+            raise ValueError("Current iOS fixture identity is unverified")
         events = control["events"]
         if not isinstance(events, list) or any(not isinstance(row, dict) for row in events):
             raise ValueError("Invalid gate event list")
-        if [row.get("event") for row in events] != ["ready", "entered", "cancelled", "cleared"]:
+        if [row.get("event") for row in events] != ["ready", "entered", "failed" if failure else "cancelled", "cleared"]:
             raise ValueError("Gate did not enter, cancel and clear without watchdog")
         if any(set(row) != {"run_id", "event", "timestamp_ms"}
                or row["run_id"] != run_id or type(row["timestamp_ms"]) is not int for row in events):
@@ -2024,6 +2047,24 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
         if stamps != sorted(stamps) or stamps[-1] > control["expires_at_ms"]:
             raise ValueError("Gate event ordering or expiry is invalid")
         clocks = [control["clock"], control["clock_end"]]
+        if platform == "ios":
+            for clock in clocks:
+                if clock.get("scope") != "simulator-only-shared-posix-monotonic":
+                    raise ValueError("iOS evidence requires the paired Simulator clock")
+                pairs = [clock[key] for key in ("host_pair_before", "device_pair", "host_pair_after")]
+                if any(not isinstance(pair, list) or len(pair) != 3
+                       or any(type(value) is not int or value < 0 for value in pair) for pair in pairs):
+                    raise ValueError("Invalid paired iOS clock fields")
+                (hm0, before, hm1), (dm0, device_ms, dm1), (hm2, after, hm3) = pairs
+                host_low = max(before - hm1, after - hm3)
+                host_high = min(before - hm0, after - hm2)
+                expected = (device_ms - dm1 - host_high - 2, device_ms - dm0 - host_low + 2)
+                if (not hm0 <= hm1 <= dm0 <= dm1 <= hm2 <= hm3 or host_low > host_high
+                        or not 0 <= after - before <= 2000
+                        or abs((after - before) - (hm3 - hm0)) > 50
+                        or clock["device_ms"] != device_ms or clock["host_wall_ms"] != before
+                        or (clock["offset_min_ms"], clock["offset_max_ms"]) != expected):
+                    raise ValueError("iOS clock bounds do not match their raw pairs")
         elapsed = [clocks[1][key] - clocks[0][key] for key in ("host_wall_ms", "host_monotonic_ms")]
         if any(type(value) is not int or value < 0 for value in elapsed) or abs(elapsed[0] - elapsed[1]) > 50:
             raise ValueError("Host wall clock changed during the cancel run")
@@ -2043,7 +2084,7 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
         if any(hashlib.sha256(path.read_bytes()).hexdigest() != manifest[key]
                for path, key in ((source, "source_sha256"), (derived, "script_sha256"))):
             raise ValueError("Cancel source/derived digest mismatch")
-        rows = parse_script(source, "android")
+        rows = parse_script(source, platform)
         required = [
             [r for r in rows if r["command"] == "press" and "Cancel export" in r["args"]],
             [r for r in rows if r["command"] == "wait" and "Export cancelled." in r["args"]],
@@ -2057,12 +2098,26 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
             [r for r in rows if r["command"] == "wait" and "absent" not in r["args"] and "Share" in r["args"]],
             [r for r in rows if r["command"] == "wait" and "absent" not in r["args"] and "View in gallery" in r["args"]],
         ]
+        if platform == "ios":
+            def matching(command, *tokens, absent=False):
+                return [r for r in rows if r["command"] == command and all(t in r["args"] for t in tokens)
+                        and ("absent" in r["args"]) == absent]
+            if failure:
+                required = [matching("press", "sharedComposeExportPrimary"),
+                            matching("wait", "sharedComposeExportCounts", "Processed 1 · Succeeded 0 · Failed 1"),
+                            matching("wait", "sharedComposeExportRetryFailed")]
+            else:
+                required[0] = matching("press", "sharedComposeExportCancel")
+                required.insert(3, matching("wait", "分享", absent=True))
+            retry_required = [matching("press", "sharedComposeExportRetryFailed"),
+                              matching("wait", "sharedComposeExportCounts", "Processed 1 · Succeeded 1 · Failed 0"),
+                              matching("wait", "sharedComposeExportPrimary", "Share")]
         if any(len(found) != 1 for found in required + retry_required):
             raise ValueError("Cancel and subsequent Retry business actions are required")
         indices = [found[0]["n"] for found in required]
         retry_indices = [found[0]["n"] for found in retry_required]
         all_indices = indices + retry_indices
-        if all_indices != sorted(all_indices) or len(set(all_indices)) != 8:
+        if all_indices != sorted(all_indices) or len(set(all_indices)) != len(all_indices):
             raise ValueError("Cancel and Retry business actions are out of order")
         if control.get("marker_absent") is not True:
             raise ValueError("Consumed fixture control marker is still present or unverified")
@@ -2104,16 +2159,21 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
         click_end = sdk_event(indices[0], "replay_action_stop")
         assertion_end = sdk_event(indices[1], "replay_action_stop")
         # Use interval bounds, never pretend host and device clocks are identical.
-        if stamps[1] - low > click_start or stamps[2] - high < click_start:
-            raise ValueError("Cannot establish entered-before-click and cancelled-after-click")
-        if stamps[2] - low > click_end:
-            raise ValueError("Cancellation was not bounded by the real Cancel press")
+        if failure:
+            if stamps[0] - high < click_start or stamps[3] - low > assertion_end:
+                raise ValueError("Injected failure was not bounded by Export press and failure assertion")
+        else:
+            if stamps[1] - low > click_start or stamps[2] - high < click_start:
+                raise ValueError("Cannot establish entered-before-click and cancelled-after-click")
+            if stamps[2] - low > click_end:
+                raise ValueError("Cancellation was not bounded by the real Cancel press")
         if any(sdk_event(left, "replay_action_stop") > sdk_event(right, "replay_action_start")
                for left, right in zip(all_indices, all_indices[1:])):
             raise ValueError("Cancel and Retry assertions did not follow their real presses")
         if stamps[3] - low > assertion_end:
             raise ValueError("Gate did not clear before the cancellation assertion completed")
         verdict.update(status="evidence_complete", retry_status="evidence_complete", run_id=run_id,
+                       platform=platform, mode=control["mode"],
                        clock_offset_interval_ms=[low, high])
     except (ValueError, OSError, KeyError, TypeError, IndexError) as exc:
         verdict["reason"] = str(exc)
@@ -2122,7 +2182,8 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
 
 def ingest_agent_device_result(spec: dict, code: int) -> dict:
     extra = _ingest_agent_device_result(spec, code)
-    if spec.get("edge_id") != "export-cancel" or spec.get("agent_platform") != "android":
+    if not ((spec.get("edge_id") == "export-cancel" and spec.get("agent_platform") in {"android", "ios"})
+            or (spec.get("edge_id") == "export-failure-recovery" and spec.get("agent_platform") == "ios")):
         return extra
     gate = _cancel_gate_evidence(spec, code)
     extra["export_control"] = gate
