@@ -69,7 +69,7 @@ from testmap_agent_device import (  # noqa: E402
     evidence_dir_for,
     agent_device_bin,
     ensure_pinned_agent_device,
-    ingest_agent_device_result,
+    ingest_agent_device_result as _ingest_agent_device_result,
     is_agent_device_cmd,
     maybe_prepare_ios_runner,
     validate_agent_device_binding,
@@ -1754,6 +1754,12 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
     if logf is not None:
         logf.write(f"\n## setup {setup} {platform}\n")
         logf.flush()
+    cancel_options = {}
+    if edge_id == "export-cancel" and platform == "android":
+        run_id = Path(str(spec.get("step_evidence_root") or "")).name
+        if not run_id:
+            raise ValueError("Android export cancel requires a run identity")
+        cancel_options["export_cancel_run_id"] = run_id
     state = apply_setup(
         str(setup),
         platform=str(platform),
@@ -1762,6 +1768,7 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         serial=serial,
         udid=udid,
         should_stop=should_stop,
+        **cancel_options,
     )
     if logf is not None:
         logf.write(f"setup recovery backup: {state['journal']}\n")
@@ -1933,6 +1940,172 @@ def _mark_ios_export_uncovered(task: dict) -> None:
         return
     task["state"] = "uncovered"
     task["note"] = reason
+
+
+def _verify_cancel_png(path: Path) -> None:
+    """Decode the bounded, non-interlaced 8-bit PNGs emitted by Android SDK shots."""
+    import struct
+    import zlib
+    if path.stat().st_size > 32 * 1024 * 1024:
+        raise ValueError("Cancel screenshot exceeds image bound")
+    data = path.read_bytes()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("Cancel screenshot is not a PNG")
+    position, compressed, header, ended = 8, bytearray(), None, False
+    while position + 12 <= len(data):
+        size = struct.unpack_from(">I", data, position)[0]
+        end = position + 12 + size
+        if end > len(data):
+            raise ValueError("Truncated cancel PNG chunk")
+        kind, payload = data[position + 4:position + 8], data[position + 8:end - 4]
+        if zlib.crc32(kind + payload) & 0xffffffff != struct.unpack_from(">I", data, end - 4)[0]:
+            raise ValueError("Cancel PNG checksum mismatch")
+        if position == 8:
+            if kind != b"IHDR" or size != 13:
+                raise ValueError("Cancel PNG lacks its image header")
+            header = struct.unpack(">IIBBBBB", payload)
+        elif kind == b"IHDR":
+            raise ValueError("Duplicate PNG image header")
+        if kind == b"IDAT":
+            compressed.extend(payload)
+        if kind == b"IEND":
+            ended = size == 0 and end == len(data)
+            break
+        position = end
+    if not ended or header is None:
+        raise ValueError("Cancel PNG is incomplete")
+    width, height, depth, color, compression, filtering, interlace = header
+    channels = {0: 1, 2: 3, 4: 2, 6: 4}.get(color, 0)
+    stride = 1 + width * channels
+    expected = height * stride
+    if not (width > 0 and height > 0 and channels and depth == 8
+            and compression == filtering == interlace == 0 and expected <= 64 * 1024 * 1024):
+        raise ValueError("Unsupported cancel PNG raster")
+    decoder = zlib.decompressobj()
+    try:
+        pixels = decoder.decompress(compressed, expected + 1)
+    except zlib.error as exc:
+        raise ValueError("Cancel PNG compressed data is invalid") from exc
+    if (len(pixels) != expected or not decoder.eof or decoder.unused_data
+            or decoder.unconsumed_tail or any(pixels[y * stride] > 4 for y in range(height))):
+        raise ValueError("Cancel PNG raster is corrupt or truncated")
+
+
+def _cancel_gate_evidence(spec: dict, code: int) -> dict:
+    """Validate real SDK actions against the bounded, fixture-scoped gate."""
+    output = Path(spec["agent_device_output"])
+    public_path = output / "export-control-events.json"
+    verdict = {"status": "incomplete", "evidence": str(public_path)}
+    try:
+        if code != 0:
+            raise ValueError("SDK cancel script did not complete")
+        control = json.loads(public_path.read_text())
+        run_id = Path(str(spec.get("step_evidence_root") or "")).name
+        if (not isinstance(control, dict) or control.get("run_id") != run_id or control.get("mode") != "hold-next"
+                or control.get("capture_error")):
+            raise ValueError("Current-run gate evidence is missing or invalid")
+        events = control["events"]
+        if not isinstance(events, list) or any(not isinstance(row, dict) for row in events):
+            raise ValueError("Invalid gate event list")
+        if [row.get("event") for row in events] != ["ready", "entered", "cancelled", "cleared"]:
+            raise ValueError("Gate did not enter, cancel and clear without watchdog")
+        if any(set(row) != {"run_id", "event", "timestamp_ms"}
+               or row["run_id"] != run_id or type(row["timestamp_ms"]) is not int for row in events):
+            raise ValueError("Invalid gate event fields")
+        stamps = [row["timestamp_ms"] for row in events]
+        if stamps != sorted(stamps) or stamps[-1] > control["expires_at_ms"]:
+            raise ValueError("Gate event ordering or expiry is invalid")
+        clocks = [control["clock"], control["clock_end"]]
+        elapsed = [clocks[1][key] - clocks[0][key] for key in ("host_wall_ms", "host_monotonic_ms")]
+        if any(type(value) is not int or value < 0 for value in elapsed) or abs(elapsed[0] - elapsed[1]) > 50:
+            raise ValueError("Host wall clock changed during the cancel run")
+        bounds = [(clock["offset_min_ms"], clock["offset_max_ms"]) for clock in clocks]
+        if any(type(low) is not int or type(high) is not int or not 0 <= high - low <= 2001
+               for low, high in bounds):
+            raise ValueError("Unbounded device clock offset")
+        if max(low for low, _ in bounds) > min(high for _, high in bounds):
+            raise ValueError("Device clock offset drifted during the cancel run")
+        low, high = min(low for low, _ in bounds), max(high for _, high in bounds)
+        if not clocks[0]["device_ms"] <= stamps[0] <= stamps[-1] <= clocks[1]["device_ms"]:
+            raise ValueError("Gate events fall outside the sampled device clock window")
+        manifest = json.loads(Path(spec["step_evidence_manifest"]).read_text())
+        source = Path(manifest["source"])
+        derived = Path(manifest["script"])
+        import hashlib
+        if any(hashlib.sha256(path.read_bytes()).hexdigest() != manifest[key]
+               for path, key in ((source, "source_sha256"), (derived, "script_sha256"))):
+            raise ValueError("Cancel source/derived digest mismatch")
+        rows = parse_script(source, "android")
+        required = [
+            [r for r in rows if r["command"] == "press" and "Cancel export" in r["args"]],
+            [r for r in rows if r["command"] == "wait" and "Export cancelled." in r["args"]],
+            [r for r in rows if r["command"] == "wait" and "absent" in r["args"] and "Share" in r["args"]],
+            [r for r in rows if r["command"] == "wait" and "absent" in r["args"] and "View in gallery" in r["args"]],
+        ]
+        if any(len(found) != 1 for found in required):
+            raise ValueError("Cancel press and unchanged business assertions are required")
+        indices = [found[0]["n"] for found in required]
+        if indices != sorted(indices) or len(set(indices)) != 4:
+            raise ValueError("Cancel business actions are out of order")
+        timing_files = list(output.rglob("replay-timing.ndjson"))
+        if len(timing_files) != 1:
+            raise ValueError("Expected exactly one SDK attempt timeline")
+        timeline = [json.loads(line) for line in timing_files[0].read_text().splitlines() if line.strip()]
+        if any(not isinstance(row, dict) for row in timeline):
+            raise ValueError("Invalid SDK timeline event")
+        actions = {m["step"]: m for m in manifest["mapping"] if m["kind"] == "action"}
+        shots = {m["step"]: m for m in manifest["mapping"] if m["kind"] == "screenshot"}
+        def sdk_event(n, kind, screenshot=False):
+            mapping = shots[n] if screenshot else actions[n]
+            matches = [e for e in timeline if e.get("type") == kind
+                       and e.get("step") == mapping["replay_step"]
+                       and isinstance(e, dict) and isinstance(e.get("replayPath"), str)
+                       and Path(e["replayPath"]).resolve() == derived.resolve()
+                       and e.get("command") == ("screenshot" if screenshot else mapping["command"])]
+            if len(matches) != 1 or (kind == "replay_action_stop" and matches[0].get("ok") is not True):
+                raise ValueError("Missing successful SDK action or screenshot")
+            return datetime.fromisoformat(matches[0]["ts"].replace("Z", "+00:00")).timestamp() * 1000
+        for n in indices:
+            start, end = sdk_event(n, "replay_action_start"), sdk_event(n, "replay_action_stop")
+            if start > end or sdk_event(n, "replay_action_stop", True) < end:
+                raise ValueError("Invalid SDK action/screenshot ordering")
+            _verify_cancel_png(Path(shots[n]["path"]))
+        click_start = sdk_event(indices[0], "replay_action_start")
+        click_end = sdk_event(indices[0], "replay_action_stop")
+        assertion_end = sdk_event(indices[1], "replay_action_stop")
+        # Use interval bounds, never pretend host and device clocks are identical.
+        if stamps[1] - low > click_start or stamps[2] - high < click_start:
+            raise ValueError("Cannot establish entered-before-click and cancelled-after-click")
+        if stamps[2] - low > click_end:
+            raise ValueError("Cancellation was not bounded by the real Cancel press")
+        if any(sdk_event(left, "replay_action_stop") > sdk_event(right, "replay_action_start")
+               for left, right in zip(indices, indices[1:])):
+            raise ValueError("Cancel assertions did not follow the real press")
+        if stamps[3] - low > assertion_end:
+            raise ValueError("Gate did not clear before the cancellation assertion completed")
+        verdict.update(status="evidence_complete", run_id=run_id,
+                       clock_offset_interval_ms=[low, high])
+    except (ValueError, OSError, KeyError, TypeError, IndexError) as exc:
+        verdict["reason"] = str(exc)
+    return verdict
+
+
+def ingest_agent_device_result(spec: dict, code: int) -> dict:
+    extra = _ingest_agent_device_result(spec, code)
+    if spec.get("edge_id") != "export-cancel" or spec.get("agent_platform") != "android":
+        return extra
+    gate = _cancel_gate_evidence(spec, code)
+    extra["export_control"] = gate
+    if gate["status"] != "evidence_complete":
+        # A process-zero or external Job cancellation is never enough.
+        extra["agent_device_state"] = "uncovered" if code == 0 else "failed"
+        layers = dict(extra.get("layers") or {})
+        layers.update(business="failed", agent_observation="cancel_gate_unverified",
+                      green_from_process_zero=False, green_from_sdk_completed=False)
+        extra["layers"] = layers
+        for case in extra.get("cases") or []:
+            case.update(status="failed", layers=layers)
+    return extra
 
 
 def _agent_task_state(spec: dict, extra: dict) -> str:
@@ -3051,6 +3224,8 @@ class RunManager:
         task["cases"] = cases
         if extra:
             task["layers"] = extra.get("layers")
+            if extra.get("export_control"):
+                task["export_control"] = extra["export_control"]
             task["evidence_dir"] = extra.get("evidence_dir")
             task["recordings"] = extra.get("recordings")
             task["independent_review"] = extra.get("independent_review")
@@ -3343,6 +3518,8 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
     task["cases"] = cases
     if extra:
         task["layers"] = extra.get("layers")
+        if extra.get("export_control"):
+            task["export_control"] = extra["export_control"]
         task["evidence_dir"] = extra.get("evidence_dir")
         task["recordings"] = extra.get("recordings")
         task["independent_review"] = extra.get("independent_review")

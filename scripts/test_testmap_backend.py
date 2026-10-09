@@ -376,6 +376,13 @@ elif args[0] == 'shell':
         operation = command[2:]
         if (root / 'fail-restore').exists() and operation[:2] == ['sh', '-c'] and 'cat >' in operation[2]:
             sys.exit('deliberate restore failure')
+        if (root / 'fail-before-mv').exists() and operation[:2] == ['sh', '-c'] and 'cat >' in operation[2]:
+            cat = operation[2].split(' && mv ', 1)[0]
+            subprocess.run(['sh', '-c', cat], cwd=root / 'android', input=sys.stdin.buffer.read(), check=True)
+            (root / 'cat-completed').touch()
+            sys.exit('deliberate failure after cat before mv')
+        if (root / 'fail-temp-cleanup').exists() and operation[:2] == ['rm', '-f'] and operation[-1].endswith('.testmap-restore'):
+            sys.exit('deliberate temp cleanup failure')
         code = subprocess.run(operation, cwd=root / 'android', input=sys.stdin.buffer.read(), stdout=sys.stdout.buffer).returncode
         sys.exit(code)
     elif command[:2] == ['getprop', 'ro.build.version.sdk']: print('37')
@@ -414,6 +421,7 @@ class SetupSafetyChecks(unittest.TestCase):
         self.stack.enter_context(patch.object(setup, 'adb_bin', return_value=str(self.cli)))
         self.stack.enter_context(patch.object(setup, 'SETUP_BACKUPS', self.root / 'locks'))
         self.stack.enter_context(patch.object(setup, 'make_fixtures', side_effect=self.fixtures))
+        self.stack.enter_context(patch.object(setup, '_device_clock', return_value={"device_ms": 100000, "offset_min_ms": 10, "offset_max_ms": 20}))
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(self.stack.close)
 
@@ -426,6 +434,153 @@ class SetupSafetyChecks(unittest.TestCase):
         return setup.apply_setup(kind, platform=platform, folder=self.root / 'evidence', marker='edge',
                                  serial='fake-serial' if platform == 'android' else None,
                                  udid='AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE' if platform == 'ios' else None)
+
+    def test_private_write_failure_after_cat_cleans_temp_when_original_absent(self):
+        name = setup.ANDROID_CONFIG[0]
+        destination = self.root / "android" / name
+        temporary = destination.with_name(destination.name + ".testmap-restore")
+        (self.root / "fail-before-mv").touch()
+        with self.assertRaisesRegex(ValueError, "after cat before mv"):
+            setup.write_private("fake-serial", name, b"partial new bytes")
+        self.assertTrue((self.root / "cat-completed").exists())
+        self.assertFalse(destination.exists())
+        self.assertFalse(temporary.exists())
+        setup.restore_private("fake-serial", {name: None})
+        self.assertFalse(destination.exists())
+        self.assertFalse(temporary.exists())
+
+    def test_existing_private_temp_is_never_overwritten_or_removed(self):
+        name = setup.ANDROID_CONFIG[0]
+        destination = self.root / "android" / name
+        temporary = destination.with_name(destination.name + ".testmap-restore")
+        temporary.write_bytes(b"another unfinished writer")
+        with self.assertRaises(setup.SetupRestoreError):
+            setup.write_private("fake-serial", name, b"new bytes")
+        with self.assertRaises(setup.SetupRestoreError):
+            setup.restore_private("fake-serial", {name: None})
+        self.assertFalse(destination.exists())
+        self.assertEqual(b"another unfinished writer", temporary.read_bytes())
+
+    def test_cancel_temp_cleanup_failure_retains_recovery_lock_for_absent_original(self):
+        (self.root / "fail-before-mv").touch()
+        (self.root / "fail-temp-cleanup").touch()
+        with self.assertRaises(setup.SetupRestoreError): self.apply_cancel()
+        journals = list((self.root / "evidence").glob("setup-backup-*.json"))
+        self.assertEqual(1, len(journals))
+        state = setup.load_setup_backup(journals[0])
+        self.assertIsNone(state["private_backup"][setup.EXPORT_EVENTS])
+        self.assertTrue(Path(state["lock"]).exists())
+        self.assertTrue(state["restore_errors"])
+        temporary = self.root / "android" / (setup.EXPORT_EVENTS + ".testmap-restore")
+        self.assertTrue(temporary.exists())
+        # This is a fake-device fixture: simulate separately reviewed recovery.
+        temporary.unlink()
+        (self.root / "fail-before-mv").unlink()
+        (self.root / "fail-temp-cleanup").unlink()
+        setup.restore_setup(state)
+        self.assertFalse(Path(state["lock"]).exists())
+        self.assertFalse((self.root / "android" / setup.EXPORT_EVENTS).exists())
+
+    def apply_cancel(self):
+        with patch.object(setup, "android_wait_editor_ready"), patch.object(setup, "_device_clock", return_value={"device_ms": 100000, "offset_min_ms": 10, "offset_max_ms": 20}):
+            return setup.apply_setup("editor", platform="android", folder=self.root / "evidence",
+                                     marker="exportcancel", serial="fake-serial", export_cancel_run_id="run-1")
+
+    def test_cancel_marker_roundtrip_absence_and_original_bytes(self):
+        marker = self.root / "android" / setup.EXPORT_CONTROL
+        events = self.root / "android" / setup.EXPORT_EVENTS
+        expired = b'{ "mode":"hold-next", "run_id":"old", "fixture_uri":"content://media/external/images/media/9", "expires_at_ms":1 }'
+        for original in (None, expired):
+            with self.subTest(original_present=original is not None):
+                if original is not None: marker.write_bytes(original)
+                events.write_bytes(b"old private event bytes\n")
+                state = self.apply_cancel()
+                payload = json.loads(marker.read_text())
+                self.assertEqual({"mode": "hold-next", "run_id": "run-1", "fixture_uri": setup.MEDIA + "/1", "expires_at_ms": 210000}, payload)
+                self.assertEqual(b"", events.read_bytes())
+                saved = setup.load_setup_backup(Path(state["journal"]))
+                self.assertEqual(original, saved["private_backup"][setup.EXPORT_CONTROL])
+                rows = [{"run_id": "run-1", "event": name, "timestamp_ms": 100100 + n} for n, name in enumerate(["ready", "entered", "cancelled", "cleared"])]
+                events.write_text(json.dumps({"run_id": "other", "private": "must not escape"}) + "\n" + "\n".join(json.dumps(row) for row in rows))
+                marker.unlink()  # Product atomically consumes only the current marker.
+                setup.restore_setup(state)
+                self.assertEqual(original, marker.read_bytes() if marker.exists() else None)
+                self.assertEqual(b"old private event bytes\n", events.read_bytes())
+                public = json.loads((self.root / "evidence/export-control-events.json").read_text())
+                self.assertEqual(rows, public["events"])
+                self.assertNotIn("must not escape", json.dumps(public))
+                self.assertFalse(Path(state["lock"]).exists())
+                marker.unlink(missing_ok=True)
+
+    def test_cancel_refuses_active_control_without_stopping_app(self):
+        marker = self.root / "android" / setup.EXPORT_CONTROL
+        for payload in (b"unrecognised", json.dumps({"mode": "hold-next", "run_id": "another-run", "fixture_uri": setup.MEDIA + "/9", "expires_at_ms": 200000}).encode()):
+            marker.write_bytes(payload)
+            with self.assertRaisesRegex(ValueError, "Existing active or unrecognised"):
+                self.apply_cancel()
+            self.assertEqual(payload, marker.read_bytes())
+            self.assertNotIn("force-stop", (self.root / "calls.jsonl").read_text())
+            self.assertFalse(list((self.root / "locks").glob("*.json")))
+
+    def test_cancel_partial_arm_failure_and_stop_restore_original_events(self):
+        events = self.root / "android" / setup.EXPORT_EVENTS
+        original = b"prior private events"
+        events.write_bytes(original)
+        write = setup.write_private
+        def fail_control(serial, path, data, **kwargs):
+            if path == setup.EXPORT_CONTROL: raise ValueError("arm interrupted")
+            return write(serial, path, data, **kwargs)
+        with patch.object(setup, "write_private", side_effect=fail_control):
+            with self.assertRaisesRegex(ValueError, "arm interrupted"): self.apply_cancel()
+        self.assertEqual(original, events.read_bytes())
+        self.assertFalse((self.root / "android" / setup.EXPORT_CONTROL).exists())
+        arm = setup._arm_export_control
+        def stop_after_arm(state):
+            arm(state)
+            raise InterruptedError("stopped after arm")
+        with patch.object(setup, "_arm_export_control", side_effect=stop_after_arm):
+            with self.assertRaises(InterruptedError): self.apply_cancel()
+        self.assertEqual(original, events.read_bytes())
+        self.assertFalse((self.root / "android" / setup.EXPORT_CONTROL).exists())
+        self.assertFalse(list((self.root / "locks").glob("*.json")))
+
+    def test_cancel_missing_backup_keys_rejected_before_any_device_access(self):
+        state = self.apply_cancel()
+        journal = Path(state["journal"])
+        original = journal.read_text()
+        for name in (*setup.ANDROID_CONFIG, *setup.EXPORT_CONTROL_PATHS):
+            modified = json.loads(original)
+            del modified["private_backup"][name]
+            journal.write_text(json.dumps(modified))
+            calls = (self.root / "calls.jsonl").read_text()
+            with self.assertRaisesRegex(ValueError, "missing preferences"):
+                setup.load_setup_backup(journal)
+            self.assertEqual(calls, (self.root / "calls.jsonl").read_text())
+        journal.write_text(original)
+        setup.restore_setup(state)
+
+    def test_cancel_restore_failure_retains_original_control_backup(self):
+        events = self.root / "android" / setup.EXPORT_EVENTS
+        events.write_bytes(b"original events")
+        state = self.apply_cancel()
+        (self.root / "fail-restore").touch()
+        with self.assertRaises(setup.SetupRestoreError): setup.restore_setup(state)
+        self.assertTrue(Path(state["lock"]).exists())
+        self.assertEqual(b"original events", setup.load_setup_backup(Path(state["journal"]))["private_backup"][setup.EXPORT_EVENTS])
+        (self.root / "fail-restore").unlink()
+        setup.restore_setup(setup.load_setup_backup(Path(state["journal"])))
+        self.assertFalse(Path(state["lock"]).exists())
+
+    def test_cancel_scope_and_non_cancel_setup_do_not_arm(self):
+        with self.assertRaisesRegex(ValueError, "restricted"):
+            setup.apply_setup("home", platform="android", folder=self.root / "evidence", marker="exportcancel", serial="fake-serial", export_cancel_run_id="run-1")
+        marker = self.root / "android" / setup.EXPORT_CONTROL
+        marker.write_bytes(b"unrelated control")
+        state = self.apply()
+        self.assertNotIn("export_control", state)
+        self.assertNotIn(setup.EXPORT_CONTROL, state["private_backup"])
+        setup.restore_setup(state)
+        self.assertEqual(b"unrelated control", marker.read_bytes())
 
     def test_android_roundtrip_binary_absent_crash_and_unique_media(self):
         original = b'\x00\xffprivate prefs\n'
@@ -628,6 +783,112 @@ finally:
             with patch.object(runner, 'maybe_prepare_ios_runner'), patch.object(runner, '_apply_agent_setup', return_value={'backup': True}), patch.object(runner, '_script_from_cmd', return_value=script), patch.object(runner, 'parse_script', return_value=[{'n': 1}]), patch.object(runner, '_run_batched_steps', return_value=0), patch.object(runner, 'release_agent_session'), patch.object(runner, 'restore_setup', side_effect=ValueError('recovery backup: fake.json')):
                 with self.assertRaisesRegex(setup.SetupRestoreError, 'fake.json'):
                     runner.run_task(spec, io.StringIO())
+
+
+class CancelGateEvidenceChecks(unittest.TestCase):
+    def setUp(self):
+        from datetime import datetime, timezone
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.output = self.root / "sdk"
+        self.output.mkdir()
+        self.evidence = self.root / "run-1"
+        self.source = self.root / "cancel.ad"
+        self.source.write_text((Path(runner.REPO_ROOT) / "docs/testing/agent-device/scripts/export-cancel@android.ad").read_text())
+        rows = runner.parse_script(self.source, "android")
+        self.derived = self.evidence / "scripts/cancel.ad"
+        manifest = runner.materialize_evidence_script(self.source, self.evidence, self.derived, {r["n"]: f"step-{r['n']}.png" for r in rows})
+        self.spec = {"edge_id": "export-cancel", "agent_platform": "android", "agent_device_output": str(self.output), "step_evidence_root": str(self.evidence), "step_evidence_manifest": str(self.derived.with_suffix(".mapping.json"))}
+        self.base = 1700000000000
+        self.timeline = []
+        for m in manifest["mapping"]:
+            screenshot = m["kind"] == "screenshot"
+            if screenshot:
+                Path(m["path"]).parent.mkdir(parents=True, exist_ok=True)
+                setup.write_png(Path(m["path"]), 2, 2, lambda y: bytes((10, 20, 30)) * 2)
+            for kind, delta in [("replay_action_start", 550 if screenshot else 0), ("replay_action_stop", 600 if screenshot else 500)]:
+                stamp = self.base + m["step"] * 1000 + delta
+                self.timeline.append({"type": kind, "step": m["replay_step"], "command": "screenshot" if screenshot else m["command"], "ok": True, "ts": datetime.fromtimestamp(stamp / 1000, timezone.utc).isoformat(), "replayPath": str(self.derived)})
+        self.control = {"mode": "hold-next", "run_id": "run-1", "fixture_uri": setup.MEDIA + "/1", "clock": {"device_ms": self.base + 2000, "offset_min_ms": 1990, "offset_max_ms": 2010, "host_wall_ms": self.base, "host_monotonic_ms": 100000}, "clock_end": {"device_ms": self.base + 22000, "offset_min_ms": 1995, "offset_max_ms": 2015, "host_wall_ms": self.base + 20000, "host_monotonic_ms": 120000}, "expires_at_ms": self.base + 110000,
+                        "events": [{"run_id": "run-1", "event": event, "timestamp_ms": self.base + when + 2000} for event, when in [("ready", 1800), ("entered", 2000), ("cancelled", 6100), ("cleared", 6200)]]}
+        self.write_evidence()
+
+    def write_evidence(self):
+        (self.output / "export-control-events.json").write_text(json.dumps(self.control))
+        (self.output / "replay-timing.ndjson").write_text("\n".join(json.dumps(e) for e in self.timeline))
+
+    def test_real_cancel_actions_and_bounded_event_order_are_required(self):
+        self.assertEqual("evidence_complete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        original = json.dumps(self.control)
+        changes = [lambda c: c["events"].pop(),
+                   lambda c: c["events"][2].update(event="watchdog"),
+                   lambda c: c["events"][2].update(timestamp_ms=self.base + 5000),
+                   lambda c: c["events"][1].update(timestamp_ms=self.base + 8100),
+                   lambda c: c["events"][2].update(timestamp_ms=self.base + 8700),
+                   lambda c: c["events"][3].update(timestamp_ms=self.base + 9800),
+                   lambda c: c["events"][0].update(run_id="old"),
+                   lambda c: c["events"][0].update(private="forbidden"),
+                   lambda c: c.update(capture_error="missing"),
+                   lambda c: c.update(expires_at_ms=self.base),
+                   lambda c: c["clock"].update(offset_max_ms=10000),
+                   lambda c: c["clock_end"].update(offset_min_ms=7000, offset_max_ms=7020),
+                   lambda c: c.pop("clock_end"),
+                   lambda c: c["clock_end"].update(host_wall_ms=self.base + 25000)]
+        for change in changes:
+            self.control = json.loads(original)
+            change(self.control)
+            self.write_evidence()
+            self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        self.control = json.loads(original)
+        self.write_evidence()
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 130)["status"])
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 1)["status"])
+
+    def test_process_zero_without_real_press_or_assertions_never_turns_green(self):
+        original = json.dumps(self.timeline)
+        # Original steps 6/7/8/9 are actual press, cancelled, no Share, no gallery.
+        for replay_step in (11, 13, 15, 17):
+            self.timeline = json.loads(original)
+            next(e for e in self.timeline if e["step"] == replay_step and e["type"] == "replay_action_stop")["ok"] = False
+            self.write_evidence()
+            extra = {"agent_device_state": "review_required", "layers": {"business": "review_required"}, "cases": []}
+            with patch.object(runner, "_ingest_agent_device_result", return_value=extra):
+                verdict = runner.ingest_agent_device_result(self.spec, 0)
+            self.assertEqual("uncovered", verdict["agent_device_state"])
+            self.assertEqual("failed", verdict["layers"]["business"])
+            self.assertFalse(verdict["layers"]["green_from_process_zero"])
+        self.timeline = json.loads(original)
+        self.write_evidence()
+        (self.evidence / "steps/step-6.png").unlink()
+        self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+
+    def test_truncated_and_corrupt_pngs_cannot_satisfy_cancel_evidence(self):
+        shot = self.evidence / "steps/step-6.png"
+        original = shot.read_bytes()
+        for invalid in (original[:8], original[:-1], original[:-12], original[:48] + bytes([original[48] ^ 1]) + original[49:]):
+            shot.write_bytes(invalid)
+            self.assertEqual("incomplete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        shot.write_bytes(original)
+        self.assertEqual("evidence_complete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+
+    def test_device_clock_rejects_wall_jump_against_monotonic_elapsed(self):
+        with patch.object(setup, "adb_shell", return_value="1700000000020000000"), patch.object(setup.time, "time_ns", side_effect=[1700000000000000000, 1700000000200000000]), patch.object(setup.time, "monotonic_ns", side_effect=[1000000000, 1020000000]):
+            with self.assertRaisesRegex(ValueError, "bounded device clock"):
+                setup._device_clock("fake-device")
+        with patch.object(setup, "adb_shell", return_value="1700000000010000000"), patch.object(setup.time, "time_ns", side_effect=[1700000000000000000, 1700000000020000000]), patch.object(setup.time, "monotonic_ns", side_effect=[1000000000, 1020000000]):
+            sample = setup._device_clock("fake-device")
+            self.assertEqual(1000, sample["host_monotonic_ms"])
+            self.assertEqual(1700000000000, sample["host_wall_ms"])
+
+    def test_gate_is_only_armed_for_android_cancel(self):
+        spec = {**self.spec, "setup": "editor", "device": {"id": "fake-device"}}
+        with patch.object(runner, "apply_setup", return_value={"journal": "private.json"}) as apply:
+            runner._apply_agent_setup(spec, io.StringIO())
+            self.assertEqual("run-1", apply.call_args.kwargs["export_cancel_run_id"])
+            spec["edge_id"] = "editor-style-then-export"
+            runner._apply_agent_setup(spec, io.StringIO())
+            self.assertNotIn("export_cancel_run_id", apply.call_args.kwargs)
 
 
 if __name__ == '__main__':

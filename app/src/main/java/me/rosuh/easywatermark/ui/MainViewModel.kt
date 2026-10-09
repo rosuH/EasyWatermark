@@ -46,6 +46,7 @@ import me.rosuh.easywatermark.session.ExportErrorCodes
 import me.rosuh.easywatermark.session.ExportJobState
 import me.rosuh.easywatermark.session.MediaLibraryPort
 import me.rosuh.easywatermark.session.WatermarkSessionViewModel
+import me.rosuh.easywatermark.session.withTestmapExportControl
 import me.rosuh.easywatermark.utils.ktx.formatDate
 import me.rosuh.easywatermark.utils.ktx.launch
 import me.rosuh.easywatermark.utils.bitmap.probeEncodedSize
@@ -115,7 +116,10 @@ class MainViewModel (
 
     init {
         // Phase 2: shared export loop uses Android port (wrap of legacy generateImage).
-        exportPipeline = AndroidExportPipelinePort(appContext = applicationContext)
+        exportPipeline = withTestmapExportControl(
+            applicationContext,
+            AndroidExportPipelinePort(appContext = applicationContext),
+        )
         // Media library port for gallery listing / picker enrichment (default app ContentResolver).
         mediaLibrary = AndroidMediaLibraryPort(applicationContext.contentResolver)
     }
