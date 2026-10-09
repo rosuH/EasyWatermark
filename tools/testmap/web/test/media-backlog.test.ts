@@ -47,7 +47,13 @@ it.each([1, 5])(
     const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
       if (url.startsWith("/api/device-video")) {
         videoSignal = init.signal as AbortSignal;
-        return { ok: true, status: 200, body: { getReader: () => ({ read }) } };
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            getReader: () => ({ read, cancel: vi.fn(), releaseLock: vi.fn() }),
+          },
+        };
       }
       if (url.startsWith("/api/device-frame"))
         return { ok: false, status: 204 };
@@ -91,50 +97,6 @@ it.each([1, 5])(
   },
 );
 
-it.each([false, true])(
-  "keeps the original 2s deadline with first packet received=%s",
-  async (hasPacket) => {
-    vi.useFakeTimers();
-    const decoder = vi.fn();
-    vi.stubGlobal("VideoDecoder", decoder);
-    const read = vi.fn().mockImplementation(() => new Promise(() => {}));
-    if (hasPacket)
-      read.mockResolvedValueOnce({ done: false, value: packet(7) });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) =>
-        url.startsWith("/api/device-video")
-          ? { ok: true, status: 200, body: { getReader: () => ({ read }) } }
-          : { ok: false, status: 204 },
-      ),
-    );
-    const canvas = {
-      getContext: () => ({ clearRect: vi.fn() }),
-      width: 0,
-      height: 0,
-    } as unknown as HTMLCanvasElement;
-    const diagnose = vi.fn();
-    const stop = watchMedia(canvas, "android", "mock", vi.fn(), diagnose);
-    await vi.advanceTimersByTimeAsync(1999);
-    expect(diagnose).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1);
-    expect(diagnose).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        reason: "first-frame-timeout",
-        elapsedMs: 2000,
-        firstPacketMs: hasPacket ? 0 : null,
-        firstIdrMs: null,
-        firstOutputMs: null,
-        decodeCount: 0,
-        outputCount: 0,
-        maxQueue: 0,
-      }),
-    );
-    expect(decoder).not.toHaveBeenCalled();
-    stop();
-  },
-);
-
 it("records the decoder's real error once, before the fallback's fetch result", async () => {
   vi.useFakeTimers();
   class Decoder {
@@ -171,7 +133,17 @@ it("records the decoder's real error once, before the fallback's fetch result", 
     "fetch",
     vi.fn(async (url: string) =>
       url.startsWith("/api/device-video")
-        ? { ok: true, status: 200, body: { getReader: () => ({ read }) } }
+        ? {
+            ok: true,
+            status: 200,
+            body: {
+              getReader: () => ({
+                read,
+                cancel: vi.fn(),
+                releaseLock: vi.fn(),
+              }),
+            },
+          }
         : { ok: false, status: 204 },
     ),
   );
@@ -197,4 +169,193 @@ it("records the decoder's real error once, before the fallback's fetch result", 
   await vi.advanceTimersByTimeAsync(2500);
   expect(diagnose).toHaveBeenCalledTimes(1);
   stop();
+});
+
+// Real stream semantics, controlled time and decoder callbacks; no device access.
+function streamFixture(connect = true) {
+  vi.useFakeTimers();
+  let input!: ReadableStreamDefaultController<Uint8Array>;
+  let output!: (frame: VideoFrame) => void;
+  const cancel = vi.fn();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      input = controller;
+    },
+    cancel,
+  });
+  const decode = vi.fn();
+  const close = vi.fn();
+  class Decoder {
+    state = "configured";
+    decodeQueueSize = 0;
+    constructor(callbacks: { output: (frame: VideoFrame) => void }) {
+      output = callbacks.output;
+    }
+    configure() {}
+    decode = decode;
+    close() {
+      this.state = "closed";
+      close();
+    }
+  }
+  vi.stubGlobal("VideoDecoder", Decoder);
+  vi.stubGlobal(
+    "EncodedVideoChunk",
+    class {
+      constructor(public init: unknown) {}
+    },
+  );
+  let signal!: AbortSignal;
+  const fetchMock = vi.fn((url: string, init: RequestInit) => {
+    if (url.startsWith("/api/device-frame"))
+      return Promise.resolve({ ok: false, status: 204 });
+    signal = init.signal as AbortSignal;
+    signal.addEventListener("abort", () =>
+      input.error(new DOMException("aborted", "AbortError")),
+    );
+    return connect
+      ? Promise.resolve({ ok: true, status: 200, body })
+      : new Promise(() => {});
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const canvas = {
+    width: 0,
+    height: 0,
+    style: {},
+    getContext: () => ({ clearRect: vi.fn(), drawImage: vi.fn() }),
+  } as unknown as HTMLCanvasElement;
+  const update = vi.fn(),
+    diagnose = vi.fn();
+  const stop = watchMedia(canvas, "android", "mock", update, diagnose);
+  const config = () => {
+    const payload = new TextEncoder().encode('{"codec":"avc1.42C032"}');
+    const size = new Uint8Array(4);
+    new DataView(size.buffer).setUint32(0, payload.length);
+    input.enqueue(concat([size, payload]));
+  };
+  return {
+    input,
+    body,
+    cancel,
+    decode,
+    close,
+    update,
+    diagnose,
+    stop,
+    fetchMock,
+    config,
+    signal: () => signal,
+    output: () => {
+      const frame = { displayWidth: 10, displayHeight: 20, close: vi.fn() };
+      output(frame as unknown as VideoFrame);
+      return frame;
+    },
+  };
+}
+
+it("waits for complete parameters despite early IDRs, accepts cold-start timing, then detects stalled output", async () => {
+  const f = streamFixture();
+  await vi.advanceTimersByTimeAsync(520);
+  f.config();
+  await vi.advanceTimersByTimeAsync(1380);
+  f.input.enqueue(packet(5));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(f.decode).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(25);
+  f.input.enqueue(concat([packet(7), packet(5)]));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(f.decode).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(5);
+  f.input.enqueue(packet(8));
+  await vi.advanceTimersByTimeAsync(95);
+  f.input.enqueue(packet(5));
+  await vi.advanceTimersByTimeAsync(25);
+  expect(f.diagnose).not.toHaveBeenCalled();
+  expect(f.decode).toHaveBeenCalledExactlyOnceWith({
+    init: {
+      type: "key",
+      timestamp: 0,
+      data: concat([
+        packet(7).slice(4),
+        packet(8).slice(4),
+        packet(5).slice(4),
+      ]),
+    },
+  });
+  expect(f.output().close).toHaveBeenCalledOnce();
+  expect(f.update).toHaveBeenLastCalledWith("video");
+  await vi.advanceTimersByTimeAsync(1200);
+  expect(f.diagnose).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      reason: "frame-timeout",
+      responseMs: 0,
+      firstPacketMs: 520,
+      firstNalMs: 1900,
+      parametersReadyMs: 1930,
+      firstIdrMs: 1900,
+      firstDecodeMs: 2025,
+      firstOutputMs: 2050,
+      elapsedMs: 3250,
+    }),
+  );
+  expect(f.signal().aborted).toBe(true);
+  expect(f.body.locked).toBe(false);
+  f.stop();
+  const count = f.fetchMock.mock.calls.length;
+  await vi.advanceTimersByTimeAsync(20000);
+  expect(f.fetchMock).toHaveBeenCalledTimes(count);
+});
+
+it.each(["connection", "startup", "keyframe", "first-frame"] as const)(
+  "bounds the %s phase without letting irrelevant packets extend it",
+  async (stage) => {
+    const f = streamFixture(stage !== "connection");
+    await vi.advanceTimersByTimeAsync(0);
+    if (stage === "keyframe" || stage === "first-frame") {
+      f.input.enqueue(
+        concat([
+          packet(7),
+          packet(8),
+          ...(stage === "first-frame" ? [packet(5)] : []),
+        ]),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    const budget =
+      stage === "connection" ? 10000 : stage === "startup" ? 12000 : 2000;
+    for (let n = 0; n < budget / 500 - 1; n++) {
+      await vi.advanceTimersByTimeAsync(500);
+      if (stage !== "connection") f.config();
+      if (stage === "keyframe" || stage === "first-frame")
+        f.input.enqueue(concat([packet(6), packet(9), packet(1)]));
+    }
+    await vi.advanceTimersByTimeAsync(499);
+    expect(f.diagnose).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.diagnose).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        reason: `${stage}-timeout`,
+        elapsedMs: budget,
+        firstOutputMs: null,
+      }),
+    );
+    expect(f.decode).toHaveBeenCalledTimes(stage === "first-frame" ? 4 : 0);
+    expect(f.signal().aborted).toBe(true);
+    if (stage !== "connection") expect(f.body.locked).toBe(false);
+    f.stop();
+  },
+);
+
+it("cancels a pending startup read without fallback or later polling", async () => {
+  const f = streamFixture();
+  await vi.advanceTimersByTimeAsync(1000);
+  f.config();
+  await vi.advanceTimersByTimeAsync(0);
+  f.stop();
+  await vi.advanceTimersByTimeAsync(30000);
+  expect(f.signal().aborted).toBe(true);
+  expect(f.body.locked).toBe(false);
+  expect(f.diagnose).not.toHaveBeenCalled();
+  expect(f.fetchMock).toHaveBeenCalledTimes(1);
+  expect(f.decode).not.toHaveBeenCalled();
 });

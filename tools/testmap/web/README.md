@@ -35,7 +35,7 @@ The small graph uses a stable four-column layout based on server ordering, with 
 
 - `src/api-types.ts`, `model.ts`, `api.ts`: API shapes, shared selection rules, abortable polling.
 - `src/App.tsx`, `Catalog.tsx`, `Run.tsx`, `Confirm.tsx`: the workflow and its views.
-- `src/media.ts`: existing length-prefixed H.264 / Annex-B protocol and still fallback.
+- `src/media.ts`: existing length-prefixed H.264 / Annex-B protocol and still fallback. The viewer caps HTTP connection at 10 seconds, then native startup until the first NAL at 12 seconds. JSON configuration does not signal video readiness or renew these limits. The first NAL starts a 2-second SPS/PPS + IDR budget; the first decode submission starts a separate 2-second output budget. Once playing, a 1.2-second output gap triggers still fallback. These are finite viewer wait limits, not a native end-to-end startup SLA; slow devices may still fall back. Diagnostics report each reached milestone from request start.
 - `src/components/ui/button.tsx`: local shadcn/ui Button pattern, using Radix Slot, CVA and Tailwind utilities.
 - `src/style.css`: responsive layout, focus styles and 120/200/320ms motion tokens. Frequent selection and media do not animate. Reduced motion is honored.
 - `test/behavior.test.tsx`: isolated mock checks for confirmation, undo/revoke, missing runs, failed edge results, pinned evidence, visibility cleanup, stale responses, filtering and packet framing. Tests stub all requests and never contact a real confirmation endpoint.

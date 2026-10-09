@@ -190,6 +190,7 @@ export function DeviceLane({
                 `${t("Reason", "原因")}: ${videoDiagnostic.reason}`,
                 `${t("Elapsed", "耗时")}: ${videoDiagnostic.elapsedMs} ms`,
                 `${t("First packet / IDR / output", "首包 / 关键帧 / 输出")}: ${[videoDiagnostic.firstPacketMs, videoDiagnostic.firstIdrMs, videoDiagnostic.firstOutputMs].map((value) => (value === null ? "—" : `${value} ms`)).join(" / ")}`,
+                `${t("HTTP / first NAL / parameters / decode submitted", "HTTP / 首 NAL / 参数就绪 / 提交解码")}: ${[videoDiagnostic.responseMs, videoDiagnostic.firstNalMs, videoDiagnostic.parametersReadyMs, videoDiagnostic.firstDecodeMs].map((value) => (value == null ? "—" : `${value} ms`)).join(" / ")}`,
                 `Codec: ${videoDiagnostic.codec}`,
                 `${t("Decode / output / peak queue", "提交解码 / 输出 / 队列峰值")}: ${videoDiagnostic.decodeCount} / ${videoDiagnostic.outputCount} / ${videoDiagnostic.maxQueue}`,
                 videoDiagnostic.errorName
