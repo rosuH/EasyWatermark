@@ -592,16 +592,40 @@ def installed_version_code(serial: str) -> str:
     return match[1]
 
 
+def _write_existing_fixture(serial: str, remote: str, data: bytes) -> None:
+    """Overwrite only an existing synthetic A fixture without replacing the file.
+
+    adb push can unlink regular files first. Hold the existing file open, verify
+    its identity, then reopen that descriptor for truncation without recreating a path.
+    """
+    pattern = rf"/sdcard/{re.escape(FIXTURE_FOLDER)}/ewm-suite-[A-Za-z0-9]{{1,24}}-[a-f0-9]{{32}}-A\.png"
+    if not re.fullmatch(pattern, remote) or not isinstance(data, bytes) or not 0 < len(data) <= 1024 * 1024:
+        raise ValueError("Fixture write requires a bounded synthetic A source")
+    command = 'test -f "$1" && test ! -L "$1" && exec 3<"$1" && test /proc/self/fd/3 -ef "$1" && cat > /proc/self/fd/3'
+    adb(serial, ["shell", shlex.join(["sh", "-c", command, "testmap-fixture-write", remote])],
+        input_data=data, timeout=5)
+
+
 def damage_source(serial: str, remote_name: str, marker: str, folder: Path) -> str:
+    if (not re.fullmatch(r"[A-Za-z0-9]{1,24}-[a-f0-9]{32}", marker)
+            or remote_name != f"ewm-suite-{marker}-A.png"):
+        raise ValueError("Damage source must be this run's synthetic A fixture")
     remote = f"/sdcard/{FIXTURE_FOLDER}/{remote_name}"
     invalid = Path(folder) / f"ewm-invalid-{marker}.bin"
-    invalid.write_bytes(f"EWM deliberate source decode failure {marker}".encode())
-    adb(serial, ["push", str(invalid), remote])
+    data = f"EWM deliberate source decode failure {marker}".encode()
+    invalid.write_bytes(data)
+    _write_existing_fixture(serial, remote, data)
     return remote
 
 
 def restore_source(serial: str, local: Path, remote: str) -> None:
-    adb(serial, ["push", str(local), remote], timeout=5)
+    local = Path(local)
+    if (remote != f"/sdcard/{FIXTURE_FOLDER}/{local.name}"
+            or local.is_symlink() or not local.is_file()):
+        raise ValueError("Restore source must match its regular local fixture")
+    with local.open("rb") as stream:
+        data = stream.read(1024 * 1024 + 1)
+    _write_existing_fixture(serial, remote, data)
 
 
 def repair_failure_source(state: dict, *, serial: str, run_id: str, should_stop=None) -> dict:

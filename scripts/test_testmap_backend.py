@@ -457,6 +457,62 @@ class BackendChecks(unittest.TestCase):
                 spawn.assert_not_called()
 
 
+    def test_fixture_damage_and_restore_stream_in_place_with_no_create_and_fail_closed(self):
+        import shlex
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            marker = 'exportfailurerec-' + 'b' * 32
+            local = setup.write_png(root / f'ewm-suite-{marker}-A.png', 2, 2, lambda y: b'\x10\x20\x30' * 2)
+            valid = local.read_bytes()
+            remote = f'/sdcard/{setup.FIXTURE_FOLDER}/{local.name}'
+            damaged = f'EWM deliberate source decode failure {marker}'.encode()
+            with patch.object(setup, 'adb') as adb:
+                self.assertEqual(remote, setup.damage_source('fixture-serial', local.name, marker, root))
+                setup.restore_source('fixture-serial', local, remote)
+                self.assertEqual(2, adb.call_count)
+                for call, expected in zip(adb.call_args_list, (damaged, valid)):
+                    serial, argv = call.args
+                    self.assertEqual('fixture-serial', serial)
+                    self.assertEqual('shell', argv[0])
+                    command = shlex.split(argv[1])
+                    self.assertEqual(['sh', '-c'], command[:2])
+                    self.assertEqual(['testmap-fixture-write', remote], command[3:])
+                    self.assertEqual('test -f "$1" && test ! -L "$1" && exec 3<"$1" && test /proc/self/fd/3 -ef "$1" && cat > /proc/self/fd/3', command[2])
+                    self.assertEqual({'input_data': expected, 'timeout': 5}, call.kwargs)
+                self.assertEqual(damaged, (root / f'ewm-invalid-{marker}.bin').read_bytes())
+            unsafe = ['/sdcard/other.png', remote.replace('-A.png', '-B.png'),
+                      remote.replace('/ewm-suite-', '/../ewm-suite-'), remote + '; echo unsafe']
+            with patch.object(setup, 'adb') as adb:
+                for target in unsafe:
+                    with self.subTest(target=target), self.assertRaises(ValueError):
+                        setup.restore_source('fixture-serial', local, target)
+                with self.assertRaises(ValueError):
+                    setup.damage_source('fixture-serial', local.name, 'different-' + 'a' * 32, root)
+                for payload in (b'', b'x' * (1024 * 1024 + 1)):
+                    local.write_bytes(payload)
+                    with self.assertRaises(ValueError):
+                        setup.restore_source('fixture-serial', local, remote)
+                local.unlink()
+                backing = root / 'source.png'
+                backing.write_bytes(valid)
+                local.symlink_to(backing)
+                with self.assertRaises(ValueError):
+                    setup.restore_source('fixture-serial', local, remote)
+                adb.assert_not_called()
+            local.unlink()
+            local.write_bytes(valid)
+            # Missing target, symlink or a device write failure must propagate.
+            # There is no retry via push or a direct path write that could recreate it.
+            failure = ValueError('device refused existing-file write')
+            with patch.object(setup, 'adb', side_effect=failure) as adb:
+                for write in (lambda: setup.damage_source('fixture-serial', local.name, marker, root),
+                              lambda: setup.restore_source('fixture-serial', local, remote)):
+                    with self.assertRaises(ValueError) as caught:
+                        write()
+                    self.assertIs(failure, caught.exception)
+                self.assertEqual(2, adb.call_count)
+
+
 # Fake command-line tools use only this test's temporary directories. They do
 # not forward any command to adb, simctl, an installed app, or a device.
 FAKE_DEVICE_CLI = r"""#!/usr/bin/env python3
