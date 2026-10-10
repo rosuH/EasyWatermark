@@ -226,7 +226,11 @@ export function watchMedia(
                     stats.outputCount++;
                     draw(frame, frame.displayWidth, frame.displayHeight);
                     update("video");
-                    arm(1200, "frame-timeout");
+                    // A still screen with no pending decode is healthy. Only
+                    // actual output progress renews an outstanding-work timer.
+                    if (stats.outputCount < stats.decodeCount)
+                      arm(1200, "frame-timeout");
+                    else clearTimeout(watchdog);
                   }
                 } finally {
                   frame.close();
@@ -271,14 +275,20 @@ export function watchMedia(
           }
           phase = "decode-error";
           if (stats.firstDecodeMs === null) stats.firstDecodeMs = elapsed();
-          decoder.decode(
-            new EncodedVideoChunk({
-              type: key ? "key" : "delta",
-              timestamp: ts++ * 33333,
-              data,
-            }),
-          );
+          const chunk = new EncodedVideoChunk({
+            type: key ? "key" : "delta",
+            timestamp: ts++ * 33333,
+            data,
+          });
+          // Account before decode so even a synchronous output drains this
+          // submission. Further input must not extend a stalled output timer.
           stats.decodeCount++;
+          if (
+            stats.firstOutputMs !== null &&
+            stats.decodeCount - stats.outputCount === 1
+          )
+            arm(1200, "frame-timeout");
+          decoder.decode(chunk);
           stats.maxQueue = Math.max(stats.maxQueue, decoder.decodeQueueSize);
         }
       }
