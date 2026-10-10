@@ -641,7 +641,7 @@
         "android": "docs/testing/agent-device/scripts/editor-clamp-drag@android.json",
         "ios": "docs/testing/agent-device/scripts/editor-clamp-drag@ios.ad"
       },
-      "honesty": "Android: owned A and exact UI nonce, fresh AX/PNG brackets, stable localized gold pixels, pixel-derived real SDK pan, visible displacement and SDK-session reopen continuity. Two immutable batch phases preserve canonical/derived hashes and global steps. Requires tools/testmap/requirements.txt before setup. This is not OCR, process-death/DataStore persistence, or A/B filmstrip proof; Single native CHECKED is not exported by SDK, so review its synchronized highlight image and real CLAMP-only drag behavior. iOS retains its separate script and gains none of these Android claims. Human Confirm remains separate."
+      "honesty": "Android: one owned A+B system-picker selection bound by four provider hashes, collection-wide three-date-column union and fresh AX/PNG fixture pixels. Exact UI nonce, stable localized gold pixels and pixel-derived SDK pan prove A displacement; fresh B then A selection and same-process SDK reopen must retain it. Immutable phases preserve canonical/derived hashes, dynamic-ref source brackets and global steps. Requires tools/testmap/requirements.txt before setup. This is not OCR or process-death/DataStore persistence; Single native CHECKED is not exported by SDK, so review its synchronized highlight image and real CLAMP-only drag behavior. iOS retains its separate script and gains none of these Android claims. Human Confirm remains separate."
     },
     {
       "id": "export-cancel",
