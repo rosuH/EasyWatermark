@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from testmap_devices import (
     JPEG_MAGIC,
@@ -279,12 +279,14 @@ class _Producer:
                 return
         self._run_stills()
 
-    def subscribe(self) -> Iterator[bytes]:
+    def subscribe(self, should_stop: Callable[[bool], bool] | None = None) -> Iterator[bytes]:
         last = -1
         with self._cv:
             self._subs += 1
         try:
             while not self._stop.is_set():
+                if should_stop and should_stop(False):
+                    return
                 with self._cv:
                     if self._seq == last:
                         self._cv.wait(timeout=1.0)
@@ -293,6 +295,8 @@ class _Producer:
                     last = self._seq
                     frame = self._frame
                 if frame:
+                    if should_stop and should_stop(True):
+                        return
                     yield frame
         finally:
             with self._cv:
@@ -321,6 +325,7 @@ class StreamHub:
         platform: str | None,
         device_id: str | None,
         preferred: dict | None = None,
+        *, should_stop: Callable[[bool], bool] | None = None,
     ) -> Iterator[bytes]:
         target = resolve_watch_target(platform, device_id, preferred)
         if not target:
@@ -331,7 +336,7 @@ class StreamHub:
             if prod is None or not prod._thread.is_alive():
                 prod = _Producer(key, target)
                 self._producers[key] = prod
-        yield from prod.subscribe()
+        yield from prod.subscribe(should_stop)
 
     def reap_idle(self) -> None:
         with self._lock:

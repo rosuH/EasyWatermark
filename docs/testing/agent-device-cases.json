@@ -292,10 +292,10 @@
         "ios": true
       },
       "script": {
-        "android": "docs/testing/agent-device/scripts/export-save-success@android.ad",
+        "android": "docs/testing/agent-device/scripts/export-save-success@android.json",
         "ios": "docs/testing/agent-device/scripts/export-save-success@ios.ad"
       },
-      "honesty": "In-app Save / PNG / Export only. Photos permission and album write are seam. File checks belong to script_checks, not agent_observation. Replay pass is not product pass."
+      "honesty": "Android executes returned-URI PNG, ownership, dimensions, visible glyph structure and metadata checks with private restore; exact nonce pixels require independent image QA. iOS remains UI-only. Replay pass is not product pass; Human Confirm stays user-owned."
     },
     {
       "id": "export-system-share",
@@ -478,10 +478,10 @@
         "ios": true
       },
       "script": {
-        "android": "docs/testing/agent-device/scripts/editor-filmstrip-switch@android.ad",
+        "android": "docs/testing/agent-device/scripts/editor-filmstrip-switch@android.json",
         "ios": "docs/testing/agent-device/scripts/editor-filmstrip-switch@ios.ad"
       },
-      "honesty": "Needs two photos from editor setup. Hard-cut filmstrip; no export. Replay pass is not a product pass."
+      "honesty": "Android proves one owned A+B selection and real fresh-thumbnail A to B to A preview identities. No export, persistence or hard-cut motion timing claim. iOS unchanged; replay pass is not product pass and Human Confirm stays user-owned."
     },
     {
       "id": "about-follow-photo",

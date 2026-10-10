@@ -85,6 +85,40 @@ def _run_is_live(snap: object) -> bool:
     return isinstance(snap, dict) and snap.get("state") in {"running", "paused"}
 
 
+# Matches the longest frontend startup watchdog. Silent subscriptions must not
+# retain a native producer forever when a client disappears without another write.
+STREAM_IDLE_TIMEOUT_S = 12.0
+
+
+def _stream_should_stop(connection: socket.socket, run_id: str | None):
+    last_activity = time.monotonic()
+    last_run_check = None
+
+    def should_stop(activity: bool = False) -> bool:
+        nonlocal last_activity, last_run_check
+        now = time.monotonic()
+        if activity:
+            last_activity = now
+            return False
+        # A decoded stream can publish many packets per frame. Read run state
+        # at most once per second, including while no packets arrive.
+        if last_run_check is None or now - last_run_check >= 1.0:
+            last_run_check = now
+            snap = MANAGER.snapshot()
+            if not _run_is_live(snap) or snap.get("id") != run_id:
+                return True
+        try:
+            # EOF also means a valid HTTP request-side half-close. Do not read
+            # or consume the socket; only an explicit TCP error is early abort.
+            if connection.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR):
+                return True
+        except OSError:
+            return True
+        return now - last_activity >= STREAM_IDLE_TIMEOUT_S
+
+    return should_stop
+
+
 def _frame_wait(key: str, gap_s: float) -> None:
     """Hold the request until this device may be captured. A 204 looks like a dead stream."""
     while True:
@@ -367,18 +401,20 @@ class Handler(BaseHTTPRequestHandler):
             )
             self.send_header("Cache-Control", "no-store, no-cache")
             self.send_header("Pragma", "no-cache")
+            self.connection.settimeout(STREAM_IDLE_TIMEOUT_S)
             self.end_headers()
+            frames = HUB.iter_frames(
+                plat, did, preferred,
+                should_stop=_stream_should_stop(self.connection, snap.get("id")),
+            )
             try:
-                any_frame = False
-                for frame in HUB.iter_frames(plat, did, preferred):
-                    any_frame = True
+                for frame in frames:
                     self.wfile.write(multipart_part(frame))
                     self.wfile.flush()
-                if not any_frame:
-                    # Generator returned immediately: no ready device.
-                    return
             except (BrokenPipeError, ConnectionResetError, OSError):
                 return
+            finally:
+                frames.close()
             return
         if path == "/api/device-video":
             plat = (qs.get("platform") or [None])[0]
@@ -403,8 +439,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Connection", "close")
             self.close_connection = True
             self.send_header("Cache-Control", "no-store, no-cache")
+            self.connection.settimeout(STREAM_IDLE_TIMEOUT_S)
             self.end_headers()
-            packets = H264_HUB.iter_packets(plat, did, preferred)
+            packets = H264_HUB.iter_packets(
+                plat, did, preferred,
+                should_stop=_stream_should_stop(self.connection, snap.get("id")),
+            )
             try:
                 # HTTP/1.0 uses connection-close delimiting. The body retains
                 # only the existing four-byte application packet framing.
