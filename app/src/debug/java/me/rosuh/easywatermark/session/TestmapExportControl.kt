@@ -35,7 +35,11 @@ internal fun testmapExportControl(
                 throw failure
             }
             // Observation must never replace the real result with a journal write failure.
-            runCatching { event(filesDir, claim.runId, outcome.observationEvent(), now()) }
+            runCatching {
+                val outputUri = (outcome as? ExportOutcome.Success)?.media?.ref?.value
+                check(outputUri == null || fixturePattern.matches(outputUri)) { "Invalid Testmap export output" }
+                event(filesDir, claim.runId, outcome.observationEvent(), now(), outputUri)
+            }
             outcome
         } finally {
             runCatching { event(filesDir, claim.runId, "cleared", now()) }
@@ -120,11 +124,12 @@ private fun claimControl(filesDir: File, fixture: String, now: Long): Claim? = s
     Claim(runId, mode as String, minOf(expiresAt - now, MAX_HOLD_MS))
 }
 
-private fun event(filesDir: File, runId: String, name: String, timestamp: Long) = synchronized(controlLock) {
+private fun event(filesDir: File, runId: String, name: String, timestamp: Long, outputUri: String? = null) = synchronized(controlLock) {
     val line = JSONObject()
         .put("run_id", runId)
         .put("event", name)
         .put("timestamp_ms", timestamp)
+        .also { if (outputUri != null) it.put("output_uri", outputUri) }
         .toString()
     val bytes = "$line\n".toByteArray(Charsets.UTF_8)
     val journal = File(filesDir, EVENTS)

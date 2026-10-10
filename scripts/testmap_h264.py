@@ -18,7 +18,7 @@ import subprocess
 import threading
 import time
 from collections import deque
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from testmap_devices import adb_bin, resolve_watch_target
@@ -359,7 +359,7 @@ class _VideoProducer:
                 check=False,
             )
 
-    def subscribe(self) -> Iterator[bytes]:
+    def subscribe(self, should_stop: Callable[[bool], bool] | None = None) -> Iterator[bytes]:
         with self._cv:
             self._subs += 1
             sps = self._sps
@@ -382,12 +382,16 @@ class _VideoProducer:
                         break
         try:
             # The first yield can also be cancelled (for example on navigation).
+            if should_stop and should_stop(True):
+                return
             yield pack_frame(config_payload(codec=avc_codec(sps) or DEFAULT_CODEC))
             if sps:
                 yield pack_frame(sps)
             if pps:
                 yield pack_frame(pps)
             while not self._stop.is_set():
+                if should_stop and should_stop(False):
+                    return
                 with self._cv:
                     if self._seq == last:
                         self._cv.wait(timeout=1.0)
@@ -403,6 +407,8 @@ class _VideoProducer:
                         item for item in self._packets if item[0] > last
                     )
                     last = seq
+                if should_stop and should_stop(True):
+                    return
                 yield packet
         finally:
             with self._cv:
@@ -432,6 +438,7 @@ class H264Hub:
         platform: str | None,
         device_id: str | None,
         preferred: dict | None = None,
+        *, should_stop: Callable[[bool], bool] | None = None,
     ) -> Iterator[bytes]:
         target = resolve_watch_target(platform, device_id, preferred)
         if not target:
@@ -446,7 +453,7 @@ class H264Hub:
             if prod is None or not prod._thread.is_alive():
                 prod = _VideoProducer(key, target)
                 self._producers[key] = prod
-        yield from prod.subscribe()
+        yield from prod.subscribe(should_stop)
 
     def reap_idle(self) -> None:
         with self._lock:

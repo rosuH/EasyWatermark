@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0032 testmap run engine (optional Pillow CLAMP pixels). Never a CI gate.
+"""ADR-0032 testmap run engine (optional Pillow Android pixels). Never a CI gate.
 
 Importable by the local console, and runnable as a foreground CLI:
 
@@ -1764,6 +1764,8 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         logf.write(f"\n## setup {setup} {platform}\n")
         logf.flush()
     cancel_options = {}
+    if edge_id == "export-save-success" and platform == "android":
+        cancel_options["export_success_run_id"] = Path(str(spec.get("step_evidence_root") or "")).name
     if edge_id == "export-cancel" and platform == "android":
         run_id = Path(str(spec.get("step_evidence_root") or "")).name
         if not run_id:
@@ -2191,6 +2193,28 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
 
 def ingest_agent_device_result(spec: dict, code: int) -> dict:
     extra = _ingest_agent_device_result(spec, code)
+    if spec.get("edge_id") == "export-save-success" and spec.get("agent_platform") == "android":
+        gate = spec.get("export_file") or {"status":"unverified", "reason":"Missing real returned-URI file acceptance"}
+        extra["export_file"] = gate
+        if (code != 0 or gate.get("status") != "evidence_complete" or gate.get("cleanup") != "verified_deleted"
+                or gate.get("baseline_preserved") is not True or gate.get("private_restored") is not True):
+            extra["agent_device_state"] = "uncovered" if code == 0 else "failed"
+            layers = dict(extra.get("layers") or {})
+            layers.update(business="failed",agent_observation="export_file_unverified",green_from_process_zero=False,green_from_sdk_completed=False)
+            extra["layers"] = layers
+            for case in extra.get("cases") or []: case.update(status="failed",layers=layers)
+        return extra
+    if spec.get("edge_id") == "editor-filmstrip-switch" and spec.get("agent_platform") == "android":
+        gate = spec.get("filmstrip_switch") or {"status":"unverified", "reason":"Missing real same-selection A/B/A preview evidence"}
+        extra["filmstrip_switch"] = gate
+        if code != 0 or gate.get("status") != "evidence_complete" or gate.get("private_restored") is not True:
+            extra["agent_device_state"] = "uncovered" if code == 0 else "failed"
+            layers = dict(extra.get("layers") or {})
+            layers.update(business="failed", agent_observation="filmstrip_switch_unverified",
+                          green_from_process_zero=False, green_from_sdk_completed=False)
+            extra["layers"] = layers
+            for case in extra.get("cases") or []: case.update(status="failed", layers=layers)
+        return extra
     if spec.get("edge_id") == "editor-clamp-drag" and spec.get("agent_platform") == "android":
         gate = spec.get("clamp_drag") or {"status": "unverified", "reason": "Missing real CLAMP pixel/gesture evidence"}
         extra["clamp_drag"] = gate
@@ -2875,6 +2899,252 @@ def _run_android_template_crud(spec, state, source, logf, *, tee_stdout=False,
         save()
     return code
 
+_EXPORT_SOURCE_SHA256 = "1c3c7dfa368a130d1bfe916d279bb01a379567f482fe2775efdf3553047241c4"
+
+
+def _export_png_structure(source: Path, output: Path, sentinel: str) -> dict:
+    """Bounded PNG/metadata and glyph-shape checks. Exact text needs independent pixel QA."""
+    import struct
+    Image = require_clamp_pixels()
+    _verify_cancel_png(source)
+    _verify_cancel_png(output)
+    data, pos, chunks = output.read_bytes(), 8, []
+    while pos < len(data):
+        length = struct.unpack_from(">I", data, pos)[0]
+        kind = data[pos + 4:pos + 8].decode("ascii")
+        chunks.append(kind)
+        pos += length + 12
+    # Excluding all text/unknown ancillary chunks excludes PNG EXIF, XMP and IPTC carriers.
+    if set(chunks) - {"IHDR", "IDAT", "IEND", "sRGB", "gAMA", "cHRM", "pHYs", "sBIT"}:
+        raise ValueError("Export PNG retains metadata or an unsupported ancillary chunk")
+    with Image.open(source) as src, Image.open(output) as out:
+        src.load(); out.load()
+        if src.getexif().get(270) != sentinel or out.getexif() or any(key in out.info for key in ("exif", "XML:com.adobe.xmp", "Raw profile type iptc")):
+            raise ValueError("Export metadata sentinel/stripping is unverified")
+        if out.size != src.size or out.size != (960, 640):
+            raise ValueError("Export geometry differs from owned source")
+        a, b = src.convert("RGB"), out.convert("RGB")
+        glyphs, white, retained = [], 0, [0, 0]
+        for y in range(640):
+            for x in range(960):
+                original, pixel = a.getpixel((x, y)), b.getpixel((x, y))
+                if y < 56 or y >= 584:
+                    retained[int(y >= 584)] += int(max(abs(u-v) for u,v in zip(original, pixel)) <= 6)
+                elif original == (255, 255, 255):
+                    white += int(min(pixel) >= 245)
+                    r,g,blue = pixel
+                    if r > g > blue and r-blue > 35 and g-blue > 20:
+                        glyphs.append((x,y))
+        if min(retained) < 960 * 56 * .65 or white < 960 * 528 * .20 or len(glyphs) < 100:
+            raise ValueError("Export lacks owned source bands, white background or visible glyph structure")
+        # Occupied horizontal runs establish separated glyph strokes, not OCR text equality.
+        glyph_rows = {}
+        for x,y in glyphs: glyph_rows.setdefault(y,[]).append(x)
+        runs = max(1 + sum(right-left > 1 for left,right in zip(xs,xs[1:])) for xs in glyph_rows.values())
+        if runs < 3 or max(y for x,y in glyphs)-min(y for x,y in glyphs) < 8:
+            raise ValueError("Export glyph strokes are absent or structurally ambiguous")
+        return {"size": list(out.size), "png_chunks": chunks, "metadata_stripped": True,
+                "glyph_pixels": len(glyphs), "glyph_column_runs": runs,
+                "source_band_retained": retained, "white_background_pixels": white,
+                "exact_nonce_pixel_review": "pending_independent_image_QA"}
+
+
+def _export_returned_uri(control: dict, run_id: str, source_uri: str) -> str:
+    if (control.get("mode") != "observe-next" or control.get("run_id") != run_id
+            or control.get("fixture_uri") != source_uri or control.get("capture_error")
+            or control.get("marker_absent") is not True):
+        raise ValueError("Export observer identity is missing or mismatched")
+    events = control.get("events")
+    if not isinstance(events, list) or [row.get("event") for row in events] != ["ready", "entered", "outcome_success", "cleared"]:
+        raise ValueError("Real returned export Success was not observed exactly once")
+    stamps = []
+    for row in events:
+        keys = {"run_id", "event", "timestamp_ms"} | ({"output_uri"} if row["event"] == "outcome_success" else set())
+        if set(row) != keys or row["run_id"] != run_id or type(row["timestamp_ms"]) is not int:
+            raise ValueError("Export outcome event fields are invalid")
+        stamps.append(row["timestamp_ms"])
+    if stamps != sorted(stamps) or not control["clock"]["device_ms"] <= stamps[0] <= stamps[-1] <= min(control["expires_at_ms"], control["clock_end"]["device_ms"]):
+        raise ValueError("Export observer event ordering/expiry is invalid")
+    uri = events[2]["output_uri"]
+    if not isinstance(uri, str) or not re.fullmatch(r"content://media/(external|external_primary)/images/media/[1-9][0-9]*", uri) or uri.rsplit("/",1)[-1] == source_uri.rsplit("/",1)[-1]:
+        raise ValueError("Export returned URI is missing, invalid or aliases its source")
+    return uri
+
+
+def _run_android_export_file(spec, state, source, logf, *, tee_stdout=False, on_proc=None,
+                             on_spec=None, on_steps=None, on_step_event=None, should_stop=None):
+    import testmap_setup as setup
+    proof = {"status": "unverified", "cleanup": "unclaimed", "private_restored": False, "phases": [],
+             "independent_image_QA": "pending", "human_confirmation": False}
+    spec["export_file"] = proof
+    root, identity = Path(spec["step_evidence_root"]), spec.get("step_evidence_task") or {}
+    folder = root / "scripts" / (_shot_name(identity, "android", 0).removesuffix(".png") + "-export-file")
+    folder.mkdir(parents=True, exist_ok=False)
+    record = folder / "export-file.json"
+    spec["export_file_manifest"] = proof["manifest"] = str(record)
+    cmd, env = list(spec["cmd"]), {**os.environ, **(spec.get("env") or {})}
+    deadline, code = time.monotonic() + 180, 2
+    live_rows, completed, omitted = [], [], set()
+    token = setup._SETUP_STOP.set(should_stop)
+    def save(): record.write_text(json.dumps(proof, indent=2) + "\n")
+    def budget():
+        if should_stop and should_stop(): raise InterruptedError("Stopped during export file acceptance")
+        if time.monotonic() >= deadline: raise TimeoutError("Export file transaction deadline reached")
+        return min(10, max(.1, deadline-time.monotonic()))
+    def query(name, uri, projection, where=None):
+        args = ["content", "query", "--uri", uri, "--projection", projection]
+        if where is not None: args += ["--where", where]
+        raw = setup.adb_shell(serial, *args, timeout=budget())
+        path = folder / (name + ".txt"); path.write_text(raw + "\n")
+        proof.setdefault("queries", []).append({"path":str(path),"sha256":hashlib.sha256(path.read_bytes()).hexdigest()})
+        return setup.export_media_rows(raw, set(projection.split(":")))
+    def read(name, uri, limit=16*1024*1024):
+        data = setup.export_provider_read(serial, uri, limit, timeout=budget())
+        path = folder / (name + ".png"); path.write_bytes(data)
+        proof.setdefault("provider_readbacks", []).append({"uri":uri,"path":str(path),"sha256":hashlib.sha256(data).hexdigest(),"bytes":len(data)})
+        return data
+    def execute(name, start, end):
+        indices = [n for n in range(start,end+1) if n not in omitted]
+        subset = [actions[n-1] for n in indices]
+        inp, derived = folder/(name+".input.json"), folder/(name+".json")
+        inp.write_text(json.dumps(subset,indent=2)+"\n")
+        offset = len(completed)
+        names = {i:_shot_name(identity,"android",offset+i) for i in range(1,len(subset)+1)}
+        manifest = materialize_evidence_script(inp,root,derived,names)
+        manifest.update(canonical_source=str(source),canonical_source_sha256=_EXPORT_SOURCE_SHA256,phase=name)
+        for item in manifest["mapping"]:
+            item.update(phase_step=item["step"],source_step=indices[item["step"]-1],step=item["step"]+offset)
+        derived.with_suffix(".mapping.json").write_text(json.dumps(manifest,indent=2)+"\n")
+        proof["phases"].append(manifest); save()
+        events, snapshots = [], {}
+        def emit(event):
+            events.append(event)
+            if on_step_event: on_step_event("android",event)
+        evidence = EvidenceEvents(manifest,root,emit)
+        try:
+            for row in parse_script(derived,"android"):
+                budget()
+                if any(hashlib.sha256(p.read_bytes()).hexdigest()!=digest for p,digest in
+                       ((source,_EXPORT_SOURCE_SHA256),(inp,manifest["source_sha256"]),(derived,manifest["script_sha256"]),(fixture,source_hash))):
+                    raise ValueError("Export fixture/source/derived identity changed")
+                item = manifest["mapping"][row["n"]-1]
+                out = folder/(name+"-sdk-"+str(row["n"])+".log")
+                with out.open("x") as stream:
+                    result = _run_batched_steps(cmd,[row],_DupWrite(logf,stream),tee_stdout,on_proc,
+                        lambda _p,event:evidence(event),should_stop,"android",env,deadline_s=min(20,max(.1,deadline-time.monotonic())))
+                if result: raise InterruptedError("Export SDK stopped") if result==130 else ValueError("Export SDK action failed")
+                if out.stat().st_size>8*1024*1024: raise ValueError("Export SDK response exceeds bound")
+                data = _single_batch_response(out.read_text(),row["command"])
+                if row["command"]=="snapshot": snapshots[item["source_step"]] = _template_snapshot(data)
+                if item["kind"]=="screenshot": _verify_cancel_png(Path(item["path"]))
+            completed.extend(indices)
+            return snapshots
+        finally:
+            evidence.finish(); (folder/(name+".events.json")).write_text(json.dumps(events,indent=2)+"\n"); save()
+    try:
+        expected = REPO_ROOT/"docs/testing/agent-device/scripts/export-save-success@android.json"
+        if source.resolve()!=expected.resolve() or source.is_symlink() or hashlib.sha256(source.read_bytes()).hexdigest()!=_EXPORT_SOURCE_SHA256:
+            raise ValueError("Export acceptance requires canonical source")
+        if not state: raise ValueError("Export acceptance requires real owned setup")
+        setup._validate_setup(state)
+        backup = setup.load_setup_backup(Path(state["journal"]))
+        serial = spec.get("serial")
+        if (state.get("phase")!="active" or state.get("serial")!=serial or _cmd_flag(cmd,"--serial")!=serial
+                or state.get("export_control",{}).get("mode")!="observe-next"
+                or state["export_control"].get("run_id")!=root.name
+                or not re.fullmatch(r"exportsavesucces-[a-f0-9]{32}",state.get("marker",""))
+                or not re.fullmatch(r"[1-9][0-9]*",str(state.get("source_id","")))
+                or any(backup.get(k)!=state.get(k) for k in ("phase","serial","marker","source_id","fixtures","export_source","export_control"))
+                or json.loads(Path(state["lock"]).read_text()).get("journal")!=state["journal"]):
+            raise ValueError("Export setup identity/lease is not current")
+        fixture = Path(state["fixtures"]["A"])
+        if fixture.is_symlink() or not fixture.is_file() or fixture.parent!=Path(state["journal"]).parent or not 0<fixture.stat().st_size<=1024*1024:
+            raise ValueError("Export source is not a bounded owned fixture")
+        source_hash = state["export_source"]["sha256"]
+        source_uri = setup.MEDIA+"/"+str(state["source_id"])
+        nonce = "E2E-"+state["marker"][-12:]
+        actions = json.loads(source.read_text().replace("__EXPORT_NONCE__",nonce))
+        if "__EXPORT_" in json.dumps(actions): raise ValueError("Unresolved export input")
+        live_rows[:] = parse_steps_json(json.dumps(actions),"android")
+        proof.update(nonce=nonce,source_uri=source_uri,source_sha256=source_hash,sentinel=state["export_source"]["sentinel"],
+                     observer_evidence=str(Path(state["journal"]).parent/"export-control-events.json"))
+        save()
+        if on_spec: on_spec(spec)
+        if on_steps: on_steps("android",live_rows)
+        rows = query("source-row",setup.MEDIA,"_id", "_id="+str(state["source_id"])+" AND _display_name='"+fixture.name+"' AND relative_path='"+setup.FIXTURE_FOLDER+"/'")
+        if rows!=[{"_id":str(state["source_id"])}] or read("source-before",source_uri,1024*1024)!=fixture.read_bytes():
+            raise ValueError("Owned export source provider identity differs")
+        observed = execute("content",1,4)[4]
+        fields = [n for n in observed["nodes"] if _template_tag(n)=="watermarkTextEditField"]
+        compact = [n for n in observed["nodes"] if _template_tag(n)=="watermarkTextContent"]
+        if len(fields)==1 and not compact and fields[0].get("editable") is True and fields[0].get("hittable") is True:
+            omitted={5,6,8}
+        elif len(compact)==1 and compact[0].get("hittable") is True and not fields:
+            omitted=set()
+        else: raise ValueError("Export Content entry is absent or ambiguous")
+        proof["omitted_source_steps"]=sorted(omitted)
+        live_rows[:]=[r for n,r in enumerate(live_rows,1) if n not in omitted]
+        for n,row in enumerate(live_rows,1): row["n"]=n
+        observed = execute("nonce",5,9)[9]
+        values = ({_template_node(observed,"watermarkTextEditField").get("value") or _template_node(observed,"watermarkTextEditField").get("text") or _template_node(observed,"watermarkTextEditField").get("label")} if omitted else
+                  {n.get("label") for n in _template_descendants(observed,_template_node(observed,"watermarkTextContent")) if n.get("type")=="android.widget.TextView" and n.get("label")})
+        if values!={nonce}: raise ValueError("Export exact visible editor nonce differs")
+        proof["nonce_confirmed"]=True
+        execute("format",10,13)
+        before = {row["_id"] for row in query("output-before",setup.MEDIA,"_id",setup.EXPORT_OUTPUT_FILTER)}
+        proof["baseline_ids"]=sorted(before,key=int)
+        setup._arm_export_control(state)
+        proof["observer_armed_before_source_step"]=14
+        execute("export",14,16)
+        setup._capture_export_control(state)
+        control_path = Path(state["journal"]).parent/"export-control-events.json"
+        control = json.loads(control_path.read_text())
+        uri = _export_returned_uri(control,Path(spec["step_evidence_root"]).name,source_uri)
+        proof.update(observer_evidence=str(control_path),output_uri=uri,cleanup="returned_uri_unclaimed")
+        returned_id = uri.rsplit("/",1)[-1]
+        after = {row["_id"] for row in query("output-after",setup.MEDIA,"_id",setup.EXPORT_OUTPUT_FILTER)}
+        proof["after_ids"]=sorted(after,key=int)
+        if returned_id in before or after!=before|{returned_id}: raise ValueError("Returned output is not the unique new owned row; candidates retained")
+        projection = setup.EXPORT_OUTPUT_PROJECTION
+        detail = query("output-row-first",uri,projection)
+        if len(detail)!=1: raise ValueError("Returned output metadata is missing or ambiguous")
+        row = detail[0]
+        if (row["_id"]!=returned_id or row["owner_package_name"]!=setup.ANDROID_PACKAGE or row["relative_path"]!="Pictures/EasyWaterMark/"
+                or row["mime_type"]!="image/png" or row["is_pending"]!="0" or not re.fullmatch(r"ewm_[0-9]+\.png",row["_display_name"])
+                or not re.fullmatch(r"[1-9][0-9]*",row["_size"])):
+            raise ValueError("Returned output publication/geometry differs")
+        data = read("output-first",uri)
+        if len(data)!=int(row["_size"]): raise ValueError("Returned output provider byte count differs")
+        detail2 = query("output-row-second",uri,projection)
+        data2 = read("output-second",uri)
+        if detail2!=detail or data2!=data: raise ValueError("Returned output changed between exact readbacks")
+        # Exact returned URI, unique union and both stable row/bytes reads prove ownership.
+        # Record it before pixel/metadata acceptance, so a bad owned export is still restored.
+        state["export_output"]={"uri":uri,"fields":row,"sha256":hashlib.sha256(data).hexdigest(),"cleanup":"claimed"}
+        setup._validate_setup(state); setup._save_setup(state)
+        proof.update(cleanup="claimed",output_fields=row,output_sha256=state["export_output"]["sha256"]); save()
+        budget()
+        if row["width"]!="960" or row["height"]!="640": raise ValueError("Returned output geometry differs")
+        if read("source-after",source_uri,1024*1024)!=fixture.read_bytes(): raise ValueError("Owned source changed after export")
+        proof["structure"]=_export_png_structure(fixture,folder/"output-first.png",state["export_source"]["sentinel"])
+        setup._restore_export_output(state)
+        proof["cleanup"]=state["export_output"]["cleanup"]
+        final = {row["_id"] for row in query("output-after-cleanup",setup.MEDIA,"_id",setup.EXPORT_OUTPUT_FILTER)}
+        if final!=before: raise ValueError("Output cleanup did not preserve the full baseline union")
+        proof["baseline_preserved"]=True
+        execute("close",17,17)
+        if completed!=[n for n in range(1,18) if n not in omitted]: raise ValueError("Export canonical action coverage is incomplete")
+        proof["status"],code="evidence_complete",0
+    except (ValueError,OSError,KeyError,TypeError,IndexError,subprocess.TimeoutExpired) as exc:
+        proof["reason"]=str(exc); code=130 if isinstance(exc,InterruptedError) else 2
+    finally:
+        setup._SETUP_STOP.reset(token)
+        if should_stop and should_stop(): code=130
+        save()
+    return code
+
+
+_FILMSTRIP_SOURCE_SHA256 = "1d16ce147b380109db7fc15d9be1aef29d9864545932a513f2b82cf6d03a029d"
 _CLAMP_SOURCE_SHA256 = "24269b38a2d5eefcf786f6eb245c8215601fa6ba783a9eab1a37cf72b92a1f06"
 
 
@@ -2884,23 +3154,31 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
     from zoneinfo import ZoneInfo
     from testmap_steps import clamp_media_rows, clamp_photo_second, clamp_fixture_identity, clamp_editor_binding
     load_setup_backup = setup.load_setup_backup
+    filmstrip = spec.get("edge_id") == "editor-filmstrip-switch"
+    edge = "editor-filmstrip-switch" if filmstrip else "editor-clamp-drag"
+    proof_key = "filmstrip_switch" if filmstrip else "clamp_drag"
+    source_hash = _FILMSTRIP_SOURCE_SHA256 if filmstrip else _CLAMP_SOURCE_SHA256
+    placeholder = "__FILMSTRIP_" if filmstrip else "__CLAMP_"
+    marker_prefix = "editorfilmstrips" if filmstrip else "editorclampdrag"
     proof = {"status": "unverified", "private_restored": False, "phases": [],
              "scope": "One owned A+B selection, real A pan, B/A offset continuity and same-process SDK reopen; no process-death/DataStore claim"}
-    spec["clamp_drag"] = proof
+    if filmstrip:
+        proof["scope"] = "One owned A+B selection with real fresh-thumbnail A to B to A preview identity; no export/persistence/motion timing claim"
+    spec[proof_key] = proof
     root, identity = Path(spec["step_evidence_root"]), spec.get("step_evidence_task") or {}
-    folder = root / "scripts" / (_shot_name(identity, "android", 0).removesuffix(".png") + "-clamp")
+    folder = root / "scripts" / (_shot_name(identity, "android", 0).removesuffix(".png") + ("-filmstrip" if filmstrip else "-clamp"))
     folder.mkdir(parents=True, exist_ok=False)
-    record = folder / "clamp-drag.json"
-    spec["clamp_drag_manifest"] = proof["manifest"] = str(record)
+    record = folder / ("filmstrip-switch.json" if filmstrip else "clamp-drag.json")
+    spec[proof_key + "_manifest"] = proof["manifest"] = str(record)
     cmd, env = list(spec["cmd"]), {**os.environ, **(spec.get("env") or {})}
-    deadline, code = time.monotonic() + 480, 2  # Business only; finally budgets are unchanged.
+    deadline, code = time.monotonic() + (420 if filmstrip else 480), 2  # Business only; finally budgets are unchanged.
     shots, executed, live_rows = {}, [], []
 
     def save():
         record.write_text(json.dumps(proof, indent=2) + "\n")
 
     def phase(name, actions, indices, offset=0, observe=False, inspect=None):
-        if "__CLAMP_" in json.dumps(actions):
+        if placeholder in json.dumps(actions):
             raise ValueError("Unresolved CLAMP input must never reach SDK")
         inp, derived = folder / (name + ".input.json"), folder / (name + ".json")
         with inp.open("x") as stream:
@@ -2908,7 +3186,7 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         names = {i: folder.name + "-entry-" + str(i) + ".png" if observe else _shot_name(identity, "android", offset + i)
                  for i in range(1, len(actions) + 1)}
         manifest = materialize_evidence_script(inp, root, derived, names)
-        manifest.update(canonical_source=str(source), canonical_source_sha256=_CLAMP_SOURCE_SHA256,
+        manifest.update(canonical_source=str(source), canonical_source_sha256=source_hash,
                         phase=name, purpose="entry-observation" if observe else "business")
         for item in manifest["mapping"]:
             item.update(phase_step=item["step"], source_step=indices[item["step"] - 1])
@@ -2929,7 +3207,7 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
                     raise InterruptedError("Stopped during CLAMP")
                 if time.monotonic() >= deadline:
                     raise TimeoutError("CLAMP transaction deadline reached")
-                for path, digest in [(source, _CLAMP_SOURCE_SHA256), (inp, manifest["source_sha256"]),
+                for path, digest in [(source, source_hash), (inp, manifest["source_sha256"]),
                                      (derived, manifest["script_sha256"]), *fixture_hashes.items()]:
                     if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
                         raise ValueError("CLAMP fixture/source/derived input changed")
@@ -2962,8 +3240,8 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
 
     stop_token = setup._SETUP_STOP.set(should_stop)
     try:
-        expected = REPO_ROOT / "docs/testing/agent-device/scripts/editor-clamp-drag@android.json"
-        if source.resolve() != expected.resolve() or source.is_symlink() or hashlib.sha256(source.read_bytes()).hexdigest() != _CLAMP_SOURCE_SHA256:
+        expected = REPO_ROOT / ("docs/testing/agent-device/scripts/" + edge + "@android.json")
+        if source.resolve() != expected.resolve() or source.is_symlink() or hashlib.sha256(source.read_bytes()).hexdigest() != source_hash:
             raise ValueError("CLAMP requires its unchanged canonical source")
         if not state or state.get("setup") != "editor" or state.get("platform") != "android":
             raise ValueError("CLAMP requires real owned editor setup")
@@ -2971,7 +3249,7 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         if (backup.get("phase") != "active" or any(backup.get(k) != state.get(k) for k in ("serial", "marker", "source_id", "fixtures"))
                 or state.get("serial") != spec.get("serial") or _cmd_flag(cmd, "--serial") != spec.get("serial")
                 or json.loads(Path(state["lock"]).read_text()).get("journal") != state["journal"]
-                or not re.fullmatch(r"editorclampdrag-[a-f0-9]{32}", str(state.get("marker", "")))
+                or not re.fullmatch(marker_prefix + r"-[a-f0-9]{32}", str(state.get("marker", "")))
                 or not re.fullmatch(r"[1-9][0-9]*", str(state.get("source_id", "")))
                 or set(state.get("fixtures", {})) != {"A", "B", "C", "icon"}):
             raise ValueError("CLAMP setup identity/lease is not current")
@@ -2986,8 +3264,10 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         fixture, serial = fixtures["A"], spec["serial"]
         nonce = "E2E-" + state["marker"][-12:]
         actions = json.loads(source.read_text().replace("__CLAMP_NONCE__", nonce))
-        proof.update(nonce=nonce, fixture_hashes={k: fixture_hashes[v] for k, v in fixtures.items()},
-                     source_id=state["source_id"], source_sha256=_CLAMP_SOURCE_SHA256, omitted_source_steps=[])
+        proof.update(fixture_hashes={k: fixture_hashes[v] for k, v in fixtures.items()},
+                     source_id=state["source_id"], source_sha256=source_hash, omitted_source_steps=[])
+        if not filmstrip:
+            proof["nonce"] = nonce
         indices = list(range(1, len(actions) + 1))
         live_rows[:] = parse_steps_json(json.dumps(actions), "android")
         save()
@@ -3077,7 +3357,7 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         def bind_ref(n, node, bracket_step):
             if node.get("hittable") is not True or not re.fullmatch(r"@?e[0-9]+", str(node.get("ref", ""))):
                 raise ValueError("CLAMP target is not a fresh hittable ref")
-            if actions[n - 1]["command"] != "press" or not actions[n - 1]["input"]["target"]["ref"].startswith("__CLAMP_"):
+            if actions[n - 1]["command"] != "press" or not actions[n - 1]["input"]["target"]["ref"].startswith(placeholder):
                 raise ValueError("CLAMP ref source slot changed")
             actions[n - 1] = {"command": "press", "input": {"target": {"kind": "ref", "ref": "@" + node["ref"].lstrip("@")}}}
             row = parse_steps_json(json.dumps([actions[n - 1]]), "android")[0]
@@ -3141,8 +3421,28 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         bound, _, _ = editor(data, pixels, 19)
         bind_ref(20, bound["A"], 19)
         data, pixels, _ = bracket("focus-A", 20, 23)
-        if editor(data, pixels, 23)[1] != "A":
-            raise ValueError("CLAMP owned A focus is not established")
+        bound, focused, _ = editor(data, pixels, 23)
+        if focused != "A":
+            raise ValueError("Owned A focus is not established")
+        if filmstrip:
+            bind_ref(24, bound["B"], 23)
+            data, pixels, _ = bracket("focus-B", 24, 27)
+            bound, focused, _ = editor(data, pixels, 27)
+            if focused != "B":
+                raise ValueError("Filmstrip did not show owned B after its real press")
+            bind_ref(28, bound["A"], 27)
+            data, pixels, _ = bracket("return-A", 28, 31)
+            if editor(data, pixels, 31)[1] != "A":
+                raise ValueError("Filmstrip did not return to owned A after its real press")
+            media()
+            union()
+            execute("close", 32, 32)
+            if executed != list(range(1, 33)):
+                raise ValueError("Filmstrip canonical action coverage is incomplete")
+            if should_stop and should_stop():
+                raise InterruptedError("Stopped after filmstrip actions")
+            proof["status"] = "evidence_complete"
+            return 0
         pid = shell("pidof", setup.ANDROID_PACKAGE).strip()
         if not re.fullmatch(r"[1-9][0-9]*", pid):
             raise ValueError("CLAMP unique app process is not observable")
@@ -3431,7 +3731,7 @@ def run_task(
         if str(output):
             output.mkdir(parents=True, exist_ok=True)
         try:
-            if spec.get("edge_id") == "editor-clamp-drag" and spec.get("agent_platform") == "android":
+            if spec.get("edge_id") in {"editor-clamp-drag", "editor-filmstrip-switch", "export-save-success"} and spec.get("agent_platform") == "android":
                 require_clamp_pixels()
             maybe_prepare_ios_runner(spec, logf, should_stop=should_stop)
             setup_state = _apply_agent_setup(spec, logf, should_stop=should_stop)
@@ -3471,10 +3771,12 @@ def run_task(
             on_steps(watch_plat, rows)
     evidence_events = None
     evidence_manifest = None
-    if spec.get("edge_id") in {"editor-to-template-sheet", "editor-clamp-drag"} and watch_plat == "android":
-        is_clamp = spec["edge_id"] == "editor-clamp-drag"
-        proof_key = "clamp_drag" if is_clamp else "template_crud"
-        execute = _run_android_clamp if is_clamp else _run_android_template_crud
+    if spec.get("edge_id") in {"editor-to-template-sheet", "editor-clamp-drag", "editor-filmstrip-switch", "export-save-success"} and watch_plat == "android":
+        is_clamp = spec["edge_id"] in {"editor-clamp-drag", "editor-filmstrip-switch"}
+        is_filmstrip = spec["edge_id"] == "editor-filmstrip-switch"
+        is_export = spec["edge_id"] == "export-save-success"
+        proof_key = "export_file" if is_export else "filmstrip_switch" if is_filmstrip else "clamp_drag" if is_clamp else "template_crud"
+        execute = _run_android_export_file if is_export else _run_android_clamp if is_clamp else _run_android_template_crud
         try:
             if not script or script.suffix != ".json" or not spec.get("step_evidence_root"):
                 raise ValueError("Bounded Android case requires its JSON source and step evidence")
@@ -3485,6 +3787,8 @@ def run_task(
                 _restore_agent_setup(setup_state, logf)
                 if spec.get(proof_key):
                     spec[proof_key]["private_restored"] = True
+                    if is_export and setup_state.get("export_output"):
+                        spec[proof_key]["cleanup"] = setup_state["export_output"]["cleanup"]
             finally:
                 try:
                     if spec.get(proof_key + "_manifest"):
@@ -4145,6 +4449,10 @@ class RunManager:
                     task_ref["step_evidence_manifest"] = updated["step_evidence_manifest"]
                 if updated.get("template_crud_manifest"):
                     task_ref["template_crud_manifest"] = updated["template_crud_manifest"]
+                if updated.get("export_file_manifest"):
+                    task_ref["export_file_manifest"] = updated["export_file_manifest"]
+                if updated.get("filmstrip_switch_manifest"):
+                    task_ref["filmstrip_switch_manifest"] = updated["filmstrip_switch_manifest"]
                 if updated.get("clamp_drag_manifest"):
                     task_ref["clamp_drag_manifest"] = updated["clamp_drag_manifest"]
                 self._remember_watch(rec)
@@ -4175,6 +4483,10 @@ class RunManager:
                 task["export_control"] = extra["export_control"]
             if extra.get("template_crud"):
                 task["template_crud"] = extra["template_crud"]
+            if extra.get("export_file"):
+                task["export_file"] = extra["export_file"]
+            if extra.get("filmstrip_switch"):
+                task["filmstrip_switch"] = extra["filmstrip_switch"]
             if extra.get("clamp_drag"):
                 task["clamp_drag"] = extra["clamp_drag"]
             task["evidence_dir"] = extra.get("evidence_dir")
@@ -4453,6 +4765,10 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
                 task_ref["step_evidence_manifest"] = updated["step_evidence_manifest"]
             if updated.get("template_crud_manifest"):
                 task_ref["template_crud_manifest"] = updated["template_crud_manifest"]
+            if updated.get("export_file_manifest"):
+                task_ref["export_file_manifest"] = updated["export_file_manifest"]
+            if updated.get("filmstrip_switch_manifest"):
+                task_ref["filmstrip_switch_manifest"] = updated["filmstrip_switch_manifest"]
             if updated.get("clamp_drag_manifest"):
                 task_ref["clamp_drag_manifest"] = updated["clamp_drag_manifest"]
             if updated.get("agent_device_output"):
@@ -4477,6 +4793,10 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
             task["export_control"] = extra["export_control"]
         if extra.get("template_crud"):
             task["template_crud"] = extra["template_crud"]
+        if extra.get("export_file"):
+            task["export_file"] = extra["export_file"]
+        if extra.get("filmstrip_switch"):
+            task["filmstrip_switch"] = extra["filmstrip_switch"]
         if extra.get("clamp_drag"):
             task["clamp_drag"] = extra["clamp_drag"]
         task["evidence_dir"] = extra.get("evidence_dir")

@@ -567,6 +567,16 @@ elif args[0] == 'shell':
     command = shlex.split(args[1])
     if command[:1] == ['run-as']:
         operation = command[2:]
+        batch = operation[:2] == ['sh', '-c'] and operation[2].startswith('# testmap-private-')
+        if batch and (root / 'fail-private-batch').exists(): sys.exit('deliberate batch failure')
+        if batch and operation[2].startswith('# testmap-private-absent-restore') and (root / 'fail-absent-delete').exists():
+            operation[2] = operation[2].replace('rm -f ', 'false ', 1)
+        if batch and operation[2].startswith('# testmap-private-absent-restore') and (root / 'leave-absent-symlink').exists():
+            path = shlex.split(operation[2].splitlines()[1])[2]
+            operation[2] = operation[2].replace(' && test ! -L ', ' && ln -s missing ' + shlex.quote(path) + ' && test ! -L ', 1)
+        if batch and (root / 'ambiguous-private-batch').exists(): print('unexpected acknowledgement', flush=True)
+        if batch and operation[2].startswith('# testmap-private-absent-restore') and (root / 'ambiguous-absent-batch').exists():
+            print('unexpected acknowledgement', flush=True)
         if (root / 'fail-restore').exists() and operation[:2] == ['sh', '-c'] and 'cat >' in operation[2]:
             sys.exit('deliberate restore failure')
         if (root / 'fail-before-mv').exists() and operation[:2] == ['sh', '-c'] and 'cat >' in operation[2]:
@@ -574,6 +584,9 @@ elif args[0] == 'shell':
             subprocess.run(['sh', '-c', cat], cwd=root / 'android', input=sys.stdin.buffer.read(), check=True)
             (root / 'cat-completed').touch()
             sys.exit('deliberate failure after cat before mv')
+        if (root / 'corrupt-private-write').exists() and operation[:2] == ['sh', '-c'] and 'cat >' in operation[2]:
+            code = subprocess.run(operation, cwd=root / 'android', input=b'corrupted private bytes', stdout=sys.stdout.buffer).returncode
+            sys.exit(code)
         if (root / 'fail-temp-cleanup').exists() and operation[:2] == ['rm', '-f'] and operation[-1].endswith('.testmap-restore'):
             sys.exit('deliberate temp cleanup failure')
         if (root / 'delay-temp-cleanup').exists() and operation[:2] == ['rm', '-f'] and operation[-1].endswith('.testmap-restore'):
@@ -618,6 +631,7 @@ class SetupSafetyChecks(unittest.TestCase):
         self.cli.write_text(FAKE_DEVICE_CLI)
         self.cli.chmod(0o700)
         (self.root / 'tools' / 'xcrun').symlink_to(self.cli)
+        self.real_make_fixtures = setup.make_fixtures
         self.stack = contextlib.ExitStack()
         self.stack.enter_context(patch.dict(os.environ, {'FAKE_DEVICE_ROOT': str(self.root), 'PATH': str(self.root / 'tools') + os.pathsep + os.environ['PATH']}))
         self.stack.enter_context(patch.object(setup, 'adb_bin', return_value=str(self.cli)))
@@ -626,6 +640,174 @@ class SetupSafetyChecks(unittest.TestCase):
         self.stack.enter_context(patch.object(setup, '_device_clock', return_value={"device_ms": 100000, "offset_min_ms": 10, "offset_max_ms": 20}))
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(self.stack.close)
+
+    def mixed_private_backup(self):
+        names = setup.ANDROID_CONFIG + setup.EXPORT_CONTROL_PATHS
+        backup = {name: (b'original\x00user preferences\xff' if index == 1 else None)
+                  for index, name in enumerate(names)}
+        for name in names:
+            (self.root / 'android' / name).write_bytes(b'test-created private data')
+        return backup
+
+    def test_restore_private_mixed_four_paths_bounded_roundtrips_and_exact_bytes(self):
+        backup = self.mixed_private_backup()
+        setup.restore_private('fake-serial', backup)
+        calls = [json.loads(line) for line in (self.root / 'calls.jsonl').read_text().splitlines()]
+        # 1 temp preflight + 1 force-stop + 5 atomic write/raw readback + 1 absent batch.
+        self.assertEqual(8, len(calls))
+        for name, original in backup.items():
+            path = self.root / 'android' / name
+            self.assertEqual(original, path.read_bytes() if path.exists() else None)
+        self.assertFalse(list(self.root.rglob('*.testmap-restore')))
+        import shlex
+        scripts = [shlex.split(call[3])[4] for call in calls
+                   if call[2] == 'shell' and shlex.split(call[3])[:4] == ['run-as', setup.ANDROID_PACKAGE, 'sh', '-c']]
+        self.assertTrue(scripts[0].startswith('# testmap-private-temp-preflight'))
+        self.assertTrue(scripts[-1].startswith('# testmap-private-absent-restore'))
+        absent = [name for name, data in backup.items() if data is None]
+        self.assertEqual(sorted(absent, key=scripts[-1].index), absent)
+
+    def test_restore_private_late_temp_regular_or_symlink_rejects_before_any_mutation(self):
+        backup = self.mixed_private_backup()
+        residue = self.root / 'android' / (list(backup)[-1] + '.testmap-restore')
+        for symlink in (False, True):
+            with self.subTest(symlink=symlink):
+                if symlink:
+                    residue.symlink_to(self.root / 'unclaimed-missing-target')
+                else:
+                    residue.write_bytes(b'unclaimed writer bytes')
+                before = {name: (self.root / 'android' / name).read_bytes() for name in backup}
+                (self.root / 'calls.jsonl').write_text('')
+                with self.assertRaises(setup.SetupRestoreError):
+                    setup.restore_private('fake-serial', backup)
+                self.assertEqual(before, {name: (self.root / 'android' / name).read_bytes() for name in backup})
+                self.assertEqual(1, len((self.root / 'calls.jsonl').read_text().splitlines()))
+                self.assertTrue(residue.is_symlink() if symlink else residue.read_bytes() == b'unclaimed writer bytes')
+                residue.unlink()
+
+    def test_present_restore_failure_does_not_delete_absent_paths(self):
+        backup = self.mixed_private_backup()
+        (self.root / 'fail-before-mv').touch()
+        with self.assertRaises(ValueError):
+            setup.restore_private('fake-serial', backup)
+        for name, data in backup.items():
+            self.assertTrue((self.root / 'android' / name).exists())
+            self.assertEqual(b'test-created private data', (self.root / 'android' / name).read_bytes())
+        self.assertFalse(list(self.root.rglob('*.testmap-restore')))
+
+    def test_present_byte_mismatch_keeps_absent_paths_and_recovery_lease(self):
+        original = b'original user bytes\x00\xff'
+        path = self.root / 'android' / setup.ANDROID_CONFIG[1]
+        path.write_bytes(original)
+        state = self.apply_cancel()
+        (self.root / 'corrupt-private-write').touch()
+        with self.assertRaisesRegex(setup.SetupRestoreError, 'byte mismatch'):
+            setup.restore_setup(state)
+        self.assertTrue((self.root / 'android' / setup.EXPORT_CONTROL).exists())
+        self.assertTrue(Path(state['lock']).exists())
+        retained = setup.load_setup_backup(Path(state['journal']))
+        self.assertEqual(original, retained['private_backup'][setup.ANDROID_CONFIG[1]])
+        (self.root / 'corrupt-private-write').unlink()
+        setup.restore_setup(retained)
+        self.assertEqual(original, path.read_bytes())
+
+    def test_absent_batch_verifies_dangling_symlink_instead_of_rm_success(self):
+        state = self.apply_cancel()
+        (self.root / 'leave-absent-symlink').touch()
+        with self.assertRaises(setup.SetupRestoreError):
+            setup.restore_setup(state)
+        path = self.root / 'android' / setup.ANDROID_CONFIG[0]
+        self.assertTrue(path.is_symlink())
+        self.assertTrue(Path(state['lock']).exists())
+        (self.root / 'leave-absent-symlink').unlink()
+        setup.restore_setup(setup.load_setup_backup(Path(state['journal'])))
+        self.assertFalse(path.is_symlink())
+        self.assertFalse(path.exists())
+
+    def test_batch_roundtrips_leave_provider_time_in_original_shared_budget(self):
+        original = b'original user bytes for bounded restore'
+        path = self.root / 'android' / setup.ANDROID_CONFIG[1]
+        path.write_bytes(original)
+        state = self.apply_cancel()
+        (self.root / 'delete-delay').write_text('2.2')
+        real_run = setup._run
+        charged = []
+        def roundtrip(argv, **kwargs):
+            try:
+                return real_run(argv, **kwargs)
+            finally:
+                deadline = setup._CLEANUP_DEADLINE.get()
+                if deadline is not None:
+                    # Charge controlled transport overhead without sleeps or changing
+                    # the configured 8s budget. The actual provider still blocks 2.2s.
+                    setup._CLEANUP_DEADLINE.set(deadline - .35)
+                    charged.append(argv)
+        with patch.object(setup, '_run', side_effect=roundtrip):
+            setup.restore_setup(state)
+        # Existing optional observer capture is unchanged (3 fake roundtrips;
+        # its device clock is already stubbed), then private 8 + fixture cleanup 2.
+        self.assertEqual(13, len(charged))
+        self.assertEqual(8, setup.RESTORE_BUDGET_S)
+        self.assertEqual(original, path.read_bytes())
+        self.assertFalse(Path(state['lock']).exists())
+        self.assertTrue((self.root / 'delete-started').exists())
+        self.assertFalse(list(self.root.rglob('*.testmap-restore')))
+
+    def test_private_batch_nonzero_ambiguous_ack_and_absent_delete_fail_retain_lease(self):
+        for flag in ('fail-private-batch', 'ambiguous-private-batch', 'ambiguous-absent-batch', 'fail-absent-delete'):
+            with self.subTest(flag=flag):
+                original = b'original user preference bytes\x00\xff'
+                path = self.root / 'android' / setup.ANDROID_CONFIG[1]
+                path.write_bytes(original)
+                state = self.apply_cancel()
+                (self.root / flag).touch()
+                with self.assertRaises(setup.SetupRestoreError):
+                    setup.restore_setup(state)
+                retained = setup.load_setup_backup(Path(state['journal']))
+                self.assertEqual('restoring', retained['phase'])
+                self.assertTrue(retained['restore_errors'])
+                self.assertTrue(Path(state['lock']).exists())
+                self.assertEqual(original, retained['private_backup'][setup.ANDROID_CONFIG[1]])
+                if flag == 'fail-absent-delete':
+                    self.assertEqual(original, path.read_bytes())
+                    self.assertTrue((self.root / 'android' / setup.EXPORT_CONTROL).exists())
+                if flag == 'ambiguous-absent-batch':
+                    self.assertEqual(original, path.read_bytes())
+                (self.root / flag).unlink()
+                setup.restore_setup(retained)  # Separate fake-device reviewed recovery.
+                self.assertEqual(original, path.read_bytes())
+                self.assertFalse(Path(state['lock']).exists())
+                for name, data in retained['private_backup'].items():
+                    if data is None: self.assertFalse((self.root / 'android' / name).exists())
+
+    def test_observe_setup_exif_before_import_and_cleanup_failure_retains_lock(self):
+        import hashlib
+        from PIL import Image
+        observed=[]
+        def push(serial,fixtures):
+            with Image.open(fixtures['A']) as image:
+                observed.append(image.getexif().get(270))
+        with patch.object(setup,'make_fixtures',side_effect=self.real_make_fixtures),patch.object(setup,'push_android_fixtures',side_effect=push),patch.object(setup,'android_wait_editor_ready'):
+            state=setup.apply_setup('editor',platform='android',folder=self.root/'evidence',marker='exportsavesucces',serial='fake-serial',export_success_run_id='run-success')
+        self.assertEqual([state['export_source']['sentinel']],observed)
+        self.assertEqual(hashlib.sha256(Path(state['fixtures']['A']).read_bytes()).hexdigest(),state['export_source']['sha256'])
+        self.assertNotIn('armed',state['export_control'])
+        self.assertEqual(set(setup.ANDROID_CONFIG+setup.EXPORT_CONTROL_PATHS),set(state['private_backup']))
+        fields={'_id':'77','_display_name':'ewm_123.png','relative_path':'Pictures/EasyWaterMark/','owner_package_name':setup.ANDROID_PACKAGE,
+            'mime_type':'image/png','is_pending':'0','_size':'5','width':'960','height':'640'}
+        state['export_output']={'uri':setup.MEDIA+'/77','fields':fields,'sha256':'a'*64,'cleanup':'claimed'}
+        setup._save_setup(state)
+        with patch.object(setup,'_restore_export_output',side_effect=ValueError('claimed cleanup failed')):
+            with self.assertRaises(setup.SetupRestoreError):setup.restore_setup(state)
+        self.assertTrue(Path(state['lock']).exists())
+        self.assertEqual('restoring',setup.load_setup_backup(Path(state['journal']))['phase'])
+        self.assertTrue(state['restore_errors'])
+        for name in state['private_backup']:
+            self.assertIsNone(setup.read_private('fake-serial',name))
+        # Fake-device recovery after separate reviewed cleanup; never delete a real foreign row.
+        state['export_output']['cleanup']='verified_deleted';setup._save_setup(state)
+        setup.restore_setup(state)
+        self.assertFalse(Path(state['lock']).exists())
 
     def apply_ios_control(self, mode="hold-next", run_id="run-1"):
         with patch.object(setup, "_ios_device_clock", return_value={"device_ms": 100000, "offset_min_ms": -2, "offset_max_ms": 2}):
@@ -2048,6 +2230,10 @@ class AndroidClampChecks(unittest.TestCase):
                       node(5, rect={'x': 0, 'y': 910, 'width': 1080, 'height': 70})]
             nodes += [node(i + 6, parentIndex=5, label='image', type='android.widget.ImageView', hittable=True,
                            rect={'x': 460 + i * 60, 'y': 920, 'width': 48, 'height': 48}) for i in range(2)]
+            if self.fault == 'filmstrip-single-photo':
+                nodes=[n for n in nodes if n['index']!=7]
+            if self.fault == 'filmstrip-AX-drift' and self.ref_generation//100%2==0:
+                rect['x']+=1
             if self.fault == 'duplicate-thumb':
                 nodes.append(node(8, parentIndex=5, label='image', type='android.widget.ImageView', hittable=True, rect=nodes[-1]['rect']))
         return {'appBundleId': 'me.rosuh.easywatermark.debug', 'truncated': False,
@@ -2078,6 +2264,7 @@ class AndroidClampChecks(unittest.TestCase):
         for row in rows:
             command, inp = row['command'], row['input']
             self.assertNotIn('__CLAMP_', json.dumps(inp))
+            self.assertNotIn('__FILMSTRIP_', json.dumps(inp))
             self.calls.append((command, inp))
             on_event(platform, {'type': 'replay_action_start', 'step': row['n'], 'command': command})
             if command == 'fill':
@@ -2100,7 +2287,8 @@ class AndroidClampChecks(unittest.TestCase):
                             self.in_picker = False
                     else:
                         self.assertIn(index, (6, 7), 'Must rebind latest filmstrip refs')
-                        self.focus = 'A' if index == 6 else 'B'
+                        self.focus = 'A' if index == 6 or self.fault=='filmstrip-B-stuck' else 'B'
+                        if index==7 and self.fault=='filmstrip-stop':self.stopped=True
                         if self.pan_done and self.focus == 'A' and self.fault == 'return-reset':
                             self.offset = [0, 0]
             if command == 'gesture':
@@ -2273,6 +2461,255 @@ class AndroidClampChecks(unittest.TestCase):
         self.assertEqual(2, code)
         self.assertFalse(self.calls)
 
+
+
+    def use_filmstrip(self):
+        marker='editorfilmstrips-'+'b'*32
+        for key,name in list(self.state['fixtures'].items()):
+            source=Path(name);destination=source.with_name('ewm-suite-'+marker+'-'+key+'.png')
+            source.rename(destination);self.state['fixtures'][key]=str(destination)
+        self.state['marker']=marker
+        self.source=runner.REPO_ROOT/'docs/testing/agent-device/scripts/editor-filmstrip-switch@android.json'
+        self.spec['edge_id']='editor-filmstrip-switch';self.spec['cmd'][self.spec['cmd'].index('--steps-file')+1]=str(self.source)
+        def provider(serial,args,**kwargs):
+            key=next(k for k,v in self.ids.items() if args[-1].endswith('/'+v))
+            if self.fault=='filmstrip-provider-mismatch' and key=='B':key='A'
+            return Path(self.state['fixtures'][key]).read_bytes()
+        self.stack.enter_context(patch.object(setup,'adb',side_effect=provider))
+
+    def test_filmstrip_real_A_B_A_fixed_32_source_mapping_and_no_clamp_tail(self):
+        import hashlib
+        self.use_filmstrip();code,_,extra=self.run_case();self.assertEqual(0,code,extra)
+        proof=extra['filmstrip_switch'];self.assertNotIn('clamp_drag',extra)
+        self.assertEqual('evidence_complete',proof['status']);self.assertTrue(proof['private_restored'])
+        self.assertEqual(['A','B','A'],[b['focused'] for b in proof['editor_bindings'] if b['source_step'] in (23,27,31)])
+        self.assertNotIn('nonce',proof);self.assertNotIn('gesture',proof);self.assertEqual([],proof['omitted_source_steps'])
+        self.assertEqual(8,len(proof['provider_readbacks']));self.assertEqual(8,len(proof['date_queries']))
+        mapping=[m for phase in proof['phases'] for m in phase['mapping'] if m['kind']=='action']
+        self.assertEqual(list(range(1,33)),[m['source_step'] for m in mapping]);self.assertEqual(list(range(1,33)),[m['step'] for m in mapping])
+        self.assertEqual(31,len([e for e in self.events if e.get('shot')]))
+        for phase in proof['phases']:
+            self.assertEqual(runner._FILMSTRIP_SOURCE_SHA256,phase['canonical_source_sha256'])
+            self.assertEqual(phase['source_sha256'],hashlib.sha256(Path(phase['source']).read_bytes()).hexdigest())
+            self.assertEqual(phase['script_sha256'],hashlib.sha256(Path(phase['script']).read_bytes()).hexdigest())
+        self.assertFalse(any(c in ('gesture','fill') for c,i in self.calls))
+        self.assertEqual(1,sum(c=='open' for c,i in self.calls));self.assertEqual(1,sum(c=='press' and i.get('target',{}).get('selector')=='label="Add more images"' for c,i in self.calls))
+        self.setup.assert_called_once();self.restore.assert_called_once();self.release.assert_called_once()
+    def test_filmstrip_single_photo_stuck_B_fresh_AX_dates_and_stop_fail_closed(self):
+        self.use_filmstrip()
+        for fault in ('filmstrip-single-photo','filmstrip-B-stuck','filmstrip-AX-drift','date-collision','filmstrip-provider-mismatch','filmstrip-stop'):
+            with self.subTest(fault=fault):
+                self.fault=fault;self.stopped=self.in_picker=False;self.selected=set();self.focus='A';self.calls.clear()
+                self.spec['step_evidence_root']=str(self.root/fault)
+                self.restore.reset_mock();self.release.reset_mock()
+                code,_,extra=self.run_case();self.assertEqual(130 if fault=='filmstrip-stop' else 2,code,extra)
+                self.assertEqual('unverified',extra['filmstrip_switch']['status']);self.assertTrue(extra['filmstrip_switch']['private_restored'])
+                self.assertNotIn('clamp_drag',extra)
+                if fault=='filmstrip-stop':self.assertEqual('press',self.calls[-1][0])
+                self.restore.assert_called_once();self.release.assert_called_once()
+    def test_filmstrip_cli_console_persist_gate_and_manifest_for_complete_and_stop(self):
+        self.use_filmstrip()
+        for mode,stopped in (('cli',False),('console',True)):
+            self.fault='filmstrip-stop' if stopped else None;self.stopped=self.in_picker=False;self.selected=set();self.focus='A';self.calls.clear()
+            self.restore.reset_mock();self.release.reset_mock()
+            built=runner._agent_device_spec('editor-filmstrip-switch','android','owned');built['agent_device_output']=str(self.root/(mode+'-output'))
+            task=runner._record_task('edge:editor-filmstrip-switch@android#agent',built)
+            rec={'id':'filmstrip-'+mode,'state':'running','started':'2026-10-10T00:00:00Z','tasks':[task]}
+            holder=runner.ActiveRun(rec) if mode=='cli' else runner.RunManager()
+            if mode=='console':holder.active=rec
+            def sdk(*args,**kwargs):
+                self.assertIn('filmstrip_switch_manifest',task)
+                result=self.batch(*args,**kwargs)
+                if self.stopped:holder.stop_requested=True
+                return result
+            with patch.object(runner,'RUNS_DIR',self.root/'records'),patch.object(runner,'ensure_device_ready',return_value={'id':'owned','platform':'android'}),patch.object(runner,'ensure_pinned_agent_device'),patch.object(runner,'_ingest_agent_device_result',return_value={'agent_device_state':'review_required','cases':[{}],'layers':{}}),patch.object(runner,'_run_batched_steps',side_effect=sdk):
+                if mode=='cli':runner._execute_task(holder,rec,task,io.StringIO())
+                else:holder._execute_one_task(rec,task,io.StringIO())
+                runner.finalize_record(rec);saved=json.loads((runner.RUNS_DIR/(rec['id']+'.json')).read_text())['tasks'][0]
+            proof=saved['filmstrip_switch'];self.assertTrue(proof['private_restored']);self.assertEqual(proof['manifest'],saved['filmstrip_switch_manifest'])
+            self.assertEqual('stopped' if stopped else 'review_required',saved['state']);self.assertNotIn('clamp_drag',saved)
+            self.restore.assert_called_once();self.release.assert_called_once()
+    def test_filmstrip_exit_zero_without_restored_switch_evidence_is_uncovered(self):
+        spec=dict(self.spec,edge_id='editor-filmstrip-switch')
+        for gate in (None,{'status':'evidence_complete','private_restored':False}):
+            if gate:spec['filmstrip_switch']=gate
+            with patch.object(runner,'_ingest_agent_device_result',return_value={'agent_device_state':'review_required','cases':[{}],'layers':{}}):extra=runner.ingest_agent_device_result(spec,0)
+            self.assertEqual('uncovered',extra['agent_device_state']);self.assertFalse(extra['layers']['green_from_process_zero'])
+
+
+
+class AndroidExportFileChecks(unittest.TestCase):
+    """Owned fixture/real PNG structure with fake SDK/provider only; no device operations."""
+    def setUp(self):
+        import hashlib
+        from PIL import Image, ImageDraw
+        self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.real_apply_agent_setup = runner._apply_agent_setup
+        self.stack = contextlib.ExitStack(); self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch.object(setup,'SETUP_BACKUPS',self.root/'locks'))
+        marker = 'exportsavesucces-'+'c'*32
+        fixtures = setup.make_fixtures(self.root,marker)
+        self.nonce = 'E2E-'+marker[-12:]
+        self.sentinel = 'EWM-EXIF-'+marker
+        exif = Image.Exif(); exif[270]=self.sentinel
+        with Image.open(fixtures['A']) as im: im.save(fixtures['A'],exif=exif)
+        self.input = fixtures['A'].read_bytes()
+        with Image.open(fixtures['A']) as im:
+            out = im.convert('RGB'); draw = ImageDraw.Draw(out)
+            for x in range(80,850,40): draw.rectangle((x,180,x+7,202),fill=(212,153,25))
+            buf=io.BytesIO();out.save(buf,format='PNG');self.output=buf.getvalue()
+        self.state={'setup':'editor','platform':'android','serial':'owned','marker':marker,
+            'source_id':'321','fixtures':{k:str(v) for k,v in fixtures.items()},'private_backup':{p:None for p in setup.ANDROID_CONFIG+setup.EXPORT_CONTROL_PATHS},
+            'display_backup':{},'mutated':True,'export_source':{'sentinel':self.sentinel,'sha256':hashlib.sha256(self.input).hexdigest()},
+            'export_control':{'mode':'observe-next','run_id':'run'}}
+        setup._claim_setup(self.state,self.root);self.state['phase']='active';self.state['mutated']=True;setup._save_setup(self.state)
+        self.source=runner.REPO_ROOT/'docs/testing/agent-device/scripts/export-save-success@android.json'
+        self.spec={'builder':'agent-device','edge_id':'export-save-success','agent_platform':'android','serial':'owned',
+            'step_evidence_root':str(self.root/'run'),'agent_device_output':str(self.root/'output'),
+            'cmd':['fake','batch','--steps-file',str(self.source),'--platform','android','--serial','owned','--session','owned']}
+        self.fields={'_id':'777','_display_name':'ewm_123.png','relative_path':'Pictures/EasyWaterMark/','owner_package_name':setup.ANDROID_PACKAGE,
+            'mime_type':'image/png','is_pending':'0','_size':str(len(self.output)),'width':'960','height':'640'}
+        self.text,self.exported,self.deleted,self.stopped='original',False,False,False
+        self.fault=None;self.calls=[];self.reads=0
+        for target,name,kwargs in (
+            (runner,'maybe_prepare_ios_runner',{}),(runner,'_apply_agent_setup',{'return_value':self.state}),
+            (runner,'_restore_agent_setup',{'side_effect':lambda state,log:setup._restore_export_output(state)}),(runner,'release_agent_session',{}),(runner,'_publish_agent_device_live',{}),
+            (setup,'adb_shell',{'side_effect':self.shell}),(setup,'export_provider_read',{'side_effect':self.read}),
+            (setup,'_arm_export_control',{}),(setup,'_capture_export_control',{'side_effect':self.capture}),
+            (runner,'_run_batched_steps',{'side_effect':self.batch}),
+            (runner,'_ingest_agent_device_result',{'return_value':{'agent_device_state':'review_required','cases':[{}],'layers':{}}})):
+            mock=self.stack.enter_context(patch.object(target,name,**kwargs))
+            if name=='_restore_agent_setup':self.restore=mock
+            if name=='release_agent_session':self.release=mock
+    def shell(self,serial,*args,**kwargs):
+        self.assertEqual('owned',serial)
+        if args[:2]==('content','delete'):
+            self.assertTrue(self.exported and not self.deleted)
+            self.assertEqual(setup.MEDIA+'/777',args[-1]);self.deleted=True;return 'Deleted 1 rows.'
+        self.assertEqual(('content','query'),args[:2])
+        uri=args[args.index('--uri')+1];projection=args[args.index('--projection')+1]
+        if uri.endswith('/777'):
+            rows=[] if self.deleted else [self.fields if projection!='_id' else {'_id':'777'}]
+        elif args[-1].startswith('_id=321'):rows=[{'_id':'321'}]
+        else:
+            ids=['9']+(['777'] if self.exported and not self.deleted else [])
+            if self.fault=='collision' and self.exported and not self.deleted:ids+=['888']
+            rows=[{'_id':i} for i in ids]
+        return '\n'.join('Row: '+str(i)+' '+', '.join(k+'='+v for k,v in row.items()) for i,row in enumerate(rows)) if rows else 'No result found.'
+    def read(self,serial,uri,*args,**kwargs):
+        if uri.endswith('/321'):return self.input
+        self.assertTrue(uri.endswith('/777'))
+        self.reads+=1
+        if self.fault=='changed-output' and self.reads==2:return self.output+b'changed'
+        if self.fault=='stop' and self.reads==2:self.stopped=True
+        return self.output
+    def capture(self,state):
+        run_id=Path(self.spec['step_evidence_root']).name
+        control={'mode':'observe-next','run_id':run_id,'fixture_uri':setup.MEDIA+'/321','marker_absent':True,'clock':{'device_ms':1},
+            'clock_end':{'device_ms':9},'expires_at_ms':10,'events':[{'run_id':run_id,'event':e,'timestamp_ms':n} for n,e in enumerate(('ready','entered','outcome_success','cleared'),2)]}
+        control['events'][2]['output_uri']=setup.MEDIA+('/888' if self.fault=='wrong-uri' else '/777')
+        if self.fault=='missing-observer':control['events']=[]
+        (self.root/'export-control-events.json').write_text(json.dumps(control))
+    def snapshot(self):
+        return {'appBundleId':setup.ANDROID_PACKAGE,'truncated':False,'visibility':{'partial':False},'snapshotQuality':{'state':'healthy'},'nodes':[
+            {'index':1,'identifier':'watermarkTextContent','parentIndex':None,'hittable':True},
+            {'index':2,'parentIndex':1,'type':'android.widget.TextView','label':self.text}]}
+    def batch(self,cmd,rows,log,tee,on_proc,on_event,should_stop,platform,env,**kwargs):
+        for row in rows:
+            command,inp=row['command'],row['input'];self.calls.append(command)
+            if command=='fill':self.text=inp['text']
+            if command=='press' and inp['target'].get('selector')=='role="textview" label="Export to the album"':self.exported=True
+            if command=='screenshot':setup.write_png(Path(inp['path']),2,2,lambda y:b'\x11\x22\x33'*2)
+            data=self.snapshot() if command=='snapshot' else {}
+            log.write(json.dumps({'success':True,'data':{'total':1,'executed':1,'results':[{'step':1,'command':command,'ok':True,'data':data}]}})+'\n')
+            on_event(platform,{'type':'replay_action_stop','step':row['n'],'command':command,'ok':True})
+        return 0
+    def run_case(self):
+        self.state['export_control']['run_id']=Path(self.spec['step_evidence_root']).name;setup._save_setup(self.state)
+        return runner.run_task(self.spec,io.StringIO(),should_stop=lambda:self.stopped)
+    def test_real_structure_uri_two_readbacks_cleanup_and_manifest(self):
+        code,_,extra=self.run_case();self.assertEqual(0,code,extra)
+        proof=extra['export_file'];self.assertEqual('evidence_complete',proof['status']);self.assertTrue(proof['private_restored'])
+        self.assertTrue(proof['baseline_preserved']);self.assertEqual('verified_deleted',proof['cleanup']);self.assertEqual(3,self.reads)
+        self.assertEqual('pending',proof['independent_image_QA']);self.assertFalse(proof['human_confirmation'])
+        self.assertEqual('pending_independent_image_QA',proof['structure']['exact_nonce_pixel_review'])
+        indices=[m['source_step'] for phase in proof['phases'] for m in phase['mapping'] if m['kind']=='action']
+        self.assertEqual(list(range(1,18)),indices);self.restore.assert_called_once();self.release.assert_called_once()
+    def test_collision_missing_observer_wrong_uri_changed_bytes_stop_are_not_claimed(self):
+        for fault in ('collision','missing-observer','wrong-uri','changed-output'):
+            with self.subTest(fault=fault):
+                # Each immutable transaction receives a separate run folder; never rewrite previous evidence.
+                self.spec['step_evidence_root']=str(self.root/('run-'+fault));self.state.pop('export_output',None)
+                self.fault=fault;self.exported=self.deleted=self.stopped=False;self.reads=0
+                code,_,extra=self.run_case();self.assertNotEqual(0,code);self.assertEqual('unverified',extra['export_file']['status'])
+                self.assertFalse(self.deleted);self.assertNotIn('export_output',self.state);self.assertTrue(extra['export_file']['private_restored'])
+        self.assertEqual(4,self.restore.call_count);self.assertEqual(4,self.release.call_count)
+    def test_stop_after_proven_readbacks_cleans_owned_output_and_restores(self):
+        self.fault='stop'
+        code,_,extra=self.run_case()
+        self.assertEqual(130,code);self.assertTrue(self.deleted)
+        self.assertEqual('unverified',extra['export_file']['status']);self.assertEqual('verified_deleted',extra['export_file']['cleanup'])
+        self.assertTrue(extra['export_file']['private_restored']);self.restore.assert_called_once();self.release.assert_called_once()
+    def test_owned_metadata_rejection_still_cleans_exact_output(self):
+        self.output=self.input;self.fields['_size']=str(len(self.output))
+        code,_,extra=self.run_case()
+        self.assertNotEqual(0,code);self.assertTrue(self.deleted)
+        self.assertEqual('verified_deleted',extra['export_file']['cleanup']);self.assertTrue(extra['export_file']['private_restored'])
+    def test_owned_wrong_geometry_is_cleaned_but_rejected(self):
+        self.fields['width']='961'
+        code,_,extra=self.run_case()
+        self.assertNotEqual(0,code);self.assertTrue(self.deleted)
+        self.assertEqual('verified_deleted',extra['export_file']['cleanup'])
+    def test_foreign_run_observer_refuses_before_any_sdk_action(self):
+        self.state['export_control']['run_id']='foreign';setup._save_setup(self.state)
+        code,_,extra=runner.run_task(self.spec,io.StringIO())
+        self.assertNotEqual(0,code);self.assertEqual([],self.calls);self.assertFalse(self.exported)
+        self.restore.assert_called_once()
+        control={'mode':{},'run_id':'foreign','fixture_uri':setup.MEDIA+'/42','expires_at_ms':0}
+        with self.assertRaises(ValueError):setup._protect_previous_export_control('owned',json.dumps(control).encode())
+    def test_metadata_residue_and_plain_source_cannot_pass_structure(self):
+        path=self.root/'output-png.png';path.write_bytes(self.input)
+        with self.assertRaisesRegex(ValueError,'metadata'):runner._export_png_structure(Path(self.state['fixtures']['A']),path,self.sentinel)
+        from PIL import Image
+        with Image.open(io.BytesIO(self.input)) as im:im.convert('RGB').save(path)
+        with self.assertRaisesRegex(ValueError,'glyph'):runner._export_png_structure(Path(self.state['fixtures']['A']),path,self.sentinel)
+    def test_process_zero_cannot_replace_file_gate(self):
+        for gate in (None,{'status':'evidence_complete','private_restored':False},{'status':'evidence_complete','private_restored':True,'cleanup':'verified_deleted'}):
+            spec=dict(self.spec)
+            if gate:spec['export_file']=gate
+            extra=runner.ingest_agent_device_result(spec,0)
+            self.assertEqual('uncovered',extra['agent_device_state']);self.assertFalse(extra['layers']['green_from_process_zero'])
+    def test_current_case_only_setup_and_returned_uri_type_fail_closed(self):
+        with patch.object(runner,'apply_setup',return_value={'journal':'owned'}) as apply:
+            spec=dict(self.spec,setup='editor',device={'id':'owned'})
+            self.real_apply_agent_setup(spec,io.StringIO())
+            self.assertEqual('run',apply.call_args.kwargs['export_success_run_id'])
+            spec['edge_id']='export-system-share';self.real_apply_agent_setup(spec,io.StringIO())
+            self.assertNotIn('export_success_run_id',apply.call_args.kwargs)
+        self.capture(self.state);control=json.loads((self.root/'export-control-events.json').read_text())
+        for uri in (None,42,'',setup.MEDIA+'/321','file:///tmp/not-owned'):
+            control['events'][2]['output_uri']=uri
+            with self.assertRaises(ValueError):runner._export_returned_uri(control,'run',setup.MEDIA+'/321')
+    def test_cli_and_console_preserve_failed_file_gate_manifest(self):
+        for mode in ('cli','console'):
+            task={'id':'edge:export-save-success@android#agent','edge':'export-save-success','platform':'android','state':'pending'}
+            rec={'id':mode,'state':'running','tasks':[task]}
+            holder=runner.ActiveRun(rec) if mode=='cli' else runner.RunManager()
+            if mode=='console':holder.active=rec
+            spec=dict(self.spec);self.fault='missing-observer';self.exported=self.deleted=self.stopped=False;self.reads=0
+            self.state['export_control']['run_id']=mode;setup._save_setup(self.state)
+            with patch.object(runner,'RUNS_DIR',self.root/'records'),patch.object(runner,'task_run_spec',return_value=spec):
+                if mode=='cli':runner._execute_task(holder,rec,task,io.StringIO())
+                else:holder._execute_one_task(rec,task,io.StringIO())
+                self.assertEqual('failed',task['state']);self.assertTrue(task['export_file']['private_restored'])
+                self.assertEqual(task['export_file']['manifest'],task['export_file_manifest'])
+    def test_claimed_cleanup_failure_preserves_restore_and_gate_failure(self):
+        with patch.object(setup,'_restore_export_output',side_effect=ValueError('actual cleanup failed')):
+            with self.assertRaises(ValueError):self.run_case()
+        proof=json.loads(next((self.root/'run').glob('scripts/*/export-file.json')).read_text())
+        self.assertFalse(self.deleted);self.assertEqual('claimed',proof['cleanup'])
+        self.assertFalse(proof['private_restored']);self.restore.assert_called_once();self.release.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()
