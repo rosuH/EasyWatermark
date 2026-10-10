@@ -112,6 +112,104 @@ def compare_clamp_pixels(before: dict, after: dict, delta: dict | None = None) -
         raise ValueError("CLAMP translated glyph pixels do not match")
     return {"shift_px": shift, "pixel_similarity": round(similarity, 4)}
 
+
+# Fixed Android CLAMP A/B fixture evidence; these are not general image selectors.
+_CLAMP_PALETTE = {"A": (232, 183, 70), "B": (34, 136, 102), "C": (214, 90, 36), "icon": (223, 48, 48)}
+
+
+def clamp_media_rows(raw: str) -> list[dict]:
+    if len(raw) > 65536:
+        raise ValueError("CLAMP MediaStore query exceeds bound")
+    if raw.strip() == "No result found.":
+        return []
+    rows = []
+    for line in raw.splitlines():
+        match = re.fullmatch(r"Row: \d+ (.+)", line)
+        if not match:
+            raise ValueError("Unknown CLAMP MediaStore query output")
+        parts = [part.split("=", 1) for part in match[1].split(", ")]
+        if len(parts) != 4 or any(len(part) != 2 for part in parts):
+            raise ValueError("CLAMP MediaStore projection changed")
+        row = dict(parts)
+        if (set(row) != {"_id", "datetaken", "date_added", "date_modified"}
+                or not re.fullmatch(r"[1-9][0-9]*", row["_id"])
+                or any(value not in ("NULL", "null") and not re.fullmatch(r"[0-9]{1,16}", value)
+                       for key, value in row.items() if key != "_id")):
+            raise ValueError("Invalid CLAMP MediaStore identity/date")
+        rows.append(row)
+    if not rows or len(rows) > 64 or len({row["_id"] for row in rows}) != len(rows):
+        raise ValueError("Ambiguous CLAMP MediaStore rows")
+    return rows
+
+
+def clamp_photo_second(label: str, zone) -> int:
+    from datetime import datetime
+    match = re.fullmatch(r"Photo taken on (.+)", label.replace("\u202f", " ").replace("\u00a0", " "))
+    if not match:
+        raise ValueError("Unknown CLAMP picker photo date")
+    return int(datetime.strptime(match[1], "%b %d, %Y, %I:%M:%S %p").replace(tzinfo=zone).timestamp())
+
+
+def clamp_fixture_identity(image, rect: dict) -> str:
+    import math
+    if any(type(rect.get(k)) not in (int, float) or not math.isfinite(rect[k]) for k in ("x", "y", "width", "height")):
+        raise ValueError("CLAMP fixture rectangle is invalid")
+    x, y, w, h = (rect[k] for k in ("x", "y", "width", "height"))
+    if min(w, h) < 30 or x < 0 or y < 0 or x + w > image.width or y + h > image.height:
+        raise ValueError("CLAMP fixture rectangle clipped or too small")
+    samples = [image.getpixel((round(x + w * sx), round(y + h * sy))) for sx in (.35, .5, .65) for sy in (.94, .96)]
+    hits = [key for key, rgb in _CLAMP_PALETTE.items()
+            if sum(max(abs(a - b) for a, b in zip(pixel, rgb)) <= 18 for pixel in samples) >= 5]
+    if len(hits) != 1:
+        raise ValueError("CLAMP fixture pixels are absent or ambiguous")
+    middle = [image.getpixel((round(x + w * sx), round(y + h * sy))) for sx in (.4, .5, .6) for sy in (.4, .5, .6)]
+    expected = _CLAMP_PALETTE["icon"] if hits[0] == "icon" else (255, 255, 255)
+    if sum(max(abs(a - b) for a, b in zip(pixel, expected)) <= 18 for pixel in middle) < 7:
+        raise ValueError("CLAMP fixture interior does not match")
+    return hits[0]
+
+
+def clamp_editor_binding(data: dict, pixels, fixture: Path) -> tuple[dict, str, dict]:
+    package = "me.rosuh.easywatermark.debug"
+    thumbs = [n for n in data["nodes"] if n.get("label") == "image" and n.get("type") == "android.widget.ImageView"
+              and n.get("bundleId") == package and n.get("hittable") is True and n.get("visibleToUser") is True]
+    preview = [n for n in data["nodes"] if n.get("label") == "Watermark preview" and n.get("visibleToUser") is True]
+    if len(thumbs) != 2 or len(preview) != 1:
+        raise ValueError("CLAMP requires exactly two selectable images and one preview")
+    parents = {n.get("parentIndex") for n in thumbs}
+    parent = [n for n in data["nodes"] if n.get("index") in parents and n.get("bundleId") == package and n.get("visibleToUser") is True]
+    if len(parents) != 1 or len(parent) != 1:
+        raise ValueError("CLAMP image parent is not uniquely observed")
+    pr, vr = parent[0]["rect"], preview[0]["rect"]
+    boxes = sorted((n["rect"] for n in thumbs), key=lambda r: r["x"])
+    if (any(r["y"] < vr["y"] + vr["height"] or r["x"] < pr["x"] or r["y"] < pr["y"]
+            or r["x"] + r["width"] > pr["x"] + pr["width"] or r["y"] + r["height"] > pr["y"] + pr["height"] for r in boxes)
+            or abs(boxes[0]["y"] - boxes[1]["y"]) > 1 or boxes[0]["x"] + boxes[0]["width"] > boxes[1]["x"]):
+        raise ValueError("CLAMP images are not a common row below preview")
+    bound = {}
+    for thumb in thumbs:
+        tr = dict(thumb["rect"])
+        if abs(tr["width"] - tr["height"]) > 1:
+            raise ValueError("CLAMP thumbnail cell is not square")
+        # Existing EditorFilmstripMetrics: clickable cell 48dp, centered image 40dp.
+        inset = tr["width"] / 12
+        tr.update(x=tr["x"] + inset, y=tr["y"] + inset, width=tr["width"] - 2 * inset, height=tr["height"] - 2 * inset)
+        key = clamp_fixture_identity(pixels, tr)
+        if key in bound:
+            raise ValueError("CLAMP editor image pixels are ambiguous")
+        bound[key] = thumb
+    if set(bound) != {"A", "B"}:
+        raise ValueError("CLAMP editor images are not owned A+B")
+    with require_clamp_pixels().open(fixture) as source:
+        w, h = source.size
+    r = dict(vr)
+    scale = min(r["width"] / w, r["height"] / h)
+    r.update(x=r["x"] + (r["width"] - w * scale) / 2, y=r["y"] + (r["height"] - h * scale) / 2, width=w * scale, height=h * scale)
+    focused = clamp_fixture_identity(pixels, r)
+    if focused not in bound:
+        raise ValueError("CLAMP preview does not match A+B")
+    return bound, focused, preview[0]
+
 _SKIP = {"context", "env"}
 _POINT_CMDS = {"press", "click", "tap", "longpress", "swipe", "gesture"}
 

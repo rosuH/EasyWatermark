@@ -2875,14 +2875,17 @@ def _run_android_template_crud(spec, state, source, logf, *, tee_stdout=False,
         save()
     return code
 
-_CLAMP_SOURCE_SHA256 = "75023ee9960ba08c3d00e46abd245eba3a6dc0faa041cbe425094dcb7e72c9da"
+_CLAMP_SOURCE_SHA256 = "24269b38a2d5eefcf786f6eb245c8215601fa6ba783a9eab1a37cf72b92a1f06"
 
 
 def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=None,
                        on_spec=None, on_steps=None, on_step_event=None, should_stop=None):
-    from testmap_setup import load_setup_backup
+    import testmap_setup as setup
+    from zoneinfo import ZoneInfo
+    from testmap_steps import clamp_media_rows, clamp_photo_second, clamp_fixture_identity, clamp_editor_binding
+    load_setup_backup = setup.load_setup_backup
     proof = {"status": "unverified", "private_restored": False, "phases": [],
-             "scope": "Real pan and SDK session reopen; no process-death or A/B persistence claim"}
+             "scope": "One owned A+B selection, real A pan, B/A offset continuity and same-process SDK reopen; no process-death/DataStore claim"}
     spec["clamp_drag"] = proof
     root, identity = Path(spec["step_evidence_root"]), spec.get("step_evidence_task") or {}
     folder = root / "scripts" / (_shot_name(identity, "android", 0).removesuffix(".png") + "-clamp")
@@ -2890,13 +2893,15 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
     record = folder / "clamp-drag.json"
     spec["clamp_drag_manifest"] = proof["manifest"] = str(record)
     cmd, env = list(spec["cmd"]), {**os.environ, **(spec.get("env") or {})}
-    deadline, code = time.monotonic() + 240, 2
-    measurements = {}
+    deadline, code = time.monotonic() + 480, 2  # Business only; finally budgets are unchanged.
+    shots, executed, live_rows = {}, [], []
 
     def save():
         record.write_text(json.dumps(proof, indent=2) + "\n")
 
     def phase(name, actions, indices, offset=0, observe=False, inspect=None):
+        if "__CLAMP_" in json.dumps(actions):
+            raise ValueError("Unresolved CLAMP input must never reach SDK")
         inp, derived = folder / (name + ".input.json"), folder / (name + ".json")
         with inp.open("x") as stream:
             stream.write(json.dumps(actions, indent=2) + "\n")
@@ -2924,8 +2929,8 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
                     raise InterruptedError("Stopped during CLAMP")
                 if time.monotonic() >= deadline:
                     raise TimeoutError("CLAMP transaction deadline reached")
-                for path, digest in ((source, _CLAMP_SOURCE_SHA256), (fixture, fixture_hash),
-                                     (inp, manifest["source_sha256"]), (derived, manifest["script_sha256"])):
+                for path, digest in [(source, _CLAMP_SOURCE_SHA256), (inp, manifest["source_sha256"]),
+                                     (derived, manifest["script_sha256"]), *fixture_hashes.items()]:
                     if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
                         raise ValueError("CLAMP fixture/source/derived input changed")
                 item = manifest["mapping"][row["n"] - 1]
@@ -2946,6 +2951,7 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
                 if item["kind"] == "screenshot":
                     shot = Path(item["path"])
                     _verify_cancel_png(shot)
+                    shots[item["source_step"]] = shot
                     if inspect and item["source_step"] in snapshots:
                         inspect(item["source_step"], snapshots[item["source_step"]], shot)
             return snapshots
@@ -2954,6 +2960,7 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
             (folder / (name + ".events.json")).write_text(json.dumps(events, indent=2) + "\n")
             save()
 
+    stop_token = setup._SETUP_STOP.set(should_stop)
     try:
         expected = REPO_ROOT / "docs/testing/agent-device/scripts/editor-clamp-drag@android.json"
         if source.resolve() != expected.resolve() or source.is_symlink() or hashlib.sha256(source.read_bytes()).hexdigest() != _CLAMP_SOURCE_SHA256:
@@ -2965,89 +2972,268 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
                 or state.get("serial") != spec.get("serial") or _cmd_flag(cmd, "--serial") != spec.get("serial")
                 or json.loads(Path(state["lock"]).read_text()).get("journal") != state["journal"]
                 or not re.fullmatch(r"editorclampdrag-[a-f0-9]{32}", str(state.get("marker", "")))
-                or not re.fullmatch(r"[1-9][0-9]*", str(state.get("source_id", "")))):
+                or not re.fullmatch(r"[1-9][0-9]*", str(state.get("source_id", "")))
+                or set(state.get("fixtures", {})) != {"A", "B", "C", "icon"}):
             raise ValueError("CLAMP setup identity/lease is not current")
-        fixture = Path(state["fixtures"]["A"])
-        if (fixture.is_symlink() or fixture.parent != Path(state["journal"]).parent
-                or fixture.name != "ewm-suite-" + state["marker"] + "-A.png" or not 0 < fixture.stat().st_size <= 1024 * 1024):
-            raise ValueError("CLAMP fixture is not the bounded owned A file")
-        fixture_hash = hashlib.sha256(fixture.read_bytes()).hexdigest()
+        fixtures, fixture_hashes = {}, {}
+        for key, value in state["fixtures"].items():
+            path = Path(value)
+            if (path.is_symlink() or path.parent != Path(state["journal"]).parent
+                    or path.name != "ewm-suite-" + state["marker"] + "-" + key + ".png"
+                    or not path.is_file() or not 0 < path.stat().st_size <= 1024 * 1024):
+                raise ValueError("CLAMP fixture is not a bounded owned file")
+            fixtures[key], fixture_hashes[path] = path, hashlib.sha256(path.read_bytes()).hexdigest()
+        fixture, serial = fixtures["A"], spec["serial"]
         nonce = "E2E-" + state["marker"][-12:]
         actions = json.loads(source.read_text().replace("__CLAMP_NONCE__", nonce))
-        proof.update(nonce=nonce, fixture_sha256=fixture_hash, source_id=state["source_id"], source_sha256=_CLAMP_SOURCE_SHA256)
+        proof.update(nonce=nonce, fixture_hashes={k: fixture_hashes[v] for k, v in fixtures.items()},
+                     source_id=state["source_id"], source_sha256=_CLAMP_SOURCE_SHA256, omitted_source_steps=[])
+        indices = list(range(1, len(actions) + 1))
+        live_rows[:] = parse_steps_json(json.dumps(actions), "android")
         save()
         if on_spec:
             on_spec(spec)
-        observed = phase("entry", actions[:4], [1, 2, 3, 4], observe=True)[4]
+        if on_steps:
+            on_steps("android", live_rows)
+
+        def budget():
+            if should_stop and should_stop():
+                raise InterruptedError("Stopped during CLAMP evidence read")
+            if time.monotonic() >= deadline:
+                raise TimeoutError("CLAMP transaction deadline reached")
+            return min(10, max(.1, deadline - time.monotonic()))
+
+        def shell(*args):
+            return setup.adb_shell(serial, *args, timeout=budget())
+
+        zone = ZoneInfo(shell("getprop", "persist.sys.timezone").strip())
+        proof["timezone"] = str(zone)
+
+        def media():
+            for key, media_id in ids.items():
+                raw = setup.adb(serial, ["exec-out", "content", "read", "--uri", setup.MEDIA + "/" + media_id], binary=True, timeout=budget())
+                digest = hashlib.sha256(raw).hexdigest()
+                proof.setdefault("provider_readbacks", []).append({"fixture": key, "uri": setup.MEDIA + "/" + media_id,
+                    "sha256": digest, "byte_count": len(raw)})
+                save()
+                if not 0 < len(raw) <= 1048576 or digest != fixture_hashes[fixtures[key]]:
+                    raise ValueError("CLAMP provider bytes changed")
+
+        def query(name, where, expected=None):
+            raw = shell("content", "query", "--uri", setup.MEDIA, "--projection", "_id:datetaken:date_added:date_modified", "--where", where)
+            path = folder / (name + ".txt")
+            with path.open("x") as stream:
+                stream.write(raw)
+            proof.setdefault("date_queries", []).append({"path": str(path), "sha256": hashlib.sha256(raw.encode()).hexdigest(), "where": where})
+            save()
+            rows = clamp_media_rows(raw)
+            if expected is not None and {r["_id"] for r in rows} != expected:
+                raise ValueError("CLAMP collection dates/owned rows are not closed")
+            return rows
+
+        # Setup has indexed these four owned files. A single bounded read per file
+        # rejects missing/ambiguous rows, rather than entering another polling loop.
+        ids, owned = {}, []
+        for key, path in fixtures.items():
+            rows = query("owned-" + key, "_display_name='" + path.name + "' AND relative_path='" + setup.FIXTURE_FOLDER + "/'")
+            if len(rows) != 1:
+                raise ValueError("CLAMP owned fixture is not uniquely indexed")
+            ids[key] = rows[0]["_id"]
+            owned.extend(rows)
+        if len(set(ids.values())) != 4 or ids["A"] != state["source_id"]:
+            raise ValueError("CLAMP owned MediaStore identities changed")
+        proof.update(fixture_ids=ids, owned_dates=owned)
+        media()
+
+        def execute(name, start, end):
+            selected = [n for n in indices if start <= n <= end]
+            if set(selected) & set(executed):
+                raise ValueError("CLAMP source action already executed")
+            result = phase(name, [actions[n - 1] for n in selected], selected, len(executed))
+            executed.extend(selected)
+            return result
+
+        def bracket(name, start, end):
+            observed = execute(name, start, end)
+            pair = [n for n in range(start, end + 1) if n in observed]
+            if len(pair) != 2:
+                raise ValueError("CLAMP bracket must contain two real snapshots")
+            before, after = (observed[n] for n in pair)
+            def signature(data):
+                return [{k: n.get(k) for k in ("index", "parentIndex", "bundleId", "identifier", "type", "label", "rect", "selected", "hittable", "visibleToUser", "value", "text", "editable")}
+                        for n in data["nodes"] if not str(n.get("bundleId", "")).startswith("com.android.systemui")]
+            if signature(before) != signature(after):
+                raise ValueError("CLAMP AX changed around synchronized PNG")
+            shot = shots[pair[0]]
+            with require_clamp_pixels().open(shot) as image:
+                if image.width * image.height > 16_000_000:
+                    raise ValueError("CLAMP screenshot exceeds pixel bound")
+                pixels = image.convert("RGB")
+            proof.setdefault("ax_brackets", []).append({"source_steps": pair, "png": str(shot),
+                "sha256": hashlib.sha256(shot.read_bytes()).hexdigest()})
+            save()
+            return after, pixels, shot
+
+        def bind_ref(n, node, bracket_step):
+            if node.get("hittable") is not True or not re.fullmatch(r"@?e[0-9]+", str(node.get("ref", ""))):
+                raise ValueError("CLAMP target is not a fresh hittable ref")
+            if actions[n - 1]["command"] != "press" or not actions[n - 1]["input"]["target"]["ref"].startswith("__CLAMP_"):
+                raise ValueError("CLAMP ref source slot changed")
+            actions[n - 1] = {"command": "press", "input": {"target": {"kind": "ref", "ref": "@" + node["ref"].lstrip("@")}}}
+            row = parse_steps_json(json.dumps([actions[n - 1]]), "android")[0]
+            row["n"] = indices.index(n) + 1
+            live_rows[indices.index(n)] = row
+            origin = next(v for v in proof["snapshots"] if v["source_step"] == bracket_step)
+            proof.setdefault("ref_bindings", []).append({"source_step": n, "snapshot": origin, "png_bracket": proof["ax_brackets"][-1],
+                "node": {k: node.get(k) for k in ("ref", "index", "parentIndex", "label", "rect")}})
+            save()
+
+        data, pixels, _ = bracket("picker", 1, 6)
+        date_sets = [{int(r[k]) // divisor for k, divisor in (("datetaken", 1000), ("date_added", 1), ("date_modified", 1))
+                      if r[k] not in ("NULL", "null", "0")} for r in owned]
+        visible = {clamp_photo_second(n["label"], zone) for n in data["nodes"] if str(n.get("label", "")).startswith("Photo taken on ")}
+        seconds = set.intersection(*date_sets) & visible
+        if len(seconds) != 1:
+            raise ValueError("CLAMP picker date fallback absent or ambiguous")
+        second = seconds.pop()
+        where = f"(datetaken>={second * 1000} AND datetaken<{(second + 1) * 1000}) OR date_added={second} OR date_modified={second}"
+        proof.update(time_second=second, date_mapping="Three-column collection-wide union; no inferred fallback precedence")
+        def union():
+            query("date-union-" + str(len(proof["date_queries"])), where, set(ids.values()))
+
+        def picker(data, pixels, selected):
+            cards = [n for n in data["nodes"] if n.get("hittable") is True and str(n.get("label", "")).startswith("Photo taken on ")
+                     and clamp_photo_second(n["label"], zone) == second]
+            if len(cards) != 4:
+                raise ValueError("CLAMP picker time group is not four cards")
+            bound = {}
+            for node in cards:
+                key = clamp_fixture_identity(pixels, node["rect"])
+                if key in bound:
+                    raise ValueError("CLAMP picker fixture pixels are ambiguous")
+                bound[key] = node
+            if set(bound) != set(fixtures) or any(n.get("selected") is not (k in selected) for k, n in bound.items()):
+                raise ValueError("CLAMP picker selection is not the exact owned set")
+            return bound
+
+        union()
+        cards = picker(data, pixels, set())
+        bind_ref(7, cards["A"], 6)
+        data, pixels, _ = bracket("pick-A", 7, 10)
+        cards = picker(data, pixels, {"A"})
+        union()
+        bind_ref(11, cards["B"], 10)
+        data, pixels, _ = bracket("pick-B", 11, 14)
+        picker(data, pixels, {"A", "B"})
+        done = [n for n in data["nodes"] if n.get("hittable") is True and n.get("label") == "Add (2)"]
+        if len(done) != 1:
+            raise ValueError("CLAMP native Add (2) is not unique")
+        union()
+        bind_ref(15, done[0], 14)
+        data, pixels, _ = bracket("add-two", 15, 19)
+
+        def editor(data, pixels, step):
+            bound, focused, preview = clamp_editor_binding(data, pixels, fixture)
+            proof.setdefault("editor_bindings", []).append({"source_step": step, "focused": focused, "preview_rect": preview["rect"],
+                "thumbs": {k: {f: v.get(f) for f in ("ref", "index", "parentIndex", "rect")} for k, v in bound.items()}})
+            return bound, focused, preview
+
+        bound, _, _ = editor(data, pixels, 19)
+        bind_ref(20, bound["A"], 19)
+        data, pixels, _ = bracket("focus-A", 20, 23)
+        if editor(data, pixels, 23)[1] != "A":
+            raise ValueError("CLAMP owned A focus is not established")
+        pid = shell("pidof", setup.ANDROID_PACKAGE).strip()
+        if not re.fullmatch(r"[1-9][0-9]*", pid):
+            raise ValueError("CLAMP unique app process is not observable")
+        proof["process_id_before"] = pid
+        observed, _, _ = bracket("content", 24, 27)
         fields = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextEditField"]
         compact = [n for n in observed["nodes"] if _template_tag(n) == "watermarkTextContent"]
         if len(fields) == 1 and not compact and fields[0].get("editable") is True and fields[0].get("hittable") is True:
-            omitted = {5, 6, 9}
+            omitted = {28, 29, 32}
         elif len(compact) == 1 and compact[0].get("hittable") is True and not fields:
             omitted = set()
         else:
             raise ValueError("CLAMP Content entry is absent or ambiguous")
-        indices = [n for n in range(1, 34) if n not in omitted]
         proof.update(entry="inline" if omitted else "compact", omitted_source_steps=sorted(omitted))
-        live_rows = parse_steps_json(json.dumps([actions[n - 1] for n in indices]), "android")
-        if on_steps:
-            on_steps("android", live_rows)
-
-        layouts = {}
-        def inspect(n, data, shot):
-            if n in (10, 11):
-                if omitted:
-                    field = _template_node(data, "watermarkTextEditField")
-                    values = {field.get("value") or field.get("text") or field.get("label")}
-                else:
-                    values = {v.get("label") for v in _template_descendants(data, _template_node(data, "watermarkTextContent"))
-                              if v.get("type") == "android.widget.TextView" and v.get("label")}
-                if values != {nonce}:
-                    raise ValueError("CLAMP visible editor text does not match the owned nonce")
-                proof["nonce_confirmed"] = True
-            if n not in (17, 19, 20, 23, 25, 26, 31, 32):
-                return
-            preview = [v for v in data["nodes"] if v.get("label") == "Watermark preview" and v.get("visibleToUser") is True]
-            if len(preview) != 1:
-                raise ValueError("CLAMP preview is absent or ambiguous")
+        indices = [n for n in indices if n not in omitted]
+        live_rows[:] = [row for n, row in enumerate(live_rows, 1) if n not in omitted]
+        for n, row in enumerate(live_rows, 1):
+            row["n"] = n
+        observed, _, _ = bracket("nonce", 28, 35)
+        if omitted:
+            field = _template_node(observed, "watermarkTextEditField")
+            values = {field.get("value") or field.get("text") or field.get("label")}
+        else:
+            values = {v.get("label") for v in _template_descendants(observed, _template_node(observed, "watermarkTextContent"))
+                      if v.get("type") == "android.widget.TextView" and v.get("label")}
+        if values != {nonce}:
+            raise ValueError("CLAMP visible editor text does not match owned nonce")
+        proof["nonce_confirmed"] = True
+        execute("single", 36, 39)
+        layouts = []
+        def measure(name, start, end):
+            data, pixels, shot = bracket(name, start, end)
+            bound, focused, preview = editor(data, pixels, end)
+            if focused != "A":
+                raise ValueError("CLAMP measurement is not owned A")
             single = [v for v in data["nodes"] if v.get("label") == "Single" and v.get("type") == "android.widget.TextView"]
             if len(single) != 1:
                 raise ValueError("CLAMP Single control is absent or ambiguous")
             tile = _template_node(data, "editorControl-TileMode")
-            layouts[n] = [{k: v.get(k) for k in ("identifier", "type", "label", "rect", "hittable", "selected")}
-                          for v in (preview[0], single[0], tile)]
-            prior = {19: 17, 20: 19, 23: 20, 25: 23, 26: 25, 31: 26, 32: 31}.get(n)
-            if prior and layouts[n] != layouts[prior]:
-                raise ValueError("CLAMP AX layout changed across its synchronized PNG")
-            if n in (20, 26, 32):
-                proof.setdefault("ax_brackets", []).append([prior, n])
-                return
-            measured = measurements[n] = clamp_pixels(shot, preview[0]["rect"], fixture)
-            proof.setdefault("pixels", {})[str(n)] = {k: v for k, v in measured.items() if not k.startswith("_")}
-            if n == 19:
-                proof["before_stable"] = compare_clamp_pixels(measurements[17], measured)
-            elif n == 25:
-                proof["after_stable"] = compare_clamp_pixels(measurements[23], measured)
-                proof["pan_observed"] = compare_clamp_pixels(measurements[19], measured, proof["gesture"]["delta"])
-            elif n == 31:
-                proof["session_reopen_observed"] = compare_clamp_pixels(measurements[25], measured)
-        first = [n for n in indices if n <= 20]
-        phase("before", [actions[n - 1] for n in first], first, inspect=inspect)
-        if not proof.get("nonce_confirmed"):
-            raise ValueError("CLAMP nonce was not observed")
-        gesture = proof["gesture"] = clamp_pan(measurements[19])
-        actions[20] = {"command": "gesture", "input": gesture}
-        position = indices.index(21)
-        authored = parse_steps_json(json.dumps([actions[20]]), "android")[0]
-        authored["n"] = position + 1
-        live_rows[position] = authored  # Same published list; completed rows are not reset.
-        second = [n for n in indices if n > 20]
-        phase("pan-reopen", [actions[n - 1] for n in second], second, len(first), inspect=inspect)
+            layout = [{k: v.get(k) for k in ("identifier", "type", "label", "rect", "hittable", "selected")} for v in (preview, single[0], tile)]
+            if layouts and layout != layouts[0]:
+                raise ValueError("CLAMP preview/control layout changed")
+            layouts.append(layout)
+            measured = clamp_pixels(shot, preview["rect"], fixture)
+            proof.setdefault("pixels", {})[str(end)] = {k: v for k, v in measured.items() if not k.startswith("_")}
+            return measured, bound
+
+        before1, _ = measure("before-1", 40, 42)
+        before2, _ = measure("before-2", 43, 45)
+        proof["before_stable"] = compare_clamp_pixels(before1, before2)
+        gesture = proof["gesture"] = clamp_pan(before2)
+        actions[45] = {"command": "gesture", "input": gesture}
+        row = parse_steps_json(json.dumps([actions[45]]), "android")[0]
+        row["n"] = indices.index(46) + 1
+        live_rows[indices.index(46)] = row
+        execute("pan", 46, 46)
+        after1, _ = measure("after-1", 47, 49)
+        after2, bound = measure("after-2", 50, 52)
+        proof["after_stable"] = compare_clamp_pixels(after1, after2)
+        proof["pan_observed"] = compare_clamp_pixels(before2, after2, gesture["delta"])
+        bind_ref(53, bound["B"], 52)
+        data, pixels, _ = bracket("focus-B", 53, 56)
+        bound, focused, _ = editor(data, pixels, 56)
+        if focused != "B":
+            raise ValueError("CLAMP filmstrip did not show owned B")
+        bind_ref(57, bound["A"], 56)
+        returned1, _ = measure("return-A-1", 57, 60)
+        returned2, _ = measure("return-A-2", 61, 63)
+        proof["return_stable"] = compare_clamp_pixels(returned1, returned2)
+        proof["same_selection_offset"] = compare_clamp_pixels(after2, returned2)
+        proof["return_still_displaced"] = compare_clamp_pixels(before2, returned2, gesture["delta"])
+        execute("reopen", 64, 66)
+        reopened1, _ = measure("reopened-1", 67, 69)
+        reopened2, _ = measure("reopened-2", 70, 72)
+        proof["reopen_stable"] = compare_clamp_pixels(reopened1, reopened2)
+        proof["session_reopen_observed"] = compare_clamp_pixels(after2, reopened2)
+        proof["reopen_still_displaced"] = compare_clamp_pixels(before2, reopened2, gesture["delta"])
+        proof["process_id_after"] = shell("pidof", setup.ANDROID_PACKAGE).strip()
+        if proof["process_id_after"] != pid:
+            raise ValueError("CLAMP app process changed across SDK reopen")
+        media()
+        union()
+        execute("close", 73, 73)
+        if executed != indices:
+            raise ValueError("CLAMP canonical action coverage is incomplete")
         proof["status"], code = "evidence_complete", 0
     except (ValueError, OSError, KeyError, TypeError, IndexError, subprocess.TimeoutExpired) as exc:
         proof["reason"] = str(exc)
         code = 130 if isinstance(exc, InterruptedError) else 2
     finally:
+        setup._SETUP_STOP.reset(stop_token)
         if should_stop and should_stop():
             code = 130
         save()

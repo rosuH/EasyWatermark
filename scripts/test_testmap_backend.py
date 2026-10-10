@@ -1964,7 +1964,7 @@ class AndroidTemplateCrudChecks(unittest.TestCase):
                         self.assertIn('cleanup_reason', proof)
 
 class AndroidClampChecks(unittest.TestCase):
-    """Real synthetic pixels and phase artifacts; SDK/device operations are fake."""
+    """Real synthetic fixture pixels and immutable phases; all device calls are fake."""
 
     def setUp(self):
         from testmap_steps import require_clamp_pixels
@@ -1982,12 +1982,16 @@ class AndroidClampChecks(unittest.TestCase):
         self.spec = {'builder': 'agent-device', 'edge_id': 'editor-clamp-drag', 'agent_platform': 'android',
                      'serial': 'owned', 'step_evidence_root': str(self.root / 'run'), 'agent_device_output': str(self.root / 'output'),
                      'cmd': ['fake', 'batch', '--steps-file', str(self.source), '--platform', 'android', '--serial', 'owned', '--session', 'owned']}
+        self.ids = dict(zip(('A', 'B', 'C', 'icon'), ('321', '322', '323', '324')))
         self.offset, self.text, self.tab = [0, 0], 'original text', 'Content'
         self.fault, self.inline, self.stopped, self.style_snapshots = None, False, False, 0
+        self.in_picker, self.selected, self.focus, self.ref_generation, self.pan_done = False, set(), 'A', 0, False
         self.calls, self.events = [], []
         self.stack = contextlib.ExitStack()
         self.addCleanup(self.stack.close)
         self.stack.enter_context(patch.object(setup, 'load_setup_backup', return_value=self.state))
+        self.stack.enter_context(patch.object(setup, 'adb_shell', side_effect=self.shell))
+        self.stack.enter_context(patch.object(setup, 'adb', side_effect=lambda serial, args, **kw: fixtures[next(k for k,v in self.ids.items() if args[-1].endswith('/' + v))].read_bytes()))
         self.prepare = self.stack.enter_context(patch.object(runner, 'maybe_prepare_ios_runner'))
         self.setup = self.stack.enter_context(patch.object(runner, '_apply_agent_setup', return_value=self.state))
         self.restore = self.stack.enter_context(patch.object(runner, '_restore_agent_setup'))
@@ -1995,52 +1999,116 @@ class AndroidClampChecks(unittest.TestCase):
         self.stack.enter_context(patch.object(runner, '_publish_agent_device_live'))
         self.stack.enter_context(patch.object(runner, '_run_batched_steps', side_effect=self.batch))
 
+    def shell(self, serial, *args, **kwargs):
+        self.assertEqual('owned', serial)
+        if args[0] == 'getprop':
+            return 'UTC'
+        if args[0] == 'pidof':
+            return '99' if self.fault == 'new-process' and self.pan_done else '42'
+        self.assertEqual(('content', 'query'), args[:2])
+        # Actual device evidence: A/B added a second earlier, all four modified together.
+        raw = '\n'.join(f'Row: {i} _id={media_id}, datetaken=NULL, date_added={1791589607 if i < 2 else 1791589608}, date_modified=1791589608'
+                        for i, media_id in enumerate(self.ids.values()))
+        if args[-1].startswith("_display_name="):
+            key = next(k for k,v in self.state['fixtures'].items() if Path(v).name in args[-1])
+            raw = raw.splitlines()[list(self.ids).index(key)]
+        if self.fault == 'date-collision' and not args[-1].startswith("_display_name="):
+            raw += '\nRow: 4 _id=999, datetaken=NULL, date_added=1791589608, date_modified=1791589608'
+        return raw
+
     def snapshot(self):
-        nodes = [{'index': 1, 'parentIndex': None}]
-        if self.tab == 'Content':
-            if self.inline:
-                nodes += [{'index': 2, 'parentIndex': 1, 'identifier': 'watermarkTextEditField', 'type': 'android.widget.EditText',
-                           'editable': True, 'hittable': True, 'value': self.text}]
-            else:
-                nodes += [{'index': 2, 'parentIndex': 1, 'identifier': 'watermarkTextContent', 'hittable': True},
-                          {'index': 3, 'parentIndex': 2, 'type': 'android.widget.TextView', 'label': self.text}]
+        self.ref_generation += 100
+        def node(index, **kwargs):
+            return {'index': index, 'parentIndex': 1, 'ref': 'e' + str(self.ref_generation + index),
+                    'bundleId': 'me.rosuh.easywatermark.debug', 'visibleToUser': True, **kwargs}
+        nodes = [node(1, parentIndex=None)]
+        if self.in_picker:
+            from datetime import datetime, timezone
+            label = 'Photo taken on ' + datetime.fromtimestamp(1791589608, timezone.utc).strftime('%b %d, %Y, %I:%M:%S %p')
+            nodes += [node(i + 2, label=label, type='android.widget.FrameLayout', hittable=True, selected=k in self.selected,
+                           rect={'x': 20 + i * 250, 'y': 100, 'width': 200, 'height': 200}) for i,k in enumerate(self.ids)]
+            if self.selected == {'A', 'B'}:
+                nodes.append(node(6, label='Add (2)', hittable=True))
         else:
-            self.style_snapshots += 1
             rect = {'x': 60, 'y': 100, 'width': 960, 'height': 800}
-            if self.fault == 'stale-ax' and self.style_snapshots == 3:
-                rect['x'] += 1
-            if self.fault == 'unstable' and self.style_snapshots == 2:
-                self.offset[0] += 8
-            nodes += [{'index': 2, 'parentIndex': 1, 'label': 'Watermark preview', 'visibleToUser': True, 'rect': rect},
-                      {'index': 3, 'parentIndex': 1, 'identifier': 'editorControl-TileMode'},
-                      {'index': 4, 'parentIndex': 3, 'label': 'Single', 'type': 'android.widget.TextView', 'selected': False}]
+            if self.tab == 'Style':
+                self.style_snapshots += 1
+                if self.fault == 'stale-ax' and self.style_snapshots == 3:
+                    rect['x'] += 1
+                if self.fault == 'unstable' and self.style_snapshots == 3:
+                    self.offset[0] += 8
+                nodes += [node(3, identifier='editorControl-TileMode'),
+                          node(4, parentIndex=3, label='Single', type='android.widget.TextView', selected=False)]
+            elif self.inline:
+                nodes += [node(3, identifier='watermarkTextEditField', type='android.widget.EditText', editable=True, hittable=True, value=self.text)]
+            else:
+                nodes += [node(3, identifier='watermarkTextContent', hittable=True),
+                          node(4, parentIndex=3, type='android.widget.TextView', label=self.text)]
+            nodes += [node(2, label='Watermark preview', rect=rect),
+                      node(5, rect={'x': 0, 'y': 910, 'width': 1080, 'height': 70})]
+            nodes += [node(i + 6, parentIndex=5, label='image', type='android.widget.ImageView', hittable=True,
+                           rect={'x': 460 + i * 60, 'y': 920, 'width': 48, 'height': 48}) for i in range(2)]
+            if self.fault == 'duplicate-thumb':
+                nodes.append(node(8, parentIndex=5, label='image', type='android.widget.ImageView', hittable=True, rect=nodes[-1]['rect']))
         return {'appBundleId': 'me.rosuh.easywatermark.debug', 'truncated': False,
                 'visibility': {'partial': False}, 'snapshotQuality': {'state': 'healthy'}, 'nodes': nodes}
 
     def png(self, path):
-        from PIL import ImageDraw
+        from PIL import ImageDraw, ImageOps
         image = self.Image.new('RGB', (1080, 1000), (20, 20, 20))
-        with self.Image.open(self.state['fixtures']['A']) as source:
-            image.paste(source, (60, 180))
-        x, y = 565 + self.offset[0], 525 + self.offset[1]
-        draw = ImageDraw.Draw(image)
-        draw.rectangle((x, y, x + 8, y + 63), fill=(255, 184, 0))
-        draw.rectangle((x, y + 55, x + 71, y + 63), fill=(255, 184, 0))
+        if self.in_picker:
+            for i, k in enumerate(self.ids):
+                with self.Image.open(self.state['fixtures'][k]) as source:
+                    image.paste(ImageOps.fit(source.convert('RGB'), (200, 200)), (20 + i * 250, 100))
+        else:
+            with self.Image.open(self.state['fixtures'][self.focus]) as source:
+                image.paste(source, (60, 180))
+            for i,k in enumerate(('A', 'B')):
+                with self.Image.open(self.state['fixtures'][k]) as source:
+                    image.paste(ImageOps.fit(source.convert('RGB'), (40, 40)), (464 + i * 60, 924))
+            if self.tab == 'Style':
+                x, y = 565 + self.offset[0], 525 + self.offset[1]
+                draw = ImageDraw.Draw(image)
+                draw.rectangle((x, y, x + 8, y + 63), fill=(255, 184, 0))
+                draw.rectangle((x, y + 55, x + 71, y + 63), fill=(255, 184, 0))
         image.save(path)
 
     def batch(self, cmd, rows, log, tee, on_proc, on_event, should_stop, platform, env, deadline_s=420):
         self.assertLessEqual(deadline_s, 20)
         for row in rows:
             command, inp = row['command'], row['input']
+            self.assertNotIn('__CLAMP_', json.dumps(inp))
             self.calls.append((command, inp))
             on_event(platform, {'type': 'replay_action_start', 'step': row['n'], 'command': command})
             if command == 'fill':
                 self.text = inp['text']
-            if command == 'press' and inp.get('target', {}).get('selector') in ('role="textview" label="Style"', 'role="textview" label="Content"'):
-                self.tab = 'Style' if 'Style' in inp['target']['selector'] else 'Content'
+            if command == 'press':
+                target = inp['target']
+                selector = target.get('selector', '')
+                if selector == 'label="Add more images"':
+                    self.in_picker = True
+                elif selector in ('role="textview" label="Style"', 'role="textview" label="Content"'):
+                    self.tab = 'Style' if 'Style' in selector else 'Content'
+                elif target['kind'] == 'ref':
+                    index = int(target['ref'].lstrip('@e')) - self.ref_generation
+                    if self.in_picker:
+                        if index in (2, 3):
+                            self.selected.add('A' if index == 2 else 'B')
+                        else:
+                            self.assertEqual(6, index, 'Must use latest Add (2) ref')
+                            self.assertEqual({'A', 'B'}, self.selected)
+                            self.in_picker = False
+                    else:
+                        self.assertIn(index, (6, 7), 'Must rebind latest filmstrip refs')
+                        self.focus = 'A' if index == 6 else 'B'
+                        if self.pan_done and self.focus == 'A' and self.fault == 'return-reset':
+                            self.offset = [0, 0]
             if command == 'gesture':
                 self.assertEqual('pan', inp['kind'])
                 self.assertFalse(any(isinstance(v, str) for v in inp['origin'].values()))
+                self.assertEqual({'A', 'B'}, self.selected)
+                self.assertEqual('A', self.focus)
+                self.pan_done = True
                 if self.fault != 'no-motion':
                     self.offset = [inp['delta']['x'], inp['delta']['y']]
                 self.stopped = self.fault == 'stop'
@@ -2068,18 +2136,27 @@ class AndroidClampChecks(unittest.TestCase):
         proof = extra['clamp_drag']
         self.assertEqual('evidence_complete', proof['status'])
         self.assertTrue(proof['private_restored'])
+        self.assertEqual([0, 0], proof['same_selection_offset']['shift_px'])
         self.assertEqual([0, 0], proof['session_reopen_observed']['shift_px'])
-        self.assertEqual([[19, 20], [25, 26], [31, 32]], proof['ax_brackets'])
+        self.assertEqual(proof['process_id_before'], proof['process_id_after'])
+        self.assertEqual(1791589608, proof['time_second'])
+        self.assertEqual(8, len(proof['provider_readbacks']))
+        self.assertEqual(8, len(proof['date_queries']))
         mapping = [m for phase in proof['phases'] for m in phase['mapping'] if m['kind'] == 'action']
-        self.assertEqual(list(range(1, 31)), [m['step'] for m in mapping])
-        self.assertEqual([n for n in range(1, 34) if n not in (5, 6, 9)], [m['source_step'] for m in mapping])
+        self.assertEqual(list(range(1, 71)), [m['step'] for m in mapping])
+        self.assertEqual([n for n in range(1, 74) if n not in (28, 29, 32)], [m['source_step'] for m in mapping])
         for phase in proof['phases']:
             self.assertEqual(phase['source_sha256'], hashlib.sha256(Path(phase['source']).read_bytes()).hexdigest())
             self.assertEqual(phase['script_sha256'], hashlib.sha256(Path(phase['script']).read_bytes()).hexdigest())
             self.assertEqual(runner._CLAMP_SOURCE_SHA256, phase['canonical_source_sha256'])
-        self.assertEqual(28, len([e for e in self.events if e.get('shot')]))
-        gesture = next(row for row in runner.parse_script(Path(proof['phases'][1]['source'])) if row['command'] == 'gesture')
+        for binding in proof['ref_bindings']:
+            self.assertEqual(binding['snapshot']['sha256'], hashlib.sha256(Path(binding['snapshot']['path']).read_bytes()).hexdigest())
+            self.assertEqual(binding['png_bracket']['sha256'], hashlib.sha256(Path(binding['png_bracket']['png']).read_bytes()).hexdigest())
+        self.assertEqual(68, len([e for e in self.events if e.get('shot')]))
+        pan = next(phase for phase in proof['phases'] if phase['phase'] == 'pan')
+        gesture = runner.parse_script(Path(pan['source']))[0]
         self.assertEqual(proof['gesture']['origin'], gesture['point'])
+        self.assertEqual(1, sum(c == 'press' and i.get('target', {}).get('selector') == 'label="Add more images"' for c,i in self.calls))
         self.restore.assert_called_once()
         self.release.assert_called_once()
 
@@ -2087,7 +2164,7 @@ class AndroidClampChecks(unittest.TestCase):
         for mode, stopped in (('cli', False), ('console', True)):
             with self.subTest(mode=mode):
                 self.fault, self.stopped, self.style_snapshots = 'stop' if stopped else None, False, 0
-                self.offset, self.tab = [0, 0], 'Content'
+                self.offset, self.tab, self.selected, self.pan_done = [0, 0], 'Content', set(), False
                 self.calls.clear()
                 self.restore.reset_mock()
                 self.release.reset_mock()
@@ -2125,25 +2202,64 @@ class AndroidClampChecks(unittest.TestCase):
                 self.restore.assert_called_once()
                 self.release.assert_called_once()
 
-    def test_fail_closed_pixels_ax_and_stop_restore(self):
-        for fault in ('no-motion', 'reopen-reset', 'stale-ax', 'unstable', 'stop'):
+    def test_fail_closed_pixels_ax_identity_and_stop_restore(self):
+        for fault in ('date-collision', 'duplicate-thumb', 'no-motion', 'return-reset', 'reopen-reset', 'new-process', 'stale-ax', 'unstable', 'stop'):
             with self.subTest(fault=fault):
                 self.fault, self.stopped, self.style_snapshots = fault, False, 0
-                self.offset, self.tab = [0, 0], 'Content'
+                self.offset, self.tab, self.selected, self.pan_done = [0, 0], 'Content', set(), False
                 self.calls.clear()
                 self.restore.reset_mock()
                 self.release.reset_mock()
                 self.spec['step_evidence_root'] = str(self.root / fault)
                 code, _, extra = self.run_case()
-                self.assertEqual(130 if fault == 'stop' else 2, code)
+                self.assertEqual(130 if fault == 'stop' else 2, code, extra)
                 self.assertEqual('unverified', extra['clamp_drag']['status'])
                 self.assertTrue(extra['clamp_drag']['private_restored'])
-                if fault in ('stale-ax', 'unstable'):
+                if fault in ('date-collision', 'duplicate-thumb', 'stale-ax', 'unstable'):
                     self.assertNotIn('gesture', [c for c, _ in self.calls])
+                if fault == 'date-collision':
+                    self.assertFalse(any(c == 'press' and i['target']['kind'] == 'ref' for c,i in self.calls))
                 if fault == 'stop':
                     self.assertEqual('gesture', self.calls[-1][0])
                 self.restore.assert_called_once()
                 self.release.assert_called_once()
+
+    def test_stop_interrupts_running_provider_read_then_restores(self):
+        import threading
+        ready = self.root / 'provider-child-ready'
+        requested = []
+        previous = setup._SETUP_STOP.get()
+        def request_stop():
+            deadline = time.monotonic() + 5
+            while not ready.exists() and time.monotonic() < deadline:
+                time.sleep(.01)
+            if ready.exists():
+                requested.append(time.monotonic())
+            self.stopped = True
+        thread = threading.Thread(target=request_stop)
+        thread.start()
+        def child_read(*args, **kwargs):
+            return setup._run([sys.executable, '-c',
+                'import pathlib,sys,time;pathlib.Path(sys.argv[1]).write_text("ready");time.sleep(30)', str(ready)],
+                timeout=10, binary=True)
+        def restored(*args):
+            self.assertIs(previous, setup._SETUP_STOP.get())
+        self.restore.side_effect = restored
+        try:
+            with patch.object(setup, 'adb', side_effect=child_read):
+                code, _, extra = self.run_case()
+            finished = time.monotonic()
+        finally:
+            thread.join(timeout=6)
+        self.assertFalse(thread.is_alive())
+        self.assertTrue(ready.exists(), 'Stop must follow the actual running I/O child')
+        self.assertEqual(1, len(requested))
+        self.assertLess(finished - requested[0], 2, 'Stop must interrupt before the 10s I/O timeout')
+        self.assertEqual(130, code)
+        self.assertTrue(extra['clamp_drag']['private_restored'])
+        self.assertFalse(self.calls, 'No later UI operation may start after Stop')
+        self.restore.assert_called_once()
+        self.release.assert_called_once()
 
     def test_dependency_preflight_and_source_hash_refuse_before_actions(self):
         with patch.object(runner, 'require_clamp_pixels', side_effect=ValueError('missing Pillow')):

@@ -18,8 +18,196 @@
     "input": {
       "target": {
         "kind": "selector",
+        "selector": "label=\"Add more images\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__CLAMP_PICK_A__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__CLAMP_PICK_B__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__CLAMP_ADD_TWO__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__CLAMP_FOCUS_A__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
         "selector": "role=\"textview\" label=\"Content\""
       }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
     }
   },
   {
@@ -70,6 +258,14 @@
         "kind": "selector",
         "selector": "id=\"watermarkTextConfirm\""
       }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
     }
   },
   {
@@ -127,7 +323,15 @@
     "input": {
       "stable": true,
       "quietMs": 300,
-      "timeoutMs": 3000
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
     }
   },
   {
@@ -143,7 +347,7 @@
     "input": {
       "stable": true,
       "quietMs": 300,
-      "timeoutMs": 3000
+      "timeoutMs": 10000
     }
   },
   {
@@ -183,7 +387,15 @@
     "input": {
       "stable": true,
       "quietMs": 300,
-      "timeoutMs": 3000
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
     }
   },
   {
@@ -199,7 +411,97 @@
     "input": {
       "stable": true,
       "quietMs": 300,
-      "timeoutMs": 3000
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__CLAMP_FOCUS_B__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__CLAMP_RETURN_A__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
     }
   },
   {
@@ -241,7 +543,31 @@
     "input": {
       "stable": true,
       "quietMs": 300,
-      "timeoutMs": 3000
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
     }
   },
   {
