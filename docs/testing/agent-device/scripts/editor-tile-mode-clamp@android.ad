@@ -1,0 +1,12 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+wait id="sharedComposeSaveButton"
+press role="textview" label="Style"
+press id="editorOption-TileMode"
+wait id="editorControl-TileMode"
+press role="textview" label="Single"
+wait stable 300 3000
+# Review the synchronized screenshot: Single highlighted, Repeat unselected, one watermark.
+# SDK Android selected=false is not the native radio CHECKED state.
+wait "label=\"Watermark preview\""
+close

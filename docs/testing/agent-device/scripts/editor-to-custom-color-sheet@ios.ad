@@ -1,0 +1,19 @@
+context platform=ios
+open me.rosuh.easywatermark.ios --relaunch
+press id="store-seed-editor"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+press id="editorTab-1"
+wait id="editorOption-Color"
+press id="editorOption-Color"
+wait id="colorSwatch-custom"
+press id="colorSwatch-custom"
+wait text "选择颜色"
+fill label="#RRGGBB" "00D1FF"
+keyboard return
+press label="确认"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+close

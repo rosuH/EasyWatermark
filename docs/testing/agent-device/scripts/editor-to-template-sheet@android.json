@@ -1,0 +1,457 @@
+[
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug",
+      "relaunch": true,
+      "timeoutMs": 15000,
+      "activity": "me.rosuh.easywatermark.debug/me.rosuh.easywatermark.ui.MainActivity",
+      "launchArgs": [
+        "-a",
+        "android.intent.action.SEND",
+        "-t",
+        "image/png",
+        "-d",
+        "__TESTMAP_FIXTURE_URI__",
+        "--eu",
+        "android.intent.extra.STREAM",
+        "__TESTMAP_FIXTURE_URI__",
+        "--grant-read-uri-permission",
+        "-f",
+        "1"
+      ]
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Content\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextContent\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextContent\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextTemplateIcon\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextTemplateIcon\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"templateListSheet\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"templateAddButton\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"templateEditField\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "fill",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"templateEditField\""
+      },
+      "text": "__TESTMAP_NONCE__"
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"templateEditConfirm\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "label=\"__TESTMAP_NONCE__\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "close",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug"
+    }
+  },
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug",
+      "relaunch": true,
+      "timeoutMs": 15000,
+      "activity": "me.rosuh.easywatermark.debug/me.rosuh.easywatermark.ui.MainActivity",
+      "launchArgs": [
+        "-a",
+        "android.intent.action.SEND",
+        "-t",
+        "image/png",
+        "-d",
+        "__TESTMAP_FIXTURE_URI__",
+        "--eu",
+        "android.intent.extra.STREAM",
+        "__TESTMAP_FIXTURE_URI__",
+        "--grant-read-uri-permission",
+        "-f",
+        "1"
+      ]
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Content\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextContent\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextContent\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextTemplateIcon\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextTemplateIcon\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"templateListSheet\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"templateRow-__TESTMAP_ROW_ID__\" label=\"__TESTMAP_NONCE__\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"templateUseConfirm\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"templateUseConfirm\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextContent\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextContent\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextTemplateIcon\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextTemplateIcon\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"templateListSheet\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"templateDeleteButton-__TESTMAP_ROW_ID__\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"templateDeleteConfirm\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"templateDeleteConfirm\""
+      }
+    }
+  },
+  {
+    "command": "close",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug"
+    }
+  },
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug",
+      "relaunch": true,
+      "timeoutMs": 15000,
+      "activity": "me.rosuh.easywatermark.debug/me.rosuh.easywatermark.ui.MainActivity",
+      "launchArgs": [
+        "-a",
+        "android.intent.action.SEND",
+        "-t",
+        "image/png",
+        "-d",
+        "__TESTMAP_FIXTURE_URI__",
+        "--eu",
+        "android.intent.extra.STREAM",
+        "__TESTMAP_FIXTURE_URI__",
+        "--grant-read-uri-permission",
+        "-f",
+        "1"
+      ]
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Content\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextContent\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextContent\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextTemplateIcon\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextTemplateIcon\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"templateListSheet\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "close",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug"
+    }
+  }
+]

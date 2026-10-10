@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.shared.generated.resources.Res
@@ -259,16 +260,6 @@ fun <T> SaveExportSheetShell(
                         liveRegion = LiveRegionMode.Polite
                     },
             )
-            // outcomeDetailLine never painted (no Saved-to-destination); keep tag + CD for I0.
-            if (hasOutcome) {
-                Spacer(
-                    Modifier
-                        .size(0.dp)
-                        .testTag("sharedComposeExportOutcomeDetail")
-                        .semantics { contentDescription = outcomeDetailLine },
-                )
-            }
-
             if (reserveCountsSlot) {
                 val displayTotal = when {
                     total > 0 -> total
@@ -342,7 +333,23 @@ fun <T> SaveExportSheetShell(
             )
 
             // Fixed primary + secondary chrome heights — label/button swaps paint inside slots.
-            Spacer(Modifier.height(28.dp))
+            // Reuse the existing fixed gap for errors/cancellation; no sheet-height jump.
+            Box(Modifier.fillMaxWidth().height(28.dp), contentAlignment = Alignment.CenterStart) {
+                if (hasOutcome) {
+                    Text(
+                        text = outcomeDetailLine,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("sharedComposeExportOutcomeDetail")
+                            .semantics {
+                                contentDescription = outcomeDetailLine
+                                liveRegion = LiveRegionMode.Polite
+                            },
+                    )
+                }
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

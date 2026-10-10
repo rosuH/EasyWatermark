@@ -124,10 +124,14 @@ kotlin {
         }
         // S4d-2 / S4d-366: Desktop tests include Compose cell-raster suite (Skiko backend).
         // Sources live under src/skikoTest (not a KMP intermediate — avoids hierarchy-template ban).
+        // L1 Compose UI tests (ADR-0032): src/uiTest on desktopTest + iOS only — not Android host.
         val desktopTest by getting {
             kotlin.srcDir("src/skikoTest/kotlin")
+            kotlin.srcDir("src/uiTest/kotlin")
             dependencies {
                 implementation(compose.desktop.currentOs)
+                @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+                implementation(compose.uiTest)
                 implementation(libs.kotlin.coroutine.test)
             }
         }
@@ -137,16 +141,21 @@ kotlin {
         listOf("iosSimulatorArm64Test", "iosArm64Test").forEach { name ->
             (kotlin.sourceSets.findByName(name) ?: return@forEach).dependencies {
                 implementation(libs.kotlin.coroutine.test)
+                @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+                implementation(compose.uiTest)
             }
         }
     }
 }
 
 // S4d-366: same skikoTest sources on iOS leaf tests (ImageBitmap works on Native Skia).
-// Not on androidHostTest — AGP host JVM cannot allocate Compose ImageBitmap/Bitmap.
+// L1 uiTest rides the same merge. Not on androidHostTest — no ImageBitmap/Skiko on host JVM.
 afterEvaluate {
     listOf("iosArm64Test", "iosSimulatorArm64Test").forEach { name ->
-        kotlin.sourceSets.findByName(name)?.kotlin?.srcDir("src/skikoTest/kotlin")
+        kotlin.sourceSets.findByName(name)?.kotlin?.apply {
+            srcDir("src/skikoTest/kotlin")
+            srcDir("src/uiTest/kotlin")
+        }
     }
 }
 

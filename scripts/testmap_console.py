@@ -1,0 +1,654 @@
+#!/usr/bin/env python3
+"""Local ADR-0032 testmap console HTTP layer (stdlib only). Never a CI gate.
+
+    scripts/e2e-console.sh
+    python3 scripts/testmap_console.py --port 8931
+
+Run engine lives in testmap_run.py (shared with scripts/e2e-run.sh).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import secrets
+import signal
+import socket
+import sys
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
+
+sys.dont_write_bytecode = True
+
+SCRIPTS = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPTS))
+
+from testmap_devices import (  # noqa: E402
+    capture_device_frame,
+    list_devices,
+    resolve_watch_target,
+)
+from testmap_h264 import H264_HUB  # noqa: E402
+from testmap_stream import (  # noqa: E402
+    BOUNDARY,
+    HUB,
+    ensure_scrcpy,
+    multipart_part,
+    stop_scrcpy,
+)
+from testmap_artemis import (  # noqa: E402
+    color_audit_trail,
+    historical_projection,
+    sandbox_artemis_file,
+)
+from testmap_run import (  # noqa: E402
+    step_shot_path,
+    DEFAULT_PORT,
+    HOST,
+    MANUAL_TASKS,
+    MAP_HTML,
+    SEMANTICS,
+    TASK_SPECS,
+    BusyError,
+    StopForbiddenError,
+    RunManager,
+    git_info,
+    confirmation_views,
+    edge_badges,
+    _latest_edge_projection,
+    enrich_run,
+    latest_run,
+    artifact_png,
+    list_witness_files,
+    load_map,
+    load_run,
+    record_confirmation,
+    revoke_confirmation,
+    run_summaries,
+    witness_file,
+    write_historical_projection,
+)
+
+from generate_testmap import catalog_payload, load_copy  # noqa: E402
+
+WEB_HTML = SCRIPTS.parent / "tools" / "testmap" / "web" / "dist" / "index.html"
+
+MANAGER = RunManager()
+_frame_lock = threading.Lock()
+_frame_at: dict[str, float] = {}
+
+
+def _run_is_live(snap: object) -> bool:
+    return isinstance(snap, dict) and snap.get("state") in {"running", "paused"}
+
+
+# Matches the longest frontend startup watchdog. Silent subscriptions must not
+# retain a native producer forever when a client disappears without another write.
+STREAM_IDLE_TIMEOUT_S = 12.0
+
+
+def _stream_should_stop(connection: socket.socket, run_id: str | None):
+    last_activity = time.monotonic()
+    last_run_check = None
+
+    def should_stop(activity: bool = False) -> bool:
+        nonlocal last_activity, last_run_check
+        now = time.monotonic()
+        if activity:
+            last_activity = now
+            return False
+        # A decoded stream can publish many packets per frame. Read run state
+        # at most once per second, including while no packets arrive.
+        if last_run_check is None or now - last_run_check >= 1.0:
+            last_run_check = now
+            snap = MANAGER.snapshot()
+            if not _run_is_live(snap) or snap.get("id") != run_id:
+                return True
+        try:
+            # EOF also means a valid HTTP request-side half-close. Do not read
+            # or consume the socket; only an explicit TCP error is early abort.
+            if connection.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR):
+                return True
+        except OSError:
+            return True
+        return now - last_activity >= STREAM_IDLE_TIMEOUT_S
+
+    return should_stop
+
+
+def _frame_wait(key: str, gap_s: float) -> None:
+    """Hold the request until this device may be captured. A 204 looks like a dead stream."""
+    while True:
+        now = time.monotonic()
+        with _frame_lock:
+            wait = gap_s - (now - _frame_at.get(key, 0.0))
+            if wait <= 0:
+                _frame_at[key] = time.monotonic()
+                return
+        time.sleep(min(wait, 0.2))
+
+
+def _watch_preferred(snap: object, plat: str | None) -> dict | None:
+    """Slot-scoped watch only. Never reuse an Android watch for the iOS pane."""
+    if not isinstance(snap, dict) or not plat:
+        return None
+    watches = snap.get("watches") if isinstance(snap.get("watches"), dict) else {}
+    preferred = watches.get(plat)
+    if isinstance(preferred, dict) and preferred.get("platform") in {None, plat}:
+        if preferred.get("device") or plat == "desktop":
+            return preferred
+    w = snap.get("watch")
+    if isinstance(w, dict) and w.get("platform") == plat:
+        return w
+    return None
+
+
+_CONFIRM_TOKENS: dict[str, float] = {}
+_CONFIRM_LOCK = threading.Lock()
+_CONFIRM_TOKEN_TTL_S = 12 * 3600
+_CONFIRM_TOKEN_MAX = 64
+
+
+def _prune_confirm_tokens(now: float) -> None:
+    expired = [tok for tok, issued in _CONFIRM_TOKENS.items() if now - issued > _CONFIRM_TOKEN_TTL_S]
+    for tok in expired:
+        del _CONFIRM_TOKENS[tok]
+    extra = len(_CONFIRM_TOKENS) - _CONFIRM_TOKEN_MAX
+    if extra <= 0:
+        return
+    for tok, _issued in sorted(_CONFIRM_TOKENS.items(), key=lambda kv: kv[1])[:extra]:
+        del _CONFIRM_TOKENS[tok]
+
+
+def _issue_confirm_token() -> str:
+    token = secrets.token_urlsafe(24)
+    now = time.monotonic()
+    with _CONFIRM_LOCK:
+        _prune_confirm_tokens(now)
+        _CONFIRM_TOKENS[token] = now
+    return token
+
+
+def _confirm_token_ok(token: object) -> bool:
+    if not isinstance(token, str) or not token:
+        return False
+    now = time.monotonic()
+    with _CONFIRM_LOCK:
+        _prune_confirm_tokens(now)
+        issued = _CONFIRM_TOKENS.get(token)
+        if issued is None:
+            return False
+        return True
+
+
+class Handler(BaseHTTPRequestHandler):
+    # HTTP/1.0: one request per connection. HTTP/1.1 keep-alive plus a full
+    # stderr pipe (agent wrapper) produced empty replies after the process sat.
+    protocol_version = "HTTP/1.0"
+
+    def log_message(self, fmt: str, *args) -> None:
+        try:
+            sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+            sys.stderr.flush()
+        except OSError:
+            pass
+
+    def _headers(self, code: int, body: bytes, content_type: str) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.close_connection = True
+
+    def _send(self, code: int, body: bytes, content_type: str) -> None:
+        self._headers(code, body, content_type)
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def _json(self, code: int, obj: object) -> None:
+        self._send(code, json.dumps(obj).encode("utf-8"), "application/json; charset=utf-8")
+
+    def _read_json(self) -> dict:
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0:
+            return {}
+        raw = self.rfile.read(n)
+        if not raw:
+            return {}
+        data = json.loads(raw.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("JSON body must be an object")
+        return data
+
+    def do_GET(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = unquote(parsed.path)
+        qs = parse_qs(parsed.query)
+        if path in {"/", "/legacy", "/map.html"}:
+            page = WEB_HTML if path == "/" else MAP_HTML
+            if not page.is_file():
+                self._json(503, {"error": "testmap page is not built", "page": str(page.relative_to(SCRIPTS.parent))})
+                return
+            html = page.read_text(encoding="utf-8")
+            token = _issue_confirm_token()
+            meta = '<meta name="ewm-confirm-token" content="' + token + '">'
+            if "</head>" in html:
+                html = html.replace("</head>", meta + "</head>", 1)
+            else:
+                html = meta + html
+            self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+            return
+        if path == "/api/catalog":
+            try:
+                nodes, edges = load_map()
+                self._json(200, catalog_payload(nodes, edges, load_copy()))
+            except (OSError, ValueError) as exc:
+                self._json(500, {"error": str(exc)})
+            return
+        if path == "/api/map":
+            try:
+                nodes, edges = load_map()
+            except ValueError as exc:
+                self._json(500, {"error": str(exc)})
+                return
+            results, result_runs = _latest_edge_projection(edges)
+            self._json(
+                200,
+                {
+                    "nodes": nodes,
+                    "edges": edges,
+                    "badges": edge_badges(edges),
+                    "results": results,
+                    "result_runs": result_runs,
+                    "confirmations": confirmation_views(edges, (results, result_runs)),
+                    "witnesses": list_witness_files(),
+                    "latest_run": (latest_run() or {}).get("id"),
+                    "head": git_info(),
+                },
+            )
+            return
+        if path == "/api/status":
+            try:
+                run_id = (qs.get("id") or [None])[0]
+                self._json(200, MANAGER.snapshot(run_id))
+            except Exception as exc:  # noqa: BLE001
+                self._json(500, {"error": str(exc), "state": "idle", "active": False})
+            return
+        if path == "/api/tasks":
+            self._json(
+                200,
+                {
+                    "runnable": [
+                        {
+                            "id": tid,
+                            "label": spec["label"],
+                            "cmd": spec["cmd"],
+                            "heavy": spec["heavy"],
+                            "platforms": list(spec.get("platforms") or ["desktop"]),
+                            "needs_device": spec.get("needs_device"),
+                        }
+                        for tid, spec in TASK_SPECS.items()
+                    ],
+                    "manual": MANUAL_TASKS,
+                    "semantics": SEMANTICS,
+                    "edge": {
+                        "pattern": "edge:<edge-id>@desktop|ios|android",
+                        "label": "Run console-runnable cases for one map transition on a chosen OS",
+                    },
+                },
+            )
+            return
+        if path == "/api/runs":
+            self._json(200, {"runs": run_summaries()})
+            return
+        if path.startswith("/api/runs/") and "/steps/" in path:
+            rest = path[len("/api/runs/") :]
+            run_id, _, name = rest.partition("/steps/")
+            found = step_shot_path(run_id, name)
+            if not found:
+                self._json(404, {"error": "step shot not found"})
+                return
+            self._send(200, found.read_bytes(), "image/png")
+            return
+        if path.startswith("/api/runs/"):
+            rec = load_run(path[len("/api/runs/") :])
+            if not rec:
+                self._json(404, {"error": "run not found"})
+                return
+            self._json(200, enrich_run(rec))
+            return
+        if path.startswith("/witness/"):
+            name = path[len("/witness/") :]
+            found = witness_file(name)
+            if not found:
+                self._json(404, {"error": "witness not found"})
+                return
+            self._send(200, found.read_bytes(), "image/png")
+            return
+        if path.startswith("/artifacts/"):
+            rest = path[len("/artifacts/") :]
+            parts = [p for p in rest.split("/") if p]
+            if len(parts) != 2:
+                self._json(404, {"error": "artifact not found"})
+                return
+            found = artifact_png(parts[0], parts[1])
+            if not found:
+                self._json(404, {"error": "artifact not found"})
+                return
+            self._send(200, found.read_bytes(), "image/png")
+            return
+        if path == "/api/devices":
+            try:
+                self._json(200, list_devices())
+            except Exception as exc:  # noqa: BLE001
+                self._json(500, {"error": str(exc)})
+            return
+        if path == "/api/device-frame":
+            plat = (qs.get("platform") or [None])[0]
+            did = (qs.get("device") or [None])[0]
+            snap = MANAGER.snapshot()
+            live = _run_is_live(snap)
+            # No run: only a visible page asks, and at most once per 2s.
+            # A run still prefers /api/device-video; stills stay at 1 fps.
+            if not live:
+                if (qs.get("idle") or [""])[0] != "1":
+                    self.send_response(204)
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    return
+                _frame_wait(f"idle:{plat}:{did}", 2.0)
+            else:
+                _frame_wait(f"run:{plat}:{did}", 1.0)
+            preferred = _watch_preferred(snap, plat)
+            target = resolve_watch_target(plat, did, preferred)
+            if not target:
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            png = capture_device_frame(target)
+            if not png:
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            self._send(200, png, "image/png")
+            return
+        if path == "/api/device-stream":
+            plat = (qs.get("platform") or [None])[0]
+            did = (qs.get("device") or [None])[0]
+            snap = MANAGER.snapshot()
+            if not _run_is_live(snap):
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            preferred = _watch_preferred(snap, plat)
+            if not resolve_watch_target(plat, did, preferred):
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header(
+                "Content-Type",
+                f"multipart/x-mixed-replace; boundary={BOUNDARY}",
+            )
+            self.send_header("Cache-Control", "no-store, no-cache")
+            self.send_header("Pragma", "no-cache")
+            self.connection.settimeout(STREAM_IDLE_TIMEOUT_S)
+            self.end_headers()
+            frames = HUB.iter_frames(
+                plat, did, preferred,
+                should_stop=_stream_should_stop(self.connection, snap.get("id")),
+            )
+            try:
+                for frame in frames:
+                    self.wfile.write(multipart_part(frame))
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                return
+            finally:
+                frames.close()
+            return
+        if path == "/api/device-video":
+            plat = (qs.get("platform") or [None])[0]
+            did = (qs.get("device") or [None])[0]
+            snap = MANAGER.snapshot()
+            if not _run_is_live(snap):
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            preferred = _watch_preferred(snap, plat)
+            target = resolve_watch_target(plat, did, preferred)
+            if not target or target.get("platform") == "desktop" or (
+                target.get("platform") == "ios" and target.get("kind") == "physical"
+            ):
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Connection", "close")
+            self.close_connection = True
+            self.send_header("Cache-Control", "no-store, no-cache")
+            self.connection.settimeout(STREAM_IDLE_TIMEOUT_S)
+            self.end_headers()
+            packets = H264_HUB.iter_packets(
+                plat, did, preferred,
+                should_stop=_stream_should_stop(self.connection, snap.get("id")),
+            )
+            try:
+                # HTTP/1.0 uses connection-close delimiting. The body retains
+                # only the existing four-byte application packet framing.
+                for packet in packets:
+                    self.wfile.write(packet)
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                return
+            finally:
+                packets.close()
+            return
+        if path == "/api/scrcpy":
+            plat = (qs.get("platform") or [None])[0]
+            did = (qs.get("device") or [None])[0]
+            snap = MANAGER.snapshot()
+            preferred = _watch_preferred(snap, plat)
+            target = resolve_watch_target(plat, did, preferred)
+            if not target or target.get("platform") != "android":
+                self._json(409, {"ok": False, "error": "scrcpy is Android-only"})
+                return
+            self._json(200, ensure_scrcpy(str(target.get("id") or "")))
+            return
+        if path == "/api/artemis/history":
+            write_historical_projection()
+            rec = historical_projection()
+            self._json(
+                200,
+                {
+                    "run": rec,
+                    "color_audit": color_audit_trail(),
+                    "human_confirmation": "console POST /api/confirm only; independent review is not human confirmed",
+                    "add_more": rec.get("add_more_business"),
+                },
+            )
+            return
+        if path.startswith("/artemis-evidence/"):
+            parts = [p for p in path.split("/") if p]
+            # artemis-evidence / <round> / <case> / <rel...>
+            if len(parts) < 4:
+                self._json(404, {"error": "artifact not found"})
+                return
+            round_id, case_id = parts[1], parts[2]
+            rel = "/".join(parts[3:])
+            found = sandbox_artemis_file(round_id, case_id, rel)
+            if not found:
+                self._json(404, {"error": "artifact not found"})
+                return
+            ctype = "application/octet-stream"
+            if found.suffix.lower() == ".png":
+                ctype = "image/png"
+            elif found.suffix.lower() in {".json", ".txt", ".log", ".md"}:
+                ctype = "text/plain; charset=utf-8"
+            elif found.suffix.lower() == ".mp4":
+                ctype = "video/mp4"
+            self._send(200, found.read_bytes(), ctype)
+            return
+        self._json(404, {"error": "not found"})
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        self.do_GET()
+
+    def do_POST(self) -> None:  # noqa: N802
+        path = unquote(self.path.split("?", 1)[0])
+        try:
+            body = self._read_json()
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._json(400, {"error": str(exc)})
+            return
+        try:
+            if path == "/api/run":
+                tasks = body.get("tasks") or body.get("selection") or []
+                if not isinstance(tasks, list) or not all(isinstance(t, str) for t in tasks):
+                    raise ValueError("tasks must be a list of strings")
+                device = body.get("device") or "auto"
+                if device is not None and not isinstance(device, str):
+                    raise ValueError("device must be a string")
+                repeat = body.get("repeat", 1)
+                if isinstance(repeat, bool) or not isinstance(repeat, int):
+                    raise ValueError("repeat must be an integer")
+                source = body.get("source") or "manual"
+                if not isinstance(source, str):
+                    raise ValueError("source must be a string")
+                result = MANAGER.start(tasks, device, repeat=repeat, source=source)
+                self._json(202, result)
+                return
+            if path == "/api/stop":
+                self._json(200, MANAGER.stop())
+                return
+            if path == "/api/confirm":
+                if not _confirm_token_ok(body.get("token") or self.headers.get("X-EWM-Confirm-Token")):
+                    self._json(403, {"error": "confirm requires the page-issued token"})
+                    return
+                edge_id = body.get("edge_id")
+                if not isinstance(edge_id, str) or not edge_id.strip():
+                    raise ValueError("edge_id is required")
+                edge_id = edge_id.strip()
+                if body.get("revoke"):
+                    revoke_confirmation(edge_id)
+                    self._json(200, {"ok": True, "revoked": edge_id})
+                    return
+                run_id = body.get("run_id")
+                if not isinstance(run_id, str) or not run_id.strip():
+                    raise ValueError("run_id is required")
+                rec = record_confirmation(edge_id, run_id.strip())
+                self._json(200, rec)
+                return
+        except BusyError as exc:
+            self._json(409, {"error": str(exc), "id": exc.run_id})
+            return
+        except StopForbiddenError as exc:
+            self._json(403, {"error": str(exc)})
+            return
+        except ValueError as exc:
+            self._json(400, {"error": str(exc)})
+            return
+        except (RuntimeError, OSError) as exc:
+            self._json(500, {"error": str(exc)})
+            return
+        self._json(404, {"error": "not found"})
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        path = unquote(self.path.split("?", 1)[0])
+        try:
+            body = self._read_json()
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._json(400, {"error": str(exc)})
+            return
+        if path == "/api/confirm":
+            if not _confirm_token_ok(body.get("token") or self.headers.get("X-EWM-Confirm-Token")):
+                self._json(403, {"error": "confirm requires the page-issued token"})
+                return
+            edge_id = body.get("edge_id")
+            if not isinstance(edge_id, str) or not edge_id.strip():
+                self._json(400, {"error": "edge_id is required"})
+                return
+            revoke_confirmation(edge_id.strip())
+            self._json(200, {"ok": True, "revoked": edge_id.strip()})
+            return
+        self._json(404, {"error": "not found"})
+
+
+def _reachable_urls(bind_host: str, port: int) -> list[str]:
+    urls = [f"http://127.0.0.1:{port}"]
+    if bind_host not in {"0.0.0.0", "::", ""}:
+        extra = f"http://{bind_host}:{port}"
+        if extra not in urls:
+            urls.append(extra)
+        return urls
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        probe.connect(("8.8.8.8", 80))
+        ip = probe.getsockname()[0]
+        probe.close()
+    except OSError:
+        ip = ""
+    if ip and not ip.startswith("127."):
+        urls.append(f"http://{ip}:{port}")
+    return urls
+
+
+class ConsoleServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Local testmap console (informational; not a CI gate)."
+    )
+    parser.add_argument("--host", default=HOST)
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    args = parser.parse_args(argv)
+    host = "127.0.0.1" if args.host in {"localhost", "127.0.0.1"} else args.host
+    if host not in {"127.0.0.1", "0.0.0.0"}:
+        print("error: --host must be 127.0.0.1 or 0.0.0.0", file=sys.stderr)
+        return 2
+    write_historical_projection()
+    httpd = ConsoleServer((host, args.port), Handler)
+    urls = _reachable_urls(host, args.port)
+    print(
+        "testmap console " + "  ".join(urls) + "  (stdlib; not a CI gate)",
+        flush=True,
+    )
+    print("Ctrl-C stops the server and any running child. Gradle daemon is left up.", flush=True)
+
+    def _shutdown(_signum=None, _frame=None) -> None:
+        MANAGER.kill_child()
+        HUB.stop_all()
+        H264_HUB.stop_all()
+        stop_scrcpy()
+        threading.Thread(target=httpd.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+    try:
+        httpd.serve_forever(poll_interval=0.5)
+    finally:
+        MANAGER.kill_child()
+        HUB.stop_all()
+        H264_HUB.stop_all()
+        stop_scrcpy()
+        httpd.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

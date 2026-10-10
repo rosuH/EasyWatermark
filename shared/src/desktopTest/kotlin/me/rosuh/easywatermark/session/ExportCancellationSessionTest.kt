@@ -18,6 +18,7 @@ import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
+import me.rosuh.easywatermark.ui.save.ExportRecoveryUi
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,6 +32,43 @@ import kotlin.test.assertTrue
  * ([WatermarkSessionViewModel.exportAndAwait] / [cancelExport] / [ExportPipelinePort]).
  */
 class ExportCancellationSessionTest {
+
+    private fun ExportJobState.recovery() = ExportRecoveryUi.fromJob(
+        isSaving, isFinished, successCount, failureCount, processedCount, totalCount,
+    )
+
+    @Test
+    fun singleItemCancel_returnsToExport_thenRealRetrySucceeds() = runBlocking {
+        coroutineScope {
+            val gate = CompletableDeferred<Unit>()
+            val port = GatedSuccessPort(gate)
+            val session = newSession(tempDir("single-retry"), port)
+            session.dispatchAndAwait(AppIntent.EnterEditor(selected = batch(1)))
+            val selected = session.launchScreenUiStateFlow.value.selectedImageList
+            val export = async { session.exportAndAwait(selected) }
+            withTimeout(5_000) { while (port.received.isEmpty()) delay(5) }
+            session.cancelExport()
+            export.await()
+
+            val cancelled = session.exportJobState.value
+            assertEquals(1, cancelled.processedCount)
+            assertEquals(ExportErrorCodes.CANCELLED, selected.single().result?.code)
+            assertTrue(cancelled.recovery().isCancelled)
+            assertFalse(cancelled.recovery().canShare)
+            assertTrue(cancelled.recovery().showRetryFailed)
+            assertEquals("Export cancelled (0 of 1 saved)", ExportRecoveryUi.summaryLine(cancelled.recovery()))
+
+            gate.complete(Unit)
+            session.exportAndAwait(selected)
+            assertEquals(2, port.received.size)
+            assertIs<JobState.Success>(selected.single().jobState)
+            val retried = session.exportJobState.value.recovery()
+            assertTrue(retried.isAllSuccess)
+            assertTrue(retried.canShare)
+            assertFalse(retried.isCancelled)
+            assertFalse(retried.showRetryFailed)
+        }
+    }
 
     /** Blocks on [gate] for each call until released; records call order. */
     private class GatedSuccessPort(
@@ -194,6 +232,10 @@ class ExportCancellationSessionTest {
             assertTrue(job.isFinished)
             assertEquals(1, job.successCount)
             assertEquals(1, job.completedCount)
+            assertTrue(job.recovery().canShare)
+            assertTrue(job.recovery().showRetryFailed)
+            assertTrue(job.recovery().isCancelled)
+            assertFalse(job.recovery().isAllSuccess)
             assertEquals(1, selected.count { it.jobState is JobState.Success })
             assertTrue(selected.drop(1).none { it.jobState is JobState.Success })
             assertNoIng(selected)

@@ -1,0 +1,31 @@
+context platform=ios
+env WATERMARK="EWM COMBO"
+open me.rosuh.easywatermark.ios --relaunch
+press id="store-seed-editor"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+press id="watermarkTextContent"
+wait id="watermarkTextEditField"
+fill id="watermarkTextEditField" "${WATERMARK}"
+press id="watermarkTextConfirm"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible"
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+press id="editorTab-1"
+wait id="editorOption-TextSize"
+press id="editorOption-TextSize"
+wait id="sliderTrack"
+press id="sliderTrack"
+press id="editorOption-Color"
+wait id="colorSwatch-FF000000"
+press id="colorSwatch-FF000000"
+press id="editorOption-Alpha"
+wait id="editorControl-Alpha"
+press id="sliderTrack"
+press id="sharedComposeSaveButton"
+wait "id=\"sharedComposeExportSheet\" visible" 20000
+press "label=\"PNG, PNG\""
+press id="sharedComposeExportPrimary"
+wait "id=\"sharedComposeExportCounts\" visible" 30000
+close

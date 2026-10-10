@@ -1,0 +1,9 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+press label="Save"
+wait "label=\"Output format\""
+press value="PNG"
+press value="Export to the album"
+wait label="Share" 30000
+press "role=\"textview\" label=\"Share\""
+close

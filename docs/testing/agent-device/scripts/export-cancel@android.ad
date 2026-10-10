@@ -1,0 +1,16 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+press label="Save"
+wait "label=\"Export to the album\""
+press value="Export to the album"
+wait "label=\"Cancel export\"" 20000
+press "role=\"textview\" label=\"Cancel export\""
+wait "label=\"Export cancelled.\" || label=\"导出已取消。\"" 15000
+wait absent "label=\"Share\"" 5000
+wait absent "label=\"View in gallery\"" 5000
+wait "label=\"Retry failed\"" 5000
+press "role=\"textview\" label=\"Retry failed\""
+wait "label=\"Processed 1 · Succeeded 1 · Failed 0\"" 30000
+wait "label=\"Share\"" 5000
+wait "label=\"View in gallery\"" 5000
+close

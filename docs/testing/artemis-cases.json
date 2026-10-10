@@ -1,0 +1,367 @@
+{
+  "source_stash": "000c3f44e0cbfa9bc851bcf1fd3be9daa8134c1f",
+  "source_path": "docs/testmap/map.yaml",
+  "cases": [
+    {
+      "id": "pick-to-editor",
+      "title": "系统选图进入编辑器",
+      "edges": [
+        "pick-to-editor"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "export-one",
+      "supported": true,
+      "goal": "From the home screen tap Choose picture and use the real SYSTEM photo picker to select ONLY {image_a}. It is the newly added synthetic A image with a blue top and yellow bottom. Do not substitute share-in or the in-app gallery for this test; if necessary disable Use in-app gallery in About first. Confirm the editor displays that source. Set text watermark to exactly {watermark}, black and clearly visible. Save as PNG and export exactly once; wait for processed 1, succeeded 1, failed 0. Report whether the real system picker was traversed."
+    },
+    {
+      "id": "share-in-to-editor",
+      "title": "系统分享输入进入编辑器",
+      "edges": [
+        "share-in-to-editor"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": true,
+      "goal": "The harness launched {package} using Android ACTION_SEND with synthetic image {image_a}. Without choosing another image, verify the editor shows that A source and a preview. Set exactly {watermark} as visible black text, save PNG and export once. Verify success count 1 and report that the entry was harness share-in, not a photo-picker traversal."
+    },
+    {
+      "id": "launch-to-about",
+      "title": "启动页往返关于",
+      "edges": [
+        "launch-to-about"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "From Launch open About using the app's About control. Observe app information and settings. Do not open any external links or change settings. Close About and verify the same Launch screen with Choose picture is visible. Report both opening and return observations."
+    },
+    {
+      "id": "editor-to-about",
+      "title": "编辑器往返关于并保留内容",
+      "edges": [
+        "editor-to-about"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "With synthetic A open, edit watermark text to exactly {watermark} and confirm it appears. Open About from the EDITOR, not from Launch. Close About and verify the same A image and exact watermark remain in the editor. If no About entry exists in the editor, report that fact as failure; do not substitute Launch About."
+    },
+    {
+      "id": "launch-to-gallery",
+      "title": "内置图库选图",
+      "edges": [
+        "launch-to-gallery"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "From Launch open About. Record the current Use in-app gallery switch value, enable it if off, return to Launch and tap Choose picture. If Android requests photo read access on this dedicated synthetic test emulator, allow it for this test. Verify the IN-APP gallery appears, select ONLY {image_a} (blue top/yellow bottom), confirm and verify A enters the editor. Do not substitute system picker or share-in. Restore the Use in-app gallery switch to its initial value afterward and report the initial/restored value and actual gallery observed."
+    },
+    {
+      "id": "editor-to-template-sheet",
+      "title": "模板新增、应用和删除",
+      "edges": [
+        "editor-to-template-sheet"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "In A's editor open Text and Templates. Create a template whose content is exactly EWM TEMPLATE {marker}. Find it by this unique content, apply it and confirm that exact text appears as the watermark. Reopen Templates, delete ONLY the template EWM TEMPLATE {marker} created by this run and confirm that unique item is absent. Preserve every pre-existing template. Report creation, application and deletion separately; do not assume IDs or an empty template list."
+    },
+    {
+      "id": "editor-to-text-edit-sheet",
+      "title": "文字编辑与真实导出",
+      "edges": [
+        "editor-to-text-edit-sheet"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": true,
+      "goal": "Open the Text watermark editor and replace all previous text with exactly {watermark}. Confirm, reopen the text field and verify its exact value, then close it. Make the watermark black and clearly visible. Save as PNG, export once and verify processed 1, succeeded 1, failed 0."
+    },
+    {
+      "id": "editor-to-custom-color-sheet",
+      "title": "自定义颜色确认与回读",
+      "edges": [
+        "editor-to-custom-color-sheet"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": true,
+      "goal": "With A open set TEXT watermark exactly {watermark}. In Style > Color first select black, then open the CUSTOM native Android color wheel. This Android dialog has NO hex input; do not search for one. Pick a vivid cyan near the LEFT edge of the wheel, set the upper checkerboard alpha bar to its far RIGHT (opaque) and the lower brightness bar to far RIGHT (bright). Use direct coordinates from the visible screenshot for these unlabeled controls. Confirm and verify the watermark is cyan. Reopen custom color and verify the same wheel/slider positions were retained, then CANCEL this second opening. Set the overall watermark opacity to 100% if needed. Save PNG and export exactly once. Verify succeeded 1, failed 0. Report actual color/retained controls; do not claim exact RGB 00AABB, which this native dialog cannot enter."
+    },
+    {
+      "id": "editor-to-save-export-sheet",
+      "title": "导出面板格式切换与取消",
+      "edges": [
+        "editor-to-save-export-sheet"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "With synthetic A in the editor tap Save. Verify the export sheet/dialog appears. Select JPEG and observe its quality control; then select PNG and verify the format state changes. Close the export panel WITHOUT exporting and confirm return to the same editor/source. Report format controls and return state."
+    },
+    {
+      "id": "editor-to-icon-picker",
+      "title": "图片水印系统选择器",
+      "edges": [
+        "editor-to-icon-picker"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "With synthetic A open, choose Image/Icon watermark mode and activate the image-watermark selection control. Use the actual picker to select ONLY the synthetic icon {icon}. Confirm it becomes the watermark over A (not a replacement source photo). Verify the distinct icon appears in the preview; report its actual shape/color and the unchanged source. Do not count merely opening the picker as success."
+    },
+    {
+      "id": "editor-to-add-more-picker",
+      "title": "继续加图与两张批量导出",
+      "edges": [
+        "editor-to-add-more-picker"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-two",
+      "supported": true,
+      "goal": "A is already open and focused. Use the EDITOR Add more photos control and its real picker to append ONLY {image_b}, the synthetic B image with purple top and green bottom. Confirm both A and B remain in the filmstrip and the focus remains A. Set text watermark exactly {watermark}, black and clearly visible. Save PNG and export the TWO selected images exactly once; wait for processed 2, succeeded 2, failed 0. Do not replace A or share-in B as a substitute for Add more."
+    },
+    {
+      "id": "export-save-success",
+      "title": "PNG 保存完成与文件验收",
+      "edges": [
+        "export-save-success"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": true,
+      "goal": "With A open, set visible black text watermark exactly {watermark}. Tap Save, choose PNG, export once and wait for completion. Verify processed 1, succeeded 1, failed 0, and the destination is the photo album. Do not share or open another app after completion."
+    },
+    {
+      "id": "export-system-share",
+      "title": "导出后打开系统面板",
+      "edges": [
+        "export-system-share"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": true,
+      "goal": "Set visible black text exactly {watermark} over A, save PNG and export exactly once. After success inspect the export actions. If a Share action exists, open the Android system SHARE chooser and dismiss it without choosing a recipient or sending. Report the actual chooser. If only View in gallery exists, report Share is unavailable and do not claim the gallery viewer is a share sheet. Leave the app showing the export result."
+    },
+    {
+      "id": "export-failure-recovery",
+      "title": "导出失败后重试恢复",
+      "edges": [
+        "export-failure-recovery"
+      ],
+      "platform": "android",
+      "setup": "failure",
+      "verify": "export-one",
+      "supported": true,
+      "goal": "With the harness's controlled export fault active, export the synthetic image and verify one failure and Retry failed. After the harness restores the source, retry the same failed item, verify one success and exactly one completed output, and confirm successful items were not duplicated."
+    },
+    {
+      "id": "android-crash-recovery",
+      "title": "Android 崩溃恢复入口",
+      "edges": [
+        "android-crash-recovery"
+      ],
+      "platform": "android",
+      "setup": "crash",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "The harness has set the debug app's crash-count gate. Verify the actual recovery screen appears. Tap Turn off recovery mode (not Clear app data) and report the response; the harness restarts afterward. Never clear app data. The harness will restart and verify return to normal Launch, then restore its saved preferences."
+    },
+    {
+      "id": "ios-library-read-upsell",
+      "title": "iOS 相册读取引导",
+      "edges": [
+        "ios-library-read-upsell"
+      ],
+      "platform": "ios",
+      "setup": "ios",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "The installed Artemis device driver and this suite target Android. Requires an iOS driver and controlled Photos authorization state.",
+      "goal": "On iOS with Photos Library Read denied, launch the app, tap Choose picture and verify the read-access prompt. Continue without read access, verify the system picker opens, select only synthetic media, and verify the editor renders the source with its matching watermark overlay. Test limited/restricted/authorized states separately; do not infer them from denied."
+    },
+    {
+      "id": "editor-dual-pane-morph",
+      "title": "宽屏双栏与编辑状态",
+      "edges": [
+        "editor-dual-pane-morph"
+      ],
+      "platform": "android",
+      "setup": "wide",
+      "verify": "ui-only",
+      "supported": true,
+      "goal": "The harness configured a viewport at least 800 dp wide and opened A. Set text to exactly {watermark}, verify preview and controls appear side by side and do not overlap. The harness then sets a 411 dp compact viewport; verify the same image and text persist in the compact editor. Record both layouts. The harness restores the original display configuration afterward."
+    },
+    {
+      "id": "editor-tile-mode-clamp",
+      "title": "把平铺改成单个（CLAMP）",
+      "edges": [
+        "editor-tile-mode-clamp"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "In the editor Style tab, open tile mode and switch Repeat to Single (CLAMP). Confirm the preview is no longer a full-tile grid. Do not export."
+    },
+    {
+      "id": "editor-typeface-style",
+      "title": "在样式里改字体或描边",
+      "edges": [
+        "editor-typeface-style"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "In the editor Style tab, open typeface/style and tap Bold. Confirm the watermark text appearance changes. Do not export."
+    },
+    {
+      "id": "editor-filmstrip-switch",
+      "title": "在胶片条上切换当前照片",
+      "edges": [
+        "editor-filmstrip-switch"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "With at least two photos in the editor, tap a non-focused filmstrip thumb and confirm the preview hard-cuts to that photo. Do not export."
+    },
+    {
+      "id": "about-follow-photo",
+      "title": "开关从照片取编辑器主题",
+      "edges": [
+        "about-follow-photo"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "Open About and toggle Theme editor from photo. Confirm the switch state flips. Return with Back."
+    },
+    {
+      "id": "about-in-app-gallery",
+      "title": "开关使用应用内图库",
+      "edges": [
+        "about-in-app-gallery"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "On Android, open About and toggle Use in-app gallery. Confirm the switch state flips. Return with Back. iOS does not show this switch."
+    },
+    {
+      "id": "export-format-jpeg-png",
+      "title": "导出格式 JPEG/PNG 切换",
+      "edges": [
+        "export-format-jpeg-png"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "Open the save/export sheet, switch JPEG to PNG (or PNG to JPEG), confirm quality is muted for PNG. Close the sheet without requiring a successful export."
+    },
+    {
+      "id": "about-to-open-source",
+      "title": "从关于打开开源许可",
+      "edges": [
+        "about-to-open-source"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "From About open Open source licenses, observe the list, then Back to About."
+    },
+    {
+      "id": "about-wallpaper",
+      "title": "开关跟随壁纸取色",
+      "edges": [
+        "about-wallpaper"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "On Android About, toggle Follow wallpaper colors. iOS and Desktop hide this switch."
+    },
+    {
+      "id": "about-bounds",
+      "title": "开关显示边界",
+      "edges": [
+        "about-bounds"
+      ],
+      "platform": "android",
+      "setup": "home",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "Open About and toggle Show Bounds. Confirm the switch state flips. Return with Back."
+    },
+    {
+      "id": "editor-clamp-drag",
+      "title": "拖动单个水印",
+      "edges": [
+        "editor-clamp-drag"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "Switch tile mode to Single then drag the watermark on the preview. Do not export."
+    },
+    {
+      "id": "export-cancel",
+      "title": "取消正在导出",
+      "edges": [
+        "export-cancel"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "ui-only",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "Open export, start it, tap Cancel while exporting. Confirm Cancel disappears."
+    },
+    {
+      "id": "editor-style-then-export",
+      "title": "改文字大小颜色透明度后导出",
+      "edges": [
+        "editor-style-then-export"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
+      "goal": "In one editor session change watermark text, size, color, and opacity, then export once."
+    }
+  ]
+}

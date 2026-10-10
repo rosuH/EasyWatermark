@@ -1,0 +1,12 @@
+context platform=android
+env WATERMARK="EWM AGENT DEVICE"
+open me.rosuh.easywatermark.debug
+press label="Content"
+wait label="Text"
+press "label=\"👋 DO NOT REDISTRIBUTE\""
+wait "label=\"Edit watermark\""
+fill editable=true "${WATERMARK}"
+press label="Confirm"
+wait label="Save"
+wait absent label="Version" 5000
+close

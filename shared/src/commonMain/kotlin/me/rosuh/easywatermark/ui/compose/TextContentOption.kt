@@ -1,11 +1,5 @@
 package me.rosuh.easywatermark.ui.compose
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,11 +23,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
@@ -101,22 +98,6 @@ fun TextContentOption(
         }
     }
 
-    // M4: soft caret blink (prod BlinkCursorView). Decorative loop — Full only (MotionPolicy).
-    // Always allocate the infinite transition (Compose remember rules); gate the painted alpha.
-    val allowBlink = motionAllowsDecorativeLoop(currentMotionPolicy())
-    val blinkAlpha by rememberInfiniteTransition(label = "textContentCursor").animateFloat(
-        initialValue = 0.55f,
-        targetValue = 0.12f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = EwmTheme.motion.textCaretBlinkMs,
-                easing = LinearEasing,
-            ),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "cursorAlpha",
-    )
-    val cursorAlpha = if (allowBlink) blinkAlpha else 0.4f
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = modifier
@@ -136,15 +117,7 @@ fun TextContentOption(
             // weight(fill=false): content-sized up to remaining width so the packed row stays centered.
             modifier = Modifier.weight(1f, fill = false),
         )
-        // Soft caret: same muted color; blink under Full, static under Reduced/Off.
-        Box(
-            modifier = Modifier
-                .padding(start = 1.dp)
-                .width(2.dp)
-                .height(18.dp)
-                .graphicsLayer { alpha = cursorAlpha }
-                .background(muted),
-        )
+        SoftCaret(color = muted)
     }
 
     if (showEditSheet) {
@@ -316,6 +289,34 @@ private fun WatermarkTextEditSheet(
             }
         }
     }
+}
+
+/** Isolated so the caret clock does not recompose the editor preview tree. */
+@Composable
+private fun SoftCaret(color: Color) {
+    val allowBlink = motionAllowsDecorativeLoop(currentMotionPolicy())
+    val alpha = remember { mutableFloatStateOf(if (allowBlink) 0.55f else 0.4f) }
+    LaunchedEffect(allowBlink) {
+        if (!allowBlink) {
+            alpha.floatValue = 0.4f
+            return@LaunchedEffect
+        }
+        val halfMs = EwmTheme.motion.textCaretBlinkMs.toLong()
+        var hi = true
+        while (true) {
+            alpha.floatValue = if (hi) 0.55f else 0.12f
+            hi = !hi
+            delay(halfMs)
+        }
+    }
+    Box(
+        modifier = Modifier
+            .padding(start = 1.dp)
+            .width(2.dp)
+            .height(18.dp)
+            .graphicsLayer { this.alpha = alpha.floatValue }
+            .background(color),
+    )
 }
 
 /** Stable Compose testTag ids for XCUITest (not user-facing accessibility strings). */

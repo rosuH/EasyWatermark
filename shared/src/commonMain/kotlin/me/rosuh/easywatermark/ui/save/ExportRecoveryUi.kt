@@ -20,21 +20,28 @@ data class ExportRecoveryUiState(
 ) {
     val showCancel: Boolean get() = isExporting
 
-    /** Retry only after a finished batch that still has failures (D2 preserves Success). */
+    /** Session excludes cancelled/never-started items from success + hard-failure counts. */
+    val isCancelled: Boolean
+        get() = isFinished && !isExporting && totalCount > 0 && successCount + failureCount < totalCount
+
+    /** Retry also resumes cancelled/never-started items; D2 preserves prior Success. */
     val showRetryFailed: Boolean
-        get() = isFinished && failureCount > 0
+        get() = isFinished && !isExporting && (failureCount > 0 || isCancelled)
 
     val hasAnySuccess: Boolean get() = successCount > 0
+
+    /** Hosts additionally require an actual successful output identity before sharing. */
+    val canShare: Boolean get() = isFinished && !isExporting && hasAnySuccess
 
     /** All items finished as failures (Retry failed still shown). */
     val isAllFailed: Boolean
         get() = isFinished && successCount == 0 && failureCount > 0
 
     val isPartial: Boolean
-        get() = isFinished && successCount > 0 && failureCount > 0
+        get() = isFinished && successCount > 0 && (failureCount > 0 || isCancelled)
 
     val isAllSuccess: Boolean
-        get() = isFinished && failureCount == 0 && successCount > 0
+        get() = isFinished && failureCount == 0 && successCount > 0 && successCount == totalCount
 }
 
 /**
@@ -67,14 +74,14 @@ object ExportRecoveryUi {
         return when {
             state.isExporting ->
                 "Exporting ${state.processedCount} of $total"
+            state.isCancelled ->
+                "Export cancelled (${state.successCount} of $total saved)"
             state.isAllSuccess ->
                 "Exported ${state.successCount} of $total"
             state.isPartial ->
                 "Exported ${state.successCount} of $total (${state.failureCount} failed)"
             state.isAllFailed ->
                 "Export failed (0 of $total, ${state.failureCount} failed)"
-            state.isFinished && state.successCount == 0 && state.processedCount < total ->
-                "Export cancelled (${state.successCount} of $total saved)"
             else ->
                 "${state.successCount}/${total}"
         }
