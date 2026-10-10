@@ -54,7 +54,8 @@ class TestmapExportControlTest {
         exportOne(ImageInfo(MediaRef(uri)), WaterMark.default, UserPreferences.DEFAULT)
     private fun events() = journal.readLines().map { line ->
         val json = JSONObject(line)
-        assertEquals(setOf("run_id", "event", "timestamp_ms"), json.keys().asSequence().toSet())
+        assertEquals(setOf("run_id", "event", "timestamp_ms") +
+            (if (json.getString("event") == "outcome_success") setOf("output_uri") else emptySet()), json.keys().asSequence().toSet())
         assertEquals("run-42_repeat_1", json.getString("run_id"))
         json.getString("event")
     }
@@ -166,7 +167,7 @@ class TestmapExportControlTest {
     @Test fun observeReturnsExactOutcomesWithOnlyFiniteTaxonomy() = runBlocking {
         val secret = "private source and settings must not enter events"
         val cases = listOf(
-            ExportOutcome.success(ExportedMedia(MediaRef("content://private/result"), 10, 20,
+            ExportOutcome.success(ExportedMedia(MediaRef("content://media/external_primary/images/media/77"), 10, 20,
                 ImageFormat.PNG, 123)) to "outcome_success",
             ExportOutcome.failure(ExportFailure.SourceDecode(secret)) to "outcome_source_decode",
             ExportOutcome.failure(ExportFailure.Render(secret)) to "outcome_render",
@@ -184,9 +185,24 @@ class TestmapExportControlTest {
             assertEquals(listOf("ready", "entered", tag, "cleared"), events())
             assertFalse(marker.exists())
             assertFalse(journal.readText().contains(secret))
-            assertFalse(journal.readText().contains("content://private/result"))
+            if (expected is ExportOutcome.Success) {
+                assertEquals(expected.media.ref.value, JSONObject(journal.readLines()[2]).getString("output_uri"))
+            }
             assertSame(expected, observed.export())
             assertEquals(4, events().size)
+        }
+    }
+
+    @Test fun invalidReturnedRefCannotFabricateSuccessfulObservationOrReplaceDelegate() = runBlocking {
+        for (uri in listOf("", "file:///private/output.png", "content://private/result")) {
+            journal.delete()
+            arm(mode = "observe-next")
+            val result = ExportOutcome.success(ExportedMedia(MediaRef(uri), 10, 20, ImageFormat.PNG, 123))
+            val observed = testmapExportControl(files, ExportPipelinePort { _, _, _ -> result }) { clock }
+            assertSame(result, observed.export())
+            assertEquals(listOf("ready", "entered", "cleared"), events())
+            if (uri.isNotEmpty()) assertFalse(journal.readText().contains(uri))
+            assertFalse(marker.exists())
         }
     }
 

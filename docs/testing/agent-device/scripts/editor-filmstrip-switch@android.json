@@ -1,0 +1,258 @@
+[
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "label=\"Add more images\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__FILMSTRIP_PICK_A__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__FILMSTRIP_PICK_B__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__FILMSTRIP_ADD_TWO__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__FILMSTRIP_FOCUS_A__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__FILMSTRIP_FOCUS_B__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "ref",
+        "ref": "__FILMSTRIP_RETURN_A__"
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "stable": true,
+      "quietMs": 300,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "close",
+    "input": {}
+  }
+]

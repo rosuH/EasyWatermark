@@ -1,17 +1,21 @@
-"""Host-only transport regressions; no devices, server, or real Confirm calls."""
+"""Host-only transport regressions; loopback HTTP only, no devices or Confirm calls."""
 import ast
 import io
 import json
+import socket
+import struct
+import time
 from pathlib import Path
 import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from collections import deque
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 import testmap_h264 as video
+import testmap_stream as mjpeg
 
 
 def producer():
@@ -209,6 +213,10 @@ class FakeSocket:
         self.fail_body = fail_body
     def makefile(self, *_):
         return self.input
+    def getsockopt(self, *_):
+        return 0
+    def settimeout(self, value):
+        self.timeout = value
     def sendall(self, data):
         if self.fail_body and b'\r\n\r\n' in self.output:
             raise BrokenPipeError('fixture disconnect')
@@ -221,8 +229,9 @@ def handler_namespace():
     source = Path(__file__).with_name('testmap_console.py').read_text()
     tree = ast.parse(source)
     selected = [n for n in tree.body if isinstance(n, (ast.ClassDef, ast.FunctionDef))
-                and n.name in {'Handler', '_run_is_live', '_watch_preferred'}]
-    ns = dict(BaseHTTPRequestHandler=BaseHTTPRequestHandler, json=json,
+                and n.name in {'Handler', '_run_is_live', '_watch_preferred', '_stream_should_stop'}]
+    ns = dict(BaseHTTPRequestHandler=BaseHTTPRequestHandler, json=json, socket=socket,
+              time=time, STREAM_IDLE_TIMEOUT_S=12.0,
               parse_qs=parse_qs, unquote=unquote, urlparse=urlparse,
               MANAGER=SimpleNamespace(snapshot=lambda: {'state': 'running'}),
               resolve_watch_target=lambda *_: {'platform': 'android', 'id': 'mock'},
@@ -237,7 +246,7 @@ class HttpTests(unittest.TestCase):
         ns = handler_namespace()
         closed = []
         packets = [video.pack_frame(video.config_payload()), video.pack_frame(nal(5))]
-        def stream(*_):
+        def stream(*_, **kwargs):
             try:
                 yield from packets
             finally:
@@ -255,19 +264,26 @@ class HttpTests(unittest.TestCase):
     def test_disconnect_on_first_body_write_closes_subscription(self):
         ns = handler_namespace()
         p = producer()
-        ns['H264_HUB'] = SimpleNamespace(iter_packets=lambda *_: p.subscribe())
+        ns['H264_HUB'] = SimpleNamespace(iter_packets=lambda *_, **kwargs: p.subscribe(**kwargs))
         sock = FakeSocket('/api/device-video?platform=android', fail_body=True)
         ns['Handler'](sock, ('fixture', 0), None)
         self.assertEqual(p.subscriber_count(), 0)
 
     def test_mjpeg_sibling_still_emits_unchanged_multipart_body(self):
         ns = handler_namespace()
-        ns['HUB'] = SimpleNamespace(iter_frames=lambda *_: iter([b'jpeg']))
+        closed = []
+        def frames(*args, **kwargs):
+            try:
+                yield b'jpeg'
+            finally:
+                closed.append(True)
+        ns['HUB'] = SimpleNamespace(iter_frames=frames)
         sock = FakeSocket('/api/device-stream?platform=android')
         ns['Handler'](sock, ('fixture', 0), None)
         head, body = bytes(sock.output).split(b'\r\n\r\n', 1)
         self.assertIn(b'multipart/x-mixed-replace; boundary=fixture', head)
         self.assertEqual(body, b'--fixture\r\njpeg')
+        self.assertEqual(closed, [True])
 
     def test_run_start_failure_returns_json_instead_of_dropping_connection(self):
         ns = handler_namespace()
@@ -290,6 +306,157 @@ class HttpTests(unittest.TestCase):
         ns['Handler'](sock, ('fixture', 0), None)
         self.assertTrue(sock.output.startswith(b'HTTP/1.0 204'))
 
+
+
+class SilentHttpTests(unittest.TestCase):
+    def check_silent_release(self, transport, ending):
+        ns = handler_namespace()
+        if ending in {'graceful', 'half-close', 'active-half-close', 'blocked-write'}:
+            ns['STREAM_IDLE_TIMEOUT_S'] = 0.4
+        state = {'state': 'running', 'id': 'owned-run'}
+        ns['MANAGER'] = SimpleNamespace(snapshot=lambda: dict(state))
+        if transport == 'video':
+            p = producer()
+            p._kids, p._forwards = [], []
+            module, hub = video, video.H264Hub()
+            ns['H264_HUB'] = hub
+        else:
+            p = mjpeg._Producer.__new__(mjpeg._Producer)
+            p._cv = threading.Condition()
+            p._frame = b'jpeg'
+            p._seq = 1
+            p._subs = 0
+            p._stop = threading.Event()
+            module, hub = mjpeg, mjpeg.StreamHub()
+            ns['HUB'] = hub
+        p._thread = SimpleNamespace(is_alive=lambda: True)
+        hub._producers['android:mock'] = p
+        target = patch.object(module, 'resolve_watch_target', return_value={'platform': 'android', 'id': 'mock'})
+        target.start()
+        # A second viewer must survive cancellation of this HTTP subscriber.
+        other = p.subscribe()
+        next(other)
+        finished = threading.Event()
+        write_entered = threading.Event()
+        write_timeouts, send_buffers = [], []
+        class Handler(ns['Handler']):
+            def setup(self):
+                super().setup()
+                if ending == 'blocked-write':
+                    self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 4096)
+                    send_buffers.append(self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF))
+                    write = self.wfile.write
+                    def observed_write(data):
+                        if len(data) > 1024 * 1024:
+                            write_entered.set()
+                        try:
+                            return write(data)  # Real socket sendall; never inject an error.
+                        except TimeoutError as exc:
+                            write_timeouts.append(exc)
+                            raise
+                    self.wfile.write = observed_write
+            def finish(self):
+                try:
+                    super().finish()
+                finally:
+                    finished.set()
+        # Local transport tests must not wait for the host's reverse DNS resolver.
+        with patch.object(socket, 'getfqdn', return_value='localhost'):
+            server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        worker = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05), daemon=True)
+        worker.start()
+        client = socket.socket()
+        client.settimeout(2)
+        if ending == 'blocked-write':
+            client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
+        client.connect(server.server_address)
+        try:
+            client.sendall(f'GET /api/device-{transport}?platform=android HTTP/1.0\r\nHost: localhost\r\n\r\n'.encode())
+            received = b''
+            while b'\r\n\r\n' not in received or not received.split(b'\r\n\r\n', 1)[1]:
+                chunk = client.recv(65536)
+                self.assertTrue(chunk, 'HTTP stream ended before its first body packet')
+                received += chunk
+            self.assertEqual(p.subscriber_count(), 2)
+            if ending == 'blocked-write':
+                payload = nal(1) + b'x' * (4 * 1024 * 1024)
+                self.assertLess(send_buffers[0], len(payload) // 4)
+                self.assertLess(client.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF), len(payload) // 4)
+                p._publish(payload)
+                # Keep the client open without another recv until handler cleanup.
+                self.assertTrue(write_entered.wait(2), 'large body write never started')
+                self.assertFalse(finished.wait(0.05), 'write did not encounter real backpressure')
+            elif ending == 'reset':
+                client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                client.close()
+            elif ending == 'graceful':
+                client.close()
+            elif ending in {'half-close', 'active-half-close'}:
+                client.shutdown(socket.SHUT_WR)
+                if ending == 'active-half-close':
+                    for _ in range(6):
+                        p._publish(nal(1) if transport == 'video' else b'jpeg-next')
+                        self.assertTrue(client.recv(65536))
+                        self.assertFalse(finished.wait(0.15), 'request half-close was mistaken for abort')
+                    self.assertEqual(p.subscriber_count(), 2)
+                    state['state'] = 'passed'
+            elif ending == 'terminal':
+                state['state'] = 'passed'
+            else:
+                state['id'] = 'replacement-run'
+            self.assertTrue(finished.wait(2.5), f'{transport}/{ending}: silent handler did not release')
+            if ending == 'blocked-write':
+                self.assertEqual(len(write_timeouts), 1, 'release was not a real write timeout')
+                self.assertGreaterEqual(client.fileno(), 0, 'client was closed before release')
+            self.assertEqual(p.subscriber_count(), 1)
+            hub.reap_idle()
+            self.assertIn('android:mock', hub._producers)
+            self.assertFalse(p._stop.is_set(), 'other viewer was stopped')
+        finally:
+            if ending == 'blocked-write':
+                # Only after assertions: abort the intentionally unread test socket
+                # so a failing pre-fix handler cannot hold server_close forever.
+                client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+            client.close()
+            p._stop.set()
+            with p._cv:
+                p._cv.notify_all()
+            finished.wait(2)
+            other.close()
+            server.shutdown()
+            server.server_close()
+            worker.join(2)
+            target.stop()
+        self.assertEqual(p.subscriber_count(), 0)
+        hub.reap_idle()
+        self.assertEqual(hub._producers, {})
+
+    def test_silent_client_reset_releases_only_its_subscription(self):
+        for transport in ('video', 'stream'):
+            with self.subTest(transport=transport):
+                self.check_silent_release(transport, 'reset')
+
+    def test_silent_graceful_close_and_half_close_have_bounded_idle_release(self):
+        for transport in ('video', 'stream'):
+            for ending in ('graceful', 'half-close'):
+                with self.subTest(transport=transport, ending=ending):
+                    self.check_silent_release(transport, ending)
+
+    def test_request_half_close_does_not_interrupt_continuing_frames(self):
+        for transport in ('video', 'stream'):
+            with self.subTest(transport=transport):
+                self.check_silent_release(transport, 'active-half-close')
+
+    def test_silent_run_end_or_replacement_releases_subscription(self):
+        for transport in ('video', 'stream'):
+            for ending in ('terminal', 'replacement'):
+                with self.subTest(transport=transport, ending=ending):
+                    self.check_silent_release(transport, ending)
+
+    def test_nonreading_client_write_timeout_releases_only_its_subscription(self):
+        for transport in ('video', 'stream'):
+            with self.subTest(transport=transport):
+                self.check_silent_release(transport, 'blocked-write')
 
 if __name__ == '__main__':
     unittest.main()

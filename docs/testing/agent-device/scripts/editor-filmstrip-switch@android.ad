@@ -1,6 +1,0 @@
-context platform=android
-open me.rosuh.easywatermark.debug
-wait "label=\"Watermark preview\""
-press label="image"
-wait label="image"
-close
