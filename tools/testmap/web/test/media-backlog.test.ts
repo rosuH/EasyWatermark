@@ -159,6 +159,7 @@ function streamFixture(connect = true, queued = false) {
   };
   return {
     input,
+    canvas,
     body,
     cancel,
     decode,
@@ -182,7 +183,7 @@ function streamFixture(connect = true, queued = false) {
   };
 }
 
-it("waits for complete parameters despite early IDRs, accepts cold-start timing, then detects stalled output", async () => {
+it("waits for complete parameters despite early IDRs, keeps a drained stream idle, then bounds new pending output", async () => {
   const f = streamFixture();
   await vi.advanceTimersByTimeAsync(520);
   f.config();
@@ -213,7 +214,18 @@ it("waits for complete parameters despite early IDRs, accepts cold-start timing,
   });
   expect(f.output().close).toHaveBeenCalledOnce();
   expect(f.update).toHaveBeenLastCalledWith("video");
-  await vi.advanceTimersByTimeAsync(1200);
+  await vi.advanceTimersByTimeAsync(13000);
+  expect(f.diagnose).not.toHaveBeenCalled();
+  expect(f.update).toHaveBeenLastCalledWith("video");
+  expect(f.signal().aborted).toBe(false);
+  expect(f.body.locked).toBe(true);
+  expect(f.close).not.toHaveBeenCalled();
+  expect([f.canvas.width, f.canvas.height]).toEqual([10, 20]);
+  f.input.enqueue(packet(1));
+  await vi.advanceTimersByTimeAsync(1199);
+  expect(f.decode).toHaveBeenCalledTimes(2);
+  expect(f.diagnose).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
   expect(f.diagnose).toHaveBeenCalledExactlyOnceWith(
     expect.objectContaining({
       reason: "frame-timeout",
@@ -224,15 +236,64 @@ it("waits for complete parameters despite early IDRs, accepts cold-start timing,
       firstIdrMs: 1900,
       firstDecodeMs: 2025,
       firstOutputMs: 2050,
-      elapsedMs: 3250,
+      elapsedMs: 16250,
+      decodeCount: 2,
+      outputCount: 1,
     }),
   );
   expect(f.signal().aborted).toBe(true);
   expect(f.body.locked).toBe(false);
+  expect(f.close).toHaveBeenCalledOnce();
   f.stop();
   const count = f.fetchMock.mock.calls.length;
   await vi.advanceTimersByTimeAsync(20000);
   expect(f.fetchMock).toHaveBeenCalledTimes(count);
+});
+
+it("bounds multiple pending outputs from actual progress, not each new submission", async () => {
+  const f = streamFixture();
+  await vi.advanceTimersByTimeAsync(0);
+  f.input.enqueue(concat([packet(7), packet(8), packet(5)]));
+  await vi.advanceTimersByTimeAsync(0);
+  f.output();
+  f.input.enqueue(concat([packet(1), packet(1)]));
+  await vi.advanceTimersByTimeAsync(600);
+  f.output(); // One output is still pending; this is real progress.
+  await vi.advanceTimersByTimeAsync(599);
+  f.input.enqueue(packet(1)); // More input must not postpone the stall deadline.
+  await vi.advanceTimersByTimeAsync(600);
+  expect(f.diagnose).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
+  expect(f.diagnose).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      reason: "frame-timeout",
+      decodeCount: 4,
+      outputCount: 2,
+      elapsedMs: 1800,
+    }),
+  );
+  expect(f.signal().aborted).toBe(true);
+  expect(f.body.locked).toBe(false);
+  expect(f.close).toHaveBeenCalledOnce();
+  f.stop();
+});
+
+it("accounts for a synchronous decoder output before deciding whether work is pending", async () => {
+  const f = streamFixture();
+  f.decode.mockImplementation(() => f.output());
+  await vi.advanceTimersByTimeAsync(0);
+  f.input.enqueue(concat([packet(7), packet(8), packet(5), packet(1)]));
+  await vi.advanceTimersByTimeAsync(13000);
+  expect(f.decode).toHaveBeenCalledTimes(2);
+  expect(f.diagnose).not.toHaveBeenCalled();
+  expect(f.update).toHaveBeenLastCalledWith("video");
+  expect(f.body.locked).toBe(true);
+  expect(f.close).not.toHaveBeenCalled();
+  f.stop();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(f.signal().aborted).toBe(true);
+  expect(f.body.locked).toBe(false);
+  expect(f.close).toHaveBeenCalledOnce();
 });
 
 it.each(["connection", "startup", "keyframe", "first-frame"] as const)(
