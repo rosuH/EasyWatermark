@@ -3,6 +3,7 @@ import { ArrowLeft, FileText, Radio, RotateCcw, Square } from "lucide-react";
 import { post, useResource, useVisible } from "./api";
 import type {
   RunDetail,
+  RunTask,
   StatusResponse,
   StatusTask,
   Step,
@@ -33,6 +34,7 @@ export function DeviceLane({
   platform,
   watch,
   task,
+  taskDetail,
   runId,
   live,
   onFollowLive,
@@ -40,6 +42,7 @@ export function DeviceLane({
   platform: string;
   watch?: Watch;
   task?: StatusTask;
+  taskDetail?: RunTask;
   runId: string;
   live: boolean;
   onFollowLive?: () => void;
@@ -59,6 +62,10 @@ export function DeviceLane({
     setSelected(null);
     setVideoDiagnostic(null);
   }, [runId, taskId]);
+  const taskActive = !!task && ["running", "paused"].includes(task.state);
+  const deviceWalk = task?.id.endsWith("#agent");
+  const waiting = task?.state === "pending";
+  const awaitingStream = live && taskActive && !watch;
   const streaming =
     live &&
     visible &&
@@ -89,7 +96,7 @@ export function DeviceLane({
   }, [current?.n, taskId, live, selected]);
   const historical =
     selected ||
-    (!live
+    (!live || !taskActive
       ? [...(task?.steps || [])].reverse().find((s) => s.shot) ||
         task?.steps?.at(-1)
       : undefined);
@@ -107,7 +114,15 @@ export function DeviceLane({
           <small>
             {watch?.name ||
               watch?.device ||
-              t("No active device", "没有活动设备")}
+              taskDetail?.device?.name ||
+              taskDetail?.device?.id ||
+              (waiting
+                ? t("Waiting to run", "等待运行")
+                : awaitingStream
+                  ? deviceWalk
+                    ? t("Preparing device", "正在准备设备")
+                    : t("Running checks", "正在运行检查")
+                  : t("No active device", "没有活动设备"))}
           </small>
         </div>
         {streaming ? (
@@ -155,14 +170,37 @@ export function DeviceLane({
           />
         ) : (
           <Empty
-            title={t("No screenshot", "无截图")}
+            title={
+              !historical && waiting
+                ? t("Waiting to run", "等待运行")
+                : !historical && awaitingStream
+                  ? deviceWalk
+                    ? t("Preparing device", "正在准备设备")
+                    : t("Running checks", "正在运行检查")
+                  : t("No screenshot", "无截图")
+            }
             detail={
               historical?.shot_error ||
               task?.note ||
-              t(
-                "Captured evidence will appear here when it is available.",
-                "有截图证据时会在此显示。",
-              )
+              (!historical && waiting
+                ? t(
+                    "This task is queued and has not started.",
+                    "此任务已排队，尚未开始。",
+                  )
+                : !historical && awaitingStream
+                  ? deviceWalk
+                    ? t(
+                        "No live stream is available yet. See the latest log for current activity.",
+                        "实时画面尚未就绪，请查看最新日志了解当前活动。",
+                      )
+                    : t(
+                        "Checks may build or test before the device walk. Checks have no live stream; see the latest log for activity.",
+                        "设备操作前可能先构建或运行测试。检查任务没有实时画面，请查看最新日志。",
+                      )
+                  : t(
+                      "Captured evidence will appear here when it is available.",
+                      "有截图证据时会在此显示。",
+                    ))
             }
           />
         )}
@@ -389,6 +427,18 @@ export function RunView({
           />
         </div>
       </div>
+      {st?.active && (
+        <section
+          className="recent-activity"
+          aria-label={t("Latest activity", "最新活动")}
+        >
+          <strong>{t("Latest activity", "最新活动")}</strong>
+          <pre>
+            {st.log_tail?.slice(-6).join("\n") ||
+              t("No log output yet.", "尚无日志。")}
+          </pre>
+        </section>
+      )}
       <div className="execution-layout">
         <aside className="task-list panel">
           <div className="section-heading">
@@ -413,6 +463,12 @@ export function RunView({
                     ? title(catalog, "edges", task.edge_id, lang)
                     : task.label}
                 </strong>
+                <small>
+                  {task.id.endsWith("#agent")
+                    ? t("Device walk", "设备操作")
+                    : t("Checks", "检查")}{" "}
+                  · {task.label}
+                </small>
                 <span>
                   {task.platform || t("Host", "主机")} · {task.repeat?.k || 1}/
                   {task.repeat?.n || 1} · {duration(task.duration_s)}
@@ -439,6 +495,11 @@ export function RunView({
               platform={p}
               watch={st?.watches?.[p as keyof typeof st.watches]}
               task={getTask(p)}
+              taskDetail={evidence?.tasks.find(
+                (task) =>
+                  task.id === getTask(p)?.id &&
+                  (task.repeat?.k || 1) === (getTask(p)?.repeat?.k || 1),
+              )}
               runId={st?.id || ""}
               live={live}
               onFollowLive={() =>
