@@ -60,6 +60,8 @@ from testmap_artemis import (  # noqa: E402
     task_state_from_layers,
     verdict_layers,
 )
+from testmap_route import route_plan, materialize_route  # noqa: E402
+
 from testmap_agent_device import (  # noqa: E402
     agent_device_cases_by_id,
     agent_device_cmd,
@@ -512,7 +514,7 @@ def _record_task(tid: str, spec: dict) -> dict:
     platform = spec.get("agent_platform") or spec.get("needs_device") or ""
     return {
         "id": tid,
-        "edge": spec.get("edge_id") or task_edge_id(tid),
+        "edge": None if spec.get("route_segments") else spec.get("edge_id") or task_edge_id(tid),
         "platform": platform or "",
         "repeat": {"k": 1, "n": 1},
         "label": spec["label"],
@@ -537,6 +539,7 @@ def _record_task(tid: str, spec: dict) -> dict:
         "agent_device_output": spec.get("agent_device_output"),
         "agent_platform": spec.get("agent_platform"),
         "setup": spec.get("setup"),
+        **{key: spec[key] for key in ("route_segments", "route_script", "route_provenance", "route_session", "route_id", "route_script_sha256") if key in spec},
     }
 
 
@@ -599,7 +602,7 @@ def apply_device(spec: dict, device: dict) -> dict:
         assert_cmd_legal(spec["cmd"])
     elif builder == "agent-device":
         platform = spec.get("agent_platform") or spec.get("needs_device")
-        edge_id = spec.get("edge_id") or ""
+        edge_id = spec["route_segments"][0]["edge_id"] if spec.get("route_segments") else spec.get("edge_id") or ""
         output = Path(
             spec.get("agent_device_output")
             or (REPO_ROOT / "build" / "agent-device" / "pending" / edge_id)
@@ -626,6 +629,9 @@ def apply_device(spec: dict, device: dict) -> dict:
             raise ValueError(
                 f"Agent Device is android/ios only, got {platform}"
             )
+        if spec.get("route_script"):
+            spec["cmd"][spec["cmd"].index("replay") + 1] = spec["route_script"]
+            spec["cmd"][spec["cmd"].index("--session") + 1] = spec["route_session"]
         spec["env"] = env
         spec["agent_device_output"] = str(output)
         spec["udid"] = device["id"] if platform == "ios" else spec.get("udid")
@@ -910,6 +916,7 @@ def task_run_spec(task: dict) -> dict:
         "agent_device_output": task.get("agent_device_output"),
         "agent_platform": task.get("agent_platform"),
         "setup": task.get("setup"),
+        **{key: task[key] for key in ("route_segments", "route_script", "route_provenance", "route_session", "route_id", "route_script_sha256") if key in task},
     }
 
 
@@ -1797,6 +1804,9 @@ def _restore_agent_setup(state: dict | None, logf) -> None:
         return
     try:
         restore_setup(state)
+        if logf is not None:
+            logf.write("setup restore: verified\n")
+            logf.flush()
     except (ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
         if logf is not None:
             logf.write(f"setup restore failed: {exc}\n")
@@ -3709,6 +3719,15 @@ def run_task(
 ) -> tuple[int, list[dict], dict]:
     """Run one TASK_SPECS entry. Returns (exit_code, parsed cases, extra)."""
     spec = dict(spec)
+    if spec.get("route_segments"):
+        if os.environ.get("TESTMAP_AGENT_DEVICE_SKIP_SETUP") == "1" or os.environ.get("TESTMAP_AGENT_DEVICE_DRY") == "1":
+            raise ValueError("Continuous routes require real setup and restoration.")
+        plan = route_plan([segment["task_id"] for segment in spec["route_segments"]])
+        if not plan["supported"] or any(a["source_sha256"] != b["source_sha256"] for a, b in zip(plan["segments"], spec["route_segments"])):
+            raise ValueError(plan.get("reason") or "Route source identity changed.")
+        route_source = Path(spec["route_script"])
+        if hashlib.sha256(route_source.read_bytes()).hexdigest() != spec.get("route_script_sha256"):
+            raise ValueError("Derived route script identity changed.")
     if spec.get("needs_device"):
         try:
             chosen = ensure_device_ready(
@@ -3750,14 +3769,22 @@ def run_task(
                 raise
             return code, extra.get("cases") or [], extra
     if callable(should_stop) and should_stop():
-        _restore_agent_setup(setup_state, logf)
+        try:
+            _restore_agent_setup(setup_state, logf)
+        finally:
+            if spec.get("builder") == "agent-device":
+                release_agent_session(spec.get("cmd"), logf)
         return 130, [], {}
     since = time.time()
     cmd = list(spec.get("cmd") or [])
     if not cmd:
         logf.write("spawn failed: empty command\n")
         logf.flush()
-        _restore_agent_setup(setup_state, logf)
+        try:
+            _restore_agent_setup(setup_state, logf)
+        finally:
+            if spec.get("builder") == "agent-device":
+                release_agent_session(spec.get("cmd"), logf)
         return 127, [], {}
     watch_plat = _cmd_flag(cmd, "--platform") or str(spec.get("needs_device") or "")
     script = _script_from_cmd(cmd) if spec.get("builder") == "agent-device" else None
@@ -3765,6 +3792,9 @@ def run_task(
     if script and script.is_file():
         try:
             rows = parse_script(script, watch_plat)
+            if spec.get("route_provenance"):
+                for row, source_row in zip(rows, spec["route_provenance"]):
+                    row.update({key: source_row[key] for key in ("source_task_id", "source_step", "source_sha256")})
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             logf.write(f"step list skipped: {exc}\n")
         if rows and on_steps:
@@ -3807,7 +3837,10 @@ def run_task(
             evidence_manifest = materialize_evidence_script(script, root, derived, names)
         except (OSError, ValueError, KeyError) as exc:
             logf.write(f"step evidence preparation failed: {exc}\n")
-            _restore_agent_setup(setup_state, logf)
+            try:
+                _restore_agent_setup(setup_state, logf)
+            finally:
+                release_agent_session(spec.get("cmd"), logf)
             return 2, [], {}
         script_flag = "--steps-file" if script.suffix == ".json" else "replay"
         cmd[cmd.index(script_flag) + 1] = str(derived)
@@ -4100,6 +4133,7 @@ def project_status(rec: dict | None) -> dict:
             "duration_s": task.get("duration_s"),
             "note": task.get("note") or "",
             "steps": steps,
+            **({"route_segments": task["route_segments"]} if task.get("route_segments") else {}),
         }
         queue.append(row)
         if current is None and row["state"] in {"running", "paused"}:
@@ -4115,6 +4149,7 @@ def project_status(rec: dict | None) -> dict:
         "state": rec.get("state") or "idle",
         "id": rec.get("id"),
         "source": rec.get("source") or "manual",
+        "execution_mode": rec.get("execution_mode") or "independent",
         "pid": rec.get("pid"),
         "git": rec.get("git"),
         "packages": rec.get("packages") or {},
@@ -4297,7 +4332,14 @@ class RunManager:
         device: str | None = None,
         repeat: int = 1,
         source: str = "manual",
+        execution_mode: str = "independent",
     ) -> dict:
+        if not isinstance(execution_mode, str) or execution_mode not in {"independent", "route"}:
+            raise ValueError("execution_mode must be independent or route")
+        if execution_mode == "route":
+            plan = route_plan(task_ids, device or "auto")
+            if not plan["supported"]:
+                raise ValueError(plan["reason"])
         active = load_status_record()
         if active and active.get("state") in {"running", "paused"}:
             raise BusyError(str(active.get("id") or ""))
@@ -4313,7 +4355,7 @@ class RunManager:
         cmd = ["bash", str(REPO_ROOT / "scripts" / "e2e-run.sh")]
         if device:
             cmd.extend(["--device", device])
-        cmd.extend(["--source", origin, "--repeat", str(count)])
+        cmd.extend(["--source", origin, "--repeat", str(count), "--execution-mode", execution_mode])
         cmd.extend(task_ids)
         proc = subprocess.Popen(
             cmd,
@@ -4659,6 +4701,9 @@ def _step_public(row: dict, task: dict) -> dict:
         item["shot_error"] = row["shot_error"]
     if row.get("point"):
         item["point"] = row["point"]
+    for key in ("source_task_id", "source_step", "source_sha256"):
+        if key in row:
+            item[key] = row[key]
     return item
 
 
@@ -4891,6 +4936,10 @@ def _read_installed_packages(rec: dict, logf) -> str:
             reasons.append(f"{plat}: {exc}")
             continue
         packages[plat] = info
+        if rec.get("execution_mode") == "route":
+            for task in rec.get("tasks") or []:
+                if task.get("platform") == plat:
+                    task["device_request"] = str(chosen["id"])
         if info.get("version") != expected_name or info.get("version_code") != expected_code:
             reasons.append(
                 f"{plat} {info.get('package')} is {info.get('version')} "
@@ -4997,13 +5046,39 @@ def run_foreground(
     device: str | None = None,
     source: str = "manual",
     repeats: int = 1,
+    execution_mode: str = "independent",
 ) -> int:
     """Run tasks in this process. The record is on disk before the first case."""
     origin = source if source in {"manual", "select", "verify"} else "manual"
-    rec = new_record(expand_mobile_parallel(task_ids, device), device)
+    if not isinstance(execution_mode, str) or execution_mode not in {"independent", "route"}:
+        raise ValueError("execution_mode must be independent or route")
+    if execution_mode == "route" and (type(repeats) is not int or not 1 <= repeats <= 20):
+        raise ValueError("repeat must be from 1 to 20")
+    plan = route_plan(task_ids, device or "auto") if execution_mode == "route" else None
+    if plan is not None and not plan["supported"]:
+        raise ValueError(plan["reason"])
+    rec = new_record(task_ids if plan else expand_mobile_parallel(task_ids, device), device)
+    rec["execution_mode"] = execution_mode
     rec["source"] = origin
     rec["pid"] = os.getpid()
-    rec["tasks"] = _repeat_tasks(rec["tasks"], repeats)
+    if plan:
+        template = rec["tasks"][0]
+        route_tasks = []
+        for k in range(1, repeats + 1):
+            metadata = materialize_route(plan, RUNS_DIR / rec["id"], k)
+            task = {**template, **metadata, "id": f"route:{metadata['route_id']}@android#agent",
+                    "edge": None, "edge_id": metadata["route_id"],
+                    "runnable_refs": [f"AgentDevice.{metadata['route_id']}"], "skipped_refs": [],
+                    "label": "Continuous route: " + " → ".join(segment["edge_id"] for segment in plan["segments"]),
+                    "repeat": {"k": k, "n": repeats}, "setup": plan["setup"],
+                    "agent_device_output": str(RUNS_DIR / rec["id"] / "route-output" / f"r{k}"),
+                    "cmd": list(template["cmd"])}
+            task["cmd"][task["cmd"].index("replay") + 1] = metadata["route_script"]
+            task["cmd"][task["cmd"].index("--session") + 1] = metadata["route_session"]
+            route_tasks.append(task)
+        rec["tasks"] = route_tasks
+    else:
+        rec["tasks"] = _repeat_tasks(rec["tasks"], repeats)
     _isolate_agent_outputs(rec["tasks"])
     write_record(rec)
     print(f"testmap run {rec['id']}  (not a CI gate)", flush=True)
@@ -5432,6 +5507,7 @@ def main(argv: list[str] | None = None) -> int:
         nargs="*",
         help="Runnable task ids (see --list).",
     )
+    parser.add_argument("--execution-mode", choices=("independent", "route"), default="independent")
     args = parser.parse_args(argv)
     if args.self_check:
         errors = validate_all_console_cmds()
@@ -5454,7 +5530,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
     try:
-        return run_foreground(args.tasks, args.device, source=args.source, repeats=args.repeat)
+        return run_foreground(args.tasks, args.device, source=args.source, repeats=args.repeat, execution_mode=args.execution_mode)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

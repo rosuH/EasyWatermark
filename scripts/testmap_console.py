@@ -45,6 +45,7 @@ from testmap_artemis import (  # noqa: E402
     sandbox_artemis_file,
 )
 from testmap_run import (  # noqa: E402
+    route_plan,
     step_shot_path,
     DEFAULT_PORT,
     HOST,
@@ -514,6 +515,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": str(exc)})
             return
         try:
+            if path == "/api/route-plan":
+                self._json(200, route_plan(body.get("tasks"), body.get("device") or "auto"))
+                return
             if path == "/api/run":
                 tasks = body.get("tasks") or body.get("selection") or []
                 if not isinstance(tasks, list) or not all(isinstance(t, str) for t in tasks):
@@ -527,7 +531,10 @@ class Handler(BaseHTTPRequestHandler):
                 source = body.get("source") or "manual"
                 if not isinstance(source, str):
                     raise ValueError("source must be a string")
-                result = MANAGER.start(tasks, device, repeat=repeat, source=source)
+                execution_mode = body.get("execution_mode", "independent")
+                if not isinstance(execution_mode, str) or execution_mode not in {"independent", "route"}:
+                    raise ValueError("execution_mode must be independent or route")
+                result = MANAGER.start(tasks, device, repeat=repeat, source=source, execution_mode=execution_mode)
                 self._json(202, result)
                 return
             if path == "/api/stop":

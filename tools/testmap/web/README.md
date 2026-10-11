@@ -31,6 +31,14 @@ pnpm check:dist
 
 The small graph uses a stable four-column layout based on server ordering, with an id fallback for unknown nodes. Large or dense catalogs may need a dedicated graph-layout engine. Filter selection never changes the existing run draft.
 
+## Continuous routes
+
+Run settings keeps **Independent cases** as the default. Select **Continuous route** to execute compatible Device walk fragments on one device in selection order. The plan preview shows the order and rejects Checks, mixed platforms and unsupported or incompatible fragments before starting. Reorder the selected fragments in the preview when needed.
+
+Start with Android **Edit watermark text** followed by **Change typeface / fill-stroke in Style**. The route prepares the editor once, keeps the same SDK session across both fragments and restores the saved state at the end. A failed or stopped route still restores its state. A route result is its own evidence; it does not mark either independent case as passed or provide Human Confirm.
+
+The initial supported fragments are deliberately bounded. Template CRUD, export-file verification, cancellation and recovery keep their existing isolated executors. They must not be concatenated by stripping setup and cleanup. See [ADR-0038](../../../docs/adr/0038-testmap-continuous-routes.md).
+
 ## Files and contracts
 
 - `src/api-types.ts`, `model.ts`, `api.ts`: API shapes, shared selection rules, abortable polling.

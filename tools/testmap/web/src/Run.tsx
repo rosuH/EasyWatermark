@@ -286,6 +286,12 @@ export function DeviceLane({
               <span className="step-number">{step.n}</span>
               <span>
                 <strong>{step.text || `${step.command} ${step.args}`}</strong>
+                {step.source_task_id && (
+                  <small>
+                    {step.source_task_id} · {t("Source step", "来源步骤")}{" "}
+                    {step.source_step}
+                  </small>
+                )}
                 <small>
                   {step.command} {step.args}
                   {step.duration_ms != null ? ` · ${step.duration_ms} ms` : ""}
@@ -464,11 +470,22 @@ export function RunView({
                     : task.label}
                 </strong>
                 <small>
-                  {task.id.endsWith("#agent")
-                    ? t("Device walk", "设备操作")
-                    : t("Checks", "检查")}{" "}
+                  {task.id.startsWith("route:")
+                    ? t("Continuous route", "连续路线")
+                    : task.id.endsWith("#agent")
+                      ? t("Device walk", "设备操作")
+                      : t("Checks", "检查")}{" "}
                   · {task.label}
                 </small>
+                {!!task.route_segments?.length && (
+                  <small>
+                    {task.route_segments
+                      .map((segment) =>
+                        title(catalog, "edges", segment.edge_id, lang),
+                      )
+                      .join(" → ")}
+                  </small>
+                )}
                 <span>
                   {task.platform || t("Host", "主机")} · {task.repeat?.k || 1}/
                   {task.repeat?.n || 1} · {duration(task.duration_s)}
