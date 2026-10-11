@@ -74,7 +74,7 @@ After a product change: [`eval/README.md`](../eval/README.md) (select → script
 
 Pre-merge / pre-ship: skill `e2e-testmap` Mode B. Fill `docs/testmap/runs/<ts>-<sha>-verify.md` (gitignored) covering **stability** (script red/green + Agent Device N-repeat), **UI** (frames vs expected + human Confirm), and **performance** only when select suggested L3 (numbers do not own pass/fail). This is not a GitHub required check. Agents must not mint Confirm and must not recommend merge without that report.
 
-The local testmap console keeps project data in `docs/testmap/` and the self-contained web client in `tools/testmap/web/`. The existing Python CLI owns execution and run records; the UI reads the catalog and runtime APIs. Run completion, script checks, independent review, and human confirmation are separate claims. Historical evidence stays attached to its run and package identity. The canonical operating skill is `skills/e2e-testmap/SKILL.md`, with linked discovery entries for agents.
+The local testmap console keeps project data in `docs/testmap/` and the self-contained web client in `tools/testmap/web/`. The existing Python CLI owns execution and run records; the UI reads the catalog and runtime APIs. Run completion, script checks, independent review, and human confirmation are separate claims. Historical evidence stays attached to its run and package identity. The canonical operating skill is `skills/e2e-testmap/SKILL.md`, with linked discovery entries for agents. Continuous routes (ADR-0038) join only validated compatible device steps in one setup/session/restoration; route execution does not replace independent-case or Human Confirm evidence.
 
 ## User flows
 

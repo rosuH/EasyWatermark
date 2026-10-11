@@ -3,6 +3,23 @@
 // Platform ids are supplied by the catalog; this client does not own that list.
 
 export type Platform = string;
+export type ExecutionMode = "independent" | "route";
+export interface RouteSegment {
+  task_id: string;
+  edge_id: string;
+  source: string;
+  source_sha256: string;
+  entry: string;
+  exit: string;
+  steps: number;
+}
+export interface RoutePlan {
+  supported: boolean;
+  reason?: string;
+  platform?: string;
+  setup?: string;
+  segments: RouteSegment[];
+}
 export type Drive = "real" | "seam" | "none";
 export type Priority = "core" | "normal" | "edge";
 export type Layer = "L0" | "L1" | "L2" | "L3";
@@ -91,6 +108,9 @@ export interface MapResponse {
 // ---------- run records ----------
 export interface Step {
   n: number;
+  source_task_id?: string;
+  source_step?: number;
+  source_sha256?: string;
   text: string;
   command: string;
   args: string;
@@ -136,6 +156,7 @@ export interface EvidenceLink {
   href: string;
 }
 export interface RunTask {
+  route_segments?: RouteSegment[];
   id: string; // e.g. edge:<edge>@android#agent | l1-desktop
   label: string;
   edge?: string;
@@ -180,6 +201,7 @@ export interface PackageInfo {
   artifact: string;
 }
 export interface RunRecord {
+  execution_mode?: ExecutionMode;
   id: string; // YYYYMMDDTHHMMSS-<sha8>
   started: string;
   finished: string | null;
@@ -249,6 +271,7 @@ export interface Watch {
   kind: DeviceKind;
 }
 export interface StatusTask {
+  route_segments?: RouteSegment[];
   id: string;
   edge: string | null;
   edge_id: string | null;
@@ -353,6 +376,7 @@ export interface ArtemisHistoryResponse {
 
 // ---------- writes (page-only) ----------
 export interface RunRequest {
+  execution_mode?: ExecutionMode;
   tasks: string[];
   device?: string;
   repeat?: number;

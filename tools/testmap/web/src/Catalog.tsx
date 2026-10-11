@@ -176,6 +176,7 @@ export function CatalogView({
   catalog,
   map,
   draft,
+  routeMode = false,
   toggle,
   refresh,
   openRun,
@@ -183,6 +184,7 @@ export function CatalogView({
   catalog: CatalogData;
   map: MapResponse;
   draft: string[];
+  routeMode?: boolean;
   toggle: (id: string) => void;
   refresh: () => void;
   openRun: (id: string) => void;
@@ -547,7 +549,7 @@ export function CatalogView({
                     <label>
                       <input
                         type="checkbox"
-                        disabled={!plan?.runnable_count}
+                        disabled={routeMode || !plan?.runnable_count}
                         checked={draft.includes(taskId)}
                         onChange={() => toggle(taskId)}
                       />

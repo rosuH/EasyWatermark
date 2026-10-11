@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
   GitBranch,
   History,
   ListChecks,
@@ -10,9 +12,11 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { post, useResource } from "./api";
+import { api, post, useResource } from "./api";
 import type {
   DevicesResponse,
+  ExecutionMode,
+  RoutePlan,
   MapResponse,
   RunsResponse,
   RunStarted,
@@ -44,10 +48,63 @@ function Workspace() {
     );
   const [draft, setDraft] = useState<string[]>([]),
     [settings, setSettings] = useState(false),
+    [executionMode, setExecutionMode] = useState<ExecutionMode>("independent"),
+    [routePreview, setRoutePreview] = useState<{
+      key: string;
+      plan?: RoutePlan;
+      error?: string;
+    }>(),
     [device, setDevice] = useState("auto"),
     [repeat, setRepeat] = useState(1),
     [starting, setStarting] = useState(false),
     [error, setError] = useState("");
+  const routeKey = JSON.stringify([draft, device]);
+  const routePlan =
+    routePreview?.key === routeKey ? routePreview.plan : undefined;
+  const routeError =
+    routePreview?.key === routeKey ? routePreview.error : undefined;
+  const allDevices = Object.values(devices.data || {}).flat();
+  const routeDeviceMismatch =
+    executionMode === "route" &&
+    routePlan?.platform &&
+    allDevices.some(
+      (candidate) =>
+        candidate.id === device && candidate.platform !== routePlan.platform,
+    );
+  const canStart =
+    !!draft.length &&
+    !starting &&
+    (executionMode === "independent" ||
+      (routePlan?.supported === true && !routeDeviceMismatch));
+  useEffect(() => {
+    if (executionMode !== "route") return;
+    const controller = new AbortController();
+    setRoutePreview(undefined);
+    void api<RoutePlan>("/api/route-plan", {
+      method: "POST",
+      body: JSON.stringify({ tasks: draft, device }),
+      signal: controller.signal,
+    }).then(
+      (plan) => {
+        if (!controller.signal.aborted)
+          setRoutePreview({ key: routeKey, plan });
+      },
+      (error) => {
+        if (!controller.signal.aborted)
+          setRoutePreview({ key: routeKey, error: humanError(error, lang) });
+      },
+    );
+    return () => controller.abort();
+  }, [executionMode, routeKey, lang]);
+  const move = (index: number, direction: number) =>
+    setDraft((old) => {
+      const next = [...old];
+      [next[index], next[index + direction]] = [
+        next[index + direction],
+        next[index],
+      ];
+      return next;
+    });
   const refresh = () => setRevision((r) => r + 1);
   const toggle = (id: string) =>
     setDraft((old) =>
@@ -57,7 +114,6 @@ function Workspace() {
     setRunId(id);
     setView("run");
   };
-  const allDevices = Object.values(devices.data || {}).flat();
   const allPlatforms = [
     ...new Set(
       catalog.data?.edges.flatMap((e) => Object.keys(e.platforms)) || [],
@@ -77,6 +133,7 @@ function Workspace() {
         device,
         repeat,
         source: "manual",
+        execution_mode: executionMode,
       });
       setRunId(null);
       setView("run");
@@ -199,6 +256,7 @@ function Workspace() {
             catalog={catalog.data}
             map={map.data}
             draft={draft}
+            routeMode={executionMode === "route"}
             toggle={toggle}
             refresh={refresh}
             openRun={openRun}
@@ -304,7 +362,10 @@ function Workspace() {
             {draft.length} {t("selected tasks", "个已选任务")}
           </strong>
           <span>
-            {repeat}× ·{" "}
+            {executionMode === "route"
+              ? t("Continuous route", "连续路线")
+              : t("Independent cases", "独立用例")}{" "}
+            · {repeat}× ·{" "}
             {device === "auto"
               ? t("Automatic devices", "自动选择设备")
               : device}
@@ -320,7 +381,7 @@ function Workspace() {
           </Button>
           <Button
             variant="default"
-            disabled={!draft.length || starting}
+            disabled={!canStart}
             onClick={() => void start()}
           >
             <Play size={14} />
@@ -363,6 +424,22 @@ function Workspace() {
               </Button>
             </div>
             <div className="settings-content">
+              <label className="execution-mode">
+                {t("Execution mode", "执行方式")}
+                <select
+                  value={executionMode}
+                  onChange={(e) =>
+                    setExecutionMode(e.target.value as ExecutionMode)
+                  }
+                >
+                  <option value="independent">
+                    {t("Independent cases", "独立用例")}
+                  </option>
+                  <option value="route">
+                    {t("Continuous route", "连续路线")}
+                  </option>
+                </select>
+              </label>
               <div className="settings-controls">
                 <label>
                   {t("Device", "设备")}
@@ -372,8 +449,12 @@ function Workspace() {
                   >
                     <option value="auto">
                       {t(
-                        "Auto — available platforms in parallel",
-                        "自动：可用平台并行",
+                        executionMode === "route"
+                          ? "Auto — one device for the route"
+                          : "Auto — available platforms in parallel",
+                        executionMode === "route"
+                          ? "自动：整条路线使用同一设备"
+                          : "自动：可用平台并行",
                       )}
                     </option>
                     {allDevices
@@ -386,7 +467,9 @@ function Workspace() {
                   </select>
                 </label>
                 <label>
-                  {t("Repeat", "重复")}
+                  {executionMode === "route"
+                    ? t("Route repeats", "路线重复次数")
+                    : t("Repeat", "重复")}
                   <input
                     type="number"
                     min={1}
@@ -406,27 +489,102 @@ function Workspace() {
               </div>
               {devices.error && <ErrorNotice>{devices.error}</ErrorNotice>}
               <p className="notice">
-                {t(
-                  "With automatic devices, a device walk also runs on the other supported mobile platform. A pinned device limits the run to that device’s platform. The execution queue shows the actual expanded tasks.",
-                  "自动选择设备时，设备回放也会在另一个受支持的移动平台运行。指定设备后，仅运行其平台。执行队列会显示服务端实际展开的任务。",
-                )}
+                {executionMode === "route"
+                  ? t(
+                      "First version: seven audited Android paths. Try text editing → typeface/style; typeface/style must be last. Prepare once on one device, then restore once. Checks stay independent.",
+                      "首版支持七条已审计的 Android 路径。可选“编辑文字 → 字体与样式”；字体与样式必须放在最后。同一设备准备一次，结束后统一恢复。检查使用独立用例模式。",
+                    )
+                  : t(
+                      "With automatic devices, a device walk also runs on the other supported mobile platform. A pinned device limits the run to that device’s platform. The execution queue shows the actual expanded tasks.",
+                      "自动选择设备时，设备回放也会在另一个受支持的移动平台运行。指定设备后，仅运行其平台。执行队列会显示服务端实际展开的任务。",
+                    )}
               </p>
-              <h3>{t("Selected tasks", "已选任务")}</h3>
+              {executionMode === "route" && (
+                <div
+                  aria-label={t("Route validation", "路线验证")}
+                  aria-live="polite"
+                >
+                  {routeDeviceMismatch && (
+                    <ErrorNotice>
+                      {t(
+                        "The selected device does not match this route. Choose an Android device or Auto.",
+                        "所选设备与路线平台不符。请选择 Android 设备或自动选择。",
+                      )}
+                    </ErrorNotice>
+                  )}
+                  {routeError || routePlan?.reason ? (
+                    <ErrorNotice>{routeError || routePlan?.reason}</ErrorNotice>
+                  ) : (
+                    <p className="muted">
+                      {routePlan?.supported
+                        ? t("Route ready", "路线可运行")
+                        : t(
+                            "Checking route compatibility…",
+                            "正在检查路线是否兼容…",
+                          )}
+                    </p>
+                  )}
+                  {routePlan?.supported && (
+                    <p className="muted">
+                      {routePlan.platform} · {routePlan.setup}
+                    </p>
+                  )}
+                  {!!routePlan?.segments?.length && (
+                    <ol>
+                      {routePlan.segments.map((segment) => (
+                        <li key={segment.task_id}>
+                          {title(catalog.data!, "edges", segment.edge_id, lang)}{" "}
+                          · {segment.entry} → {segment.exit} · {segment.steps}{" "}
+                          {t("steps", "步")}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              )}
+              <h3>
+                {executionMode === "route"
+                  ? t("Route order", "路线顺序")
+                  : t("Selected tasks", "已选任务")}
+              </h3>
               {draft.length ? (
                 <div className="draft-list">
-                  {draft.map((id) => (
+                  {draft.map((id, index) => (
                     <div className="row between" key={id}>
                       <span>
+                        {executionMode === "route" ? `${index + 1}. ` : ""}
                         {label(id)}
                         <code>{id}</code>
                       </span>
-                      <Button
-                        size="icon"
-                        aria-label={`${t("Remove", "移除")} ${label(id)}`}
-                        onClick={() => toggle(id)}
-                      >
-                        <X size={14} />
-                      </Button>
+                      <div className="row">
+                        {executionMode === "route" && (
+                          <>
+                            <Button
+                              size="icon"
+                              aria-label={`${t("Move up", "上移")} ${label(id)}`}
+                              disabled={index === 0}
+                              onClick={() => move(index, -1)}
+                            >
+                              <ArrowUp size={14} />
+                            </Button>
+                            <Button
+                              size="icon"
+                              aria-label={`${t("Move down", "下移")} ${label(id)}`}
+                              disabled={index === draft.length - 1}
+                              onClick={() => move(index, 1)}
+                            >
+                              <ArrowDown size={14} />
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          size="icon"
+                          aria-label={`${t("Remove", "移除")} ${label(id)}`}
+                          onClick={() => toggle(id)}
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -449,6 +607,7 @@ function Workspace() {
                     <label>
                       <input
                         type="checkbox"
+                        disabled={executionMode === "route"}
                         checked={draft.includes(task.id)}
                         onChange={() => toggle(task.id)}
                       />
@@ -489,7 +648,7 @@ function Workspace() {
               </Button>
               <Button
                 variant="default"
-                disabled={!draft.length || starting}
+                disabled={!canStart}
                 onClick={() => void start()}
               >
                 <Play size={14} />

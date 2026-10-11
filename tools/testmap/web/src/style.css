@@ -778,6 +778,13 @@ dd {
   padding: 20px 24px;
   overflow: auto;
 }
+.execution-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
 .settings-controls {
   display: flex;
   align-items: end;
