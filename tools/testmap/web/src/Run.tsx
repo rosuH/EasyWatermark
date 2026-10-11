@@ -194,8 +194,8 @@ export function DeviceLane({
                         "实时画面尚未就绪，请查看最新日志了解当前活动。",
                       )
                     : t(
-                        "Checks may build or test before the device walk. Checks have no live stream; see the latest log for activity.",
-                        "设备操作前可能先构建或运行测试。检查任务没有实时画面，请查看最新日志。",
+                        "Checks may build or test before the device walk. See the latest log while the device frame is unavailable.",
+                        "设备操作前可能先构建或运行测试。设备画面尚未就绪时，请查看最新日志。",
                       )
                   : t(
                       "Captured evidence will appear here when it is available.",
