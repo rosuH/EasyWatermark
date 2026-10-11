@@ -883,6 +883,23 @@ dd {
   height: 100%;
   transform-origin: left;
 }
+.recent-activity {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #0b111a;
+  color: #aab9cd;
+  font-size: 11px;
+}
+.recent-activity pre {
+  margin: 8px 0 0;
+  max-height: 10em;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
 .execution-layout {
   display: grid;
   grid-template-columns: 245px minmax(0, 1fr);

@@ -263,6 +263,152 @@ it("keeps clicked historical evidence pinned when live steps advance", async () 
   expect(fetchMock.mock.calls).toHaveLength(0);
   expect(screen.getByText("Screenshot timing unverified")).toBeTruthy();
 });
+it("explains checks without streams and shows completed lane evidence while another lane runs", async () => {
+  vi.useFakeTimers();
+  const media = vi.spyOn(mediaModule, "watchMedia").mockReturnValue(vi.fn());
+  const task = (
+    platform: StatusTask["platform"],
+    suffix: string,
+    state: StatusTask["state"],
+    label: string,
+  ): StatusTask => ({
+    id: `edge:pick@${platform}${suffix}`,
+    platform,
+    label,
+    state,
+    steps: [],
+    edge: null,
+    edge_id: null,
+    repeat: { k: 1, n: 1 },
+    exit_code: null,
+    duration_s: null,
+    note: "",
+  });
+  let queue = [
+    task("android", "#l2", "running", "pick (2 android device cases)"),
+    task("android", "#agent", "pending", "pick Android script"),
+    { ...task("ios", "", "passed", "pick (19 ios host cases)"), platform: "" },
+    task("ios", "#l2", "running", "pick (16 ios device cases)"),
+    task("ios", "#agent", "pending", "pick iOS script"),
+    {
+      ...task("desktop", "", "running", "pick (19 desktop host cases)"),
+      platform: "",
+    },
+  ] as StatusTask[];
+  const log = [
+    "old line",
+    "older line",
+    "Starting checks",
+    "Preparing test runner",
+    "> Task :app:connectedDebugAndroidTest",
+    "Waiting for test results",
+    "iOS tests running",
+    "Desktop checks running",
+  ];
+  fetchMock.mockImplementation(async (path: string) => {
+    if (path === "/api/status")
+      return new Response(
+        JSON.stringify({
+          id: "mixed-run",
+          active: true,
+          state: "running",
+          progress: { done: 1, total: 6 },
+          watches: {},
+          queue,
+          log_tail: log,
+        }),
+      );
+    if (path === "/api/runs/mixed-run")
+      return new Response(
+        JSON.stringify({
+          ...record,
+          id: "mixed-run",
+          tasks: queue.map((row) => ({
+            ...row,
+            device: row.id.endsWith("#l2")
+              ? { id: "assigned-device", name: `${row.platform} QA device` }
+              : undefined,
+          })),
+        }),
+      );
+    throw new Error(`Unexpected mock request ${path}`);
+  });
+  await act(async () => {
+    render(
+      <RunView
+        runId={null}
+        platforms={["android", "ios"]}
+        catalog={{} as Catalog}
+        onCurrent={vi.fn()}
+      />,
+    );
+  });
+  const android = within(
+    screen.getByRole("region", { name: "android device" }),
+  );
+  const ios = within(screen.getByRole("region", { name: "ios device" }));
+  expect(android.getByText("Running checks")).toBeTruthy();
+  expect(android.getByText("android QA device")).toBeTruthy();
+  expect(android.getByText(/Checks may build or test/)).toBeTruthy();
+  expect(android.queryByText("No active device")).toBeNull();
+  const activity = screen.getByRole("region", { name: "Latest activity" });
+  expect(activity.textContent).toContain(
+    "> Task :app:connectedDebugAndroidTest",
+  );
+  expect(activity.textContent).not.toContain("old line");
+  expect(activity.querySelector("details")).toBeNull();
+  expect(
+    screen.getByRole("button", { name: /Checks.*19 ios host cases/ }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: /Checks.*19 desktop host cases/ }),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: /Device walk.*pick iOS script/ }),
+  );
+  expect(
+    ios.getByText("This task is queued and has not started."),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: /Checks.*16 ios device cases/ }),
+  );
+  const shot = {
+    n: 1,
+    text: "Saved Android step",
+    state: "done",
+    command: "press",
+    args: "",
+    platform: "android",
+    shot: "android-proof.png",
+  };
+  queue = queue.map((row) =>
+    row.id.endsWith("android#l2")
+      ? { ...row, state: "failed", note: "UnsupportedOperationException" }
+      : row.id.endsWith("android#agent")
+        ? { ...row, state: "running", steps: [shot] }
+        : row,
+  ) as StatusTask[];
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(android.getByText(/No live stream is available yet/)).toBeTruthy();
+  expect(android.queryByRole("img")).toBeNull();
+  queue = queue.map((row) =>
+    row.id.endsWith("android#agent")
+      ? { ...row, state: "review_required" }
+      : row,
+  ) as StatusTask[];
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(android.getByRole("img").getAttribute("src")).toBe(
+    "/api/runs/mixed-run/steps/android-proof.png",
+  );
+  expect(ios.getByText("Running checks")).toBeTruthy();
+  expect(screen.getByText("UnsupportedOperationException")).toBeTruthy();
+  expect(screen.getByText("1 / 6 tasks complete")).toBeTruthy();
+  expect(media).not.toHaveBeenCalled();
+});
 it("Follow live leaves a completed repeat and resumes only that platform's active task", async () => {
   const media = vi.spyOn(mediaModule, "watchMedia").mockReturnValue(vi.fn());
   const completed = (platform: string) => ({
