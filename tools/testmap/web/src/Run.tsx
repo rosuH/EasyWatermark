@@ -63,7 +63,10 @@ export function DeviceLane({
     setVideoDiagnostic(null);
   }, [runId, taskId]);
   const taskActive = !!task && ["running", "paused"].includes(task.state);
-  const deviceWalk = task?.id.endsWith("#agent");
+  const deviceWalk =
+    task?.builder === "e2e-runner" ||
+    task?.id === "android-ai-journey" ||
+    task?.id.endsWith("#agent");
   const waiting = task?.state === "pending";
   const awaitingStream = live && taskActive && !watch;
   const streaming =
@@ -472,9 +475,12 @@ export function RunView({
                 <small>
                   {task.id.startsWith("route:")
                     ? t("Continuous route", "连续路线")
-                    : task.id.endsWith("#agent")
-                      ? t("Device walk", "设备操作")
-                      : t("Checks", "检查")}{" "}
+                    : task.builder === "e2e-runner" ||
+                        task.id === "android-ai-journey"
+                      ? t("End-to-end device flow", "端到端设备流程")
+                      : task.id.endsWith("#agent")
+                        ? t("Device walk", "设备操作")
+                        : t("Checks", "检查")}{" "}
                   · {task.label}
                 </small>
                 {!!task.route_segments?.length && (

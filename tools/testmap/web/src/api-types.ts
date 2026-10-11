@@ -272,6 +272,8 @@ export interface Watch {
 }
 export interface StatusTask {
   route_segments?: RouteSegment[];
+  builder?: string;
+  needs_device?: string | null;
   id: string;
   edge: string | null;
   edge_id: string | null;
@@ -317,6 +319,7 @@ export interface StatusResponse {
 export interface TasksResponse {
   runnable: {
     id: string;
+    builder?: string;
     label: string;
     cmd: string[];
     heavy: boolean;

@@ -48,6 +48,7 @@ from testmap_stop import CLEANUP_CMD_TIMEOUT_S, RESTORE_BUDGET_S, terminate_proc
 
 _CLEANUP_DEADLINE = contextvars.ContextVar("setup_cleanup_deadline", default=None)
 _SETUP_STOP = contextvars.ContextVar("setup_stop", default=None)
+_ANDROID_AI_JOURNEY_RESTORE_BUDGET_S = 15
 
 MAP_PATH = REPO_ROOT / "docs" / "testmap" / "map.yaml"
 ANDROID_PACKAGE = "me.rosuh.easywatermark.debug"
@@ -198,31 +199,38 @@ def _band_row(width, y, height, top, mid, bottom, band=56):
     return bytes(rgb) * width
 
 
-def make_fixtures(folder: Path, marker: str) -> dict[str, Path]:
-    """Stdlib A/B/icon PNGs. A = blue/yellow, B = purple/green, icon = red."""
+def make_fixtures(folder: Path, marker: str, *, keys: tuple[str, ...] | None = None) -> dict[str, Path]:
+    """Generate the standard fixture set, or a bounded subset for a focused journey."""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
+    requested = ("A", "B", "C", "icon") if keys is None else tuple(keys)
+    if len(requested) != len(set(requested)) or not set(requested).issubset({"A", "B", "C", "icon"}):
+        raise ValueError("Unsupported fixture subset")
     width, height = (2400, 2400) if str(marker).startswith("exportcancel") else PNG_SIZE
-    paths = {key: folder / f"ewm-suite-{marker}-{key}.png" for key in ("A", "B", "C", "icon")}
-    write_png(
-        paths["A"],
-        width,
-        height,
-        lambda y: _band_row(width, y, height, (25, 77, 128), (255, 255, 255), (232, 183, 70)),
-    )
-    write_png(
-        paths["B"],
-        width,
-        height,
-        lambda y: _band_row(width, y, height, (119, 51, 153), (255, 255, 255), (34, 136, 102)),
-    )
-    write_png(
-        paths["C"],
-        width,
-        height,
-        lambda y: _band_row(width, y, height, (16, 122, 109), (255, 255, 255), (214, 90, 36)),
-    )
-    write_png(paths["icon"], 128, 128, lambda y: bytes((223, 48, 48)) * 128)
+    paths = {key: folder / f"ewm-suite-{marker}-{key}.png" for key in requested}
+    if "A" in paths:
+        write_png(
+            paths["A"],
+            width,
+            height,
+            lambda y: _band_row(width, y, height, (25, 77, 128), (255, 255, 255), (232, 183, 70)),
+        )
+    if "B" in paths:
+        write_png(
+            paths["B"],
+            width,
+            height,
+            lambda y: _band_row(width, y, height, (119, 51, 153), (255, 255, 255), (34, 136, 102)),
+        )
+    if "C" in paths:
+        write_png(
+            paths["C"],
+            width,
+            height,
+            lambda y: _band_row(width, y, height, (16, 122, 109), (255, 255, 255), (214, 90, 36)),
+        )
+    if "icon" in paths:
+        write_png(paths["icon"], 128, 128, lambda y: bytes((223, 48, 48)) * 128)
     return paths
 
 
@@ -1048,15 +1056,37 @@ def _validate_setup(state: dict) -> None:
         raise ValueError("Invalid backup platform/device identity")
     if state.get("setup") not in (ANDROID_SETUPS if platform == "android" else IOS_SETUPS):
         raise ValueError("Invalid backup setup")
+    marker_value = state.get("marker")
+    journey_scope = (
+        platform == "android"
+        and state.get("setup") == "home"
+        and isinstance(marker_value, str)
+        and re.fullmatch(r"e2ejourney-[a-f0-9]{32}", marker_value)
+    )
+    journey_run_id = state.get("android_ai_journey_run_id")
+    if journey_run_id is not None and (
+            not journey_scope or not isinstance(journey_run_id, str)
+            or not re.fullmatch(EXPORT_RUN_ID, journey_run_id)):
+        raise ValueError("Invalid Android AI journey identity")
+    if ("journey_control_files_cleared" in state
+            and type(state["journey_control_files_cleared"]) is not bool):
+        raise ValueError("Invalid Android AI journey control-file clearing proof")
+    if (journey_run_id is not None and state.get("phase") == "active"
+            and state.get("journey_control_files_cleared") is not True):
+        raise ValueError("Android AI journey control files were not verified clear")
     control = state.get("export_control")
-    if control is not None and (state["setup"] != "editor"
-            or not isinstance(control, dict) or control.get("mode") not in ({"hold-next", "observe-next"} if platform == "android" else {"hold-next", "fail-next"})
+    if control is not None and (
+            state["setup"] != "editor"
+            or not isinstance(control, dict)
+            or control.get("mode") not in ({"hold-next", "observe-next"} if platform == "android" else {"hold-next", "fail-next"})
             or not isinstance(control.get("run_id"), str)
             or not re.fullmatch(EXPORT_RUN_ID, control["run_id"])):
         raise ValueError("Invalid export control recovery scope")
     output = state.get("export_output")
     if output is not None:
-        if (platform != "android" or not control or control.get("mode") != "observe-next"
+        journey_output = journey_run_id is not None
+        observed_output = bool(control and control.get("mode") == "observe-next")
+        if (platform != "android" or not (journey_output or observed_output)
                 or not isinstance(output, dict) or set(output) != {"uri", "fields", "sha256", "cleanup"}
                 or output.get("cleanup") not in {"claimed", "verified_deleted"}
                 or not re.fullmatch(r"content://media/(external|external_primary)/images/media/[1-9][0-9]*", str(output.get("uri", "")))
@@ -1068,20 +1098,24 @@ def _validate_setup(state: dict) -> None:
                 or output["fields"].get("relative_path") != "Pictures/EasyWaterMark/"
                 or output["fields"].get("mime_type") != "image/png" or output["fields"].get("is_pending") != "0"):
             raise ValueError("Invalid owned export output recovery scope")
-    allowed = set(ANDROID_CONFIG + (CRASH_PREF, CRASH_PREF + ".bak") + (EXPORT_CONTROL_PATHS if control else ())) if platform == "android" else set(IOS_CONFIG + (IOS_EXPORT_PATHS if control else ()))
+    protected_export_controls = bool(control or journey_scope)
+    allowed = set(ANDROID_CONFIG + (CRASH_PREF, CRASH_PREF + ".bak") + (EXPORT_CONTROL_PATHS if protected_export_controls else ())) if platform == "android" else set(IOS_CONFIG + (IOS_EXPORT_PATHS if control else ()))
     private = state.get("private_backup")
     if not isinstance(private, dict) or not set(private).issubset(allowed):
         raise ValueError("Backup contains unsupported private paths")
     expected = set(ANDROID_CONFIG if platform == "android" else IOS_CONFIG)
     if platform == "android" and state["setup"] == "crash":
         expected.update((CRASH_PREF, CRASH_PREF + ".bak"))
-    if control:
+    if protected_export_controls:
         expected.update(EXPORT_CONTROL_PATHS if platform == "android" else IOS_EXPORT_PATHS)
     if not isinstance(state.get("mutated"), bool) or (state["mutated"] and set(private) != expected):
         raise ValueError("Backup is missing preferences required for recovery")
     journal = Path(str(state.get("journal") or ""))
     if not journal.is_absolute() or not re.fullmatch(r"setup-backup-[a-f0-9]{32}\.json", journal.name):
         raise ValueError("Invalid backup journal path")
+    if journey_run_id is not None and (
+            journal.parent.name != "e2e-setup" or journal.parent.parent.name != journey_run_id):
+        raise ValueError("Android AI journey journal is outside its exact Testmap run")
     if state.get("lock") != str(_setup_lock_path(platform, identity)):
         raise ValueError("Backup lock is not this repository's lock for this device")
     marker = state.get("marker") or ""
@@ -1090,6 +1124,12 @@ def _validate_setup(state: dict) -> None:
     fixtures = state.get("fixtures")
     if not isinstance(fixtures, dict) or not set(fixtures).issubset({"A", "B", "C", "icon"}):
         raise ValueError("Invalid backup fixtures")
+    journey_ids = state.get("journey_output_ids_before")
+    if journey_ids is not None and (
+            not journey_scope or not isinstance(journey_ids, list) or len(journey_ids) > 128
+            or any(not isinstance(value, str) or not re.fullmatch(r"[1-9][0-9]*", value) for value in journey_ids)
+            or len(set(journey_ids)) != len(journey_ids)):
+        raise ValueError("Invalid Android AI journey export baseline")
     for key, value in fixtures.items():
         path = Path(value).resolve()
         if path.parent != journal.parent or path.name != f"ewm-suite-{marker}-{key}.png":
@@ -1121,12 +1161,15 @@ def apply_setup(setup: str, *, platform: str, folder: Path, marker: str,
                 serial: str | None = None, udid: str | None = None, should_stop=None,
                 export_cancel_run_id: str | None = None, ios_export_run_id: str | None = None,
                 ios_export_mode: str | None = None, failure_run_id: str | None = None,
-                export_success_run_id: str | None = None) -> dict:
+                export_success_run_id: str | None = None,
+                android_ai_journey_run_id: str | None = None) -> dict:
     token = _SETUP_STOP.set(should_stop)
     try:
         return _apply_setup(setup, platform=platform, folder=folder, marker=marker, serial=serial, udid=udid,
                             export_cancel_run_id=export_cancel_run_id, ios_export_run_id=ios_export_run_id,
-                            ios_export_mode=ios_export_mode, failure_run_id=failure_run_id, export_success_run_id=export_success_run_id)
+                            ios_export_mode=ios_export_mode, failure_run_id=failure_run_id,
+                            export_success_run_id=export_success_run_id,
+                            android_ai_journey_run_id=android_ai_journey_run_id)
     finally:
         _SETUP_STOP.reset(token)
 
@@ -1143,6 +1186,7 @@ def _apply_setup(
     ios_export_run_id: str | None = None, ios_export_mode: str | None = None,
     failure_run_id: str | None = None,
     export_success_run_id: str | None = None,
+    android_ai_journey_run_id: str | None = None,
 ) -> dict:
     """Back up before mutation; restore even when preparation itself fails."""
     platform = platform.lower()
@@ -1167,16 +1211,30 @@ def _apply_setup(
             or (marker, ios_export_mode) not in {("exportcancel", "hold-next"), ("exportfailurerec", "fail-next")}
             or not isinstance(ios_export_run_id, str) or not re.fullmatch(EXPORT_RUN_ID, ios_export_run_id)):
         raise ValueError("iOS export control is restricted to the two export edge cases")
-    if export_success_run_id is not None and (platform != "android" or setup != "editor"
-            or marker != "exportsavesucces" or export_cancel_run_id is not None or failure_run_id is not None
-            or not isinstance(export_success_run_id, str) or not re.fullmatch(EXPORT_RUN_ID, export_success_run_id)):
+    if export_success_run_id is not None and (
+            platform != "android"
+            or (setup, marker) != ("editor", "exportsavesucces")
+            or export_cancel_run_id is not None or failure_run_id is not None
+            or not isinstance(export_success_run_id, str)
+            or not re.fullmatch(EXPORT_RUN_ID, export_success_run_id)):
         raise ValueError("Export observation is restricted to the Android save success case")
+    if android_ai_journey_run_id is not None and (
+            platform != "android" or setup != "home" or marker != "e2ejourney"
+            or export_success_run_id is not None or export_cancel_run_id is not None
+            or failure_run_id is not None or not isinstance(android_ai_journey_run_id, str)
+            or not re.fullmatch(EXPORT_RUN_ID, android_ai_journey_run_id)):
+        raise ValueError("Android AI journey setup is restricted to its home fixture")
     folder = Path(folder)
+    if android_ai_journey_run_id is not None and (
+            folder.name != "e2e-setup" or folder.parent.name != android_ai_journey_run_id):
+        raise ValueError("Android AI journey setup folder must belong to its exact Testmap run")
     folder.mkdir(parents=True, exist_ok=True)
     marker = re.sub(r"[^A-Za-z0-9]", "", marker)[:24] + "-" + uuid.uuid4().hex
     state = dict(setup=setup, platform=platform, serial=serial, udid=udid,
                  marker=marker, fixtures={}, display_backup={}, private_backup={},
                  source_id=None, damaged_remote=None)
+    if android_ai_journey_run_id is not None:
+        state["android_ai_journey_run_id"] = android_ai_journey_run_id
     if export_cancel_run_id is not None:
         state["export_control"] = {"mode": "hold-next", "run_id": export_cancel_run_id}
     if export_success_run_id is not None:
@@ -1187,17 +1245,19 @@ def _apply_setup(
     try:
         if platform == "android":
             require_android_ready(serial)
-            if state.get("export_control"):
+            journey_setup = android_ai_journey_run_id is not None
+            if state.get("export_control") or journey_setup:
                 _protect_previous_export_control(serial, read_private(serial, EXPORT_CONTROL))
             android_force_stop(serial)
             paths = ANDROID_CONFIG + ((CRASH_PREF, CRASH_PREF + ".bak") if setup == "crash" else ())
-            if state.get("export_control"):
+            if state.get("export_control") or journey_setup:
                 paths += EXPORT_CONTROL_PATHS
             state["private_backup"] = {path: read_private(serial, path) for path in paths}
             if setup == "wide":
                 state["display_backup"] = record_display(serial)
-            fixtures = make_fixtures(folder, marker)
-            if export_success_run_id is not None:
+            journey_setup = android_ai_journey_run_id is not None
+            fixtures = make_fixtures(folder, marker, keys=("A",) if journey_setup else None)
+            if export_success_run_id is not None or android_ai_journey_run_id is not None:
                 # Owned synthetic A receives metadata before MediaStore import or editor decode.
                 sentinel = "EWM-EXIF-" + marker
                 value = sentinel.encode("ascii") + b"\0"
@@ -1208,9 +1268,21 @@ def _apply_setup(
             state["fixtures"] = {key: str(path.resolve()) for key, path in fixtures.items()}
             state.update(phase="prepared", mutated=True)
             _save_setup(state)
+            if android_ai_journey_run_id is not None:
+                adb_shell(
+                    serial, "run-as", ANDROID_PACKAGE, "sh", "-c",
+                    "rm -f " + shlex.quote(EXPORT_CONTROL) + " " + shlex.quote(EXPORT_EVENTS),
+                )
+                if _run_as_file(serial, EXPORT_CONTROL) or _run_as_file(serial, EXPORT_EVENTS):
+                    raise ValueError("Previous Android export-control files remain after journey setup")
+                state["journey_control_files_cleared"] = True
+                _save_setup(state)
             push_android_fixtures(serial, fixtures)
             android_leave_system_picker(serial)
             android_reset_saved_config(serial)
+            if setup == "home" and (export_success_run_id is not None or android_ai_journey_run_id is not None):
+                state["source_id"] = wait_media_id(serial, fixtures["A"].name)
+                _save_setup(state)
             if setup == "wide":
                 set_wide(serial)
             if setup == "crash":
@@ -1266,7 +1338,11 @@ def _apply_setup(
 
 
 def restore_setup(state: dict) -> None:
-    token = _CLEANUP_DEADLINE.set(time.monotonic() + RESTORE_BUDGET_S)
+    _validate_setup(state)
+    budget = (_ANDROID_AI_JOURNEY_RESTORE_BUDGET_S
+              if state.get("android_ai_journey_run_id") is not None
+              else RESTORE_BUDGET_S)
+    token = _CLEANUP_DEADLINE.set(time.monotonic() + budget)
     try:
         _restore_setup(state)
     finally:
@@ -1281,6 +1357,8 @@ def _restore_setup(state: dict) -> None:
     """
     _validate_setup(state)
     if state.get("phase") == "restored":
+        if state.pop("restore_errors", None):
+            _save_setup(state)
         return
     lock = Path(state["lock"])
     if lock.is_symlink() or not lock.is_file() or json.loads(lock.read_text()).get("journal") != state["journal"]:
@@ -1316,9 +1394,37 @@ def _restore_setup(state: dict) -> None:
             names = [Path(path).name for path in state["fixtures"].values()]
             if names:
                 try:
+                    journey = state.get("android_ai_journey_run_id") is not None
                     where = "relative_path='" + FIXTURE_FOLDER + "/' AND _display_name IN (" + ",".join("'" + name + "'" for name in names) + ")"
+                    if journey:
+                        source_id = str(state.get("source_id") or "")
+                        if not re.fullmatch(r"[1-9][0-9]*", source_id):
+                            raise ValueError("Android AI journey fixture has no exact owned MediaStore source id")
+                        where = "_id=" + source_id + " AND " + where
                     adb_shell(serial, "content", "delete", "--uri", MEDIA, "--where", where)
                     adb_shell(serial, "rm", "-f", *(f"/sdcard/{FIXTURE_FOLDER}/{name}" for name in names))
+                    if journey:
+                        where = (f"relative_path='{FIXTURE_FOLDER}/' AND _display_name IN ("
+                                 + ",".join("'" + name + "'" for name in names) + ")")
+                        raw = adb_shell(serial, "content", "query", "--uri", MEDIA,
+                                        "--projection", "_display_name", "--where", where)
+                        if export_media_rows(raw, {"_display_name"}):
+                            raise ValueError("Owned Android AI journey fixture remains in MediaStore")
+                        paths = " ".join(shlex.quote(f"/sdcard/{FIXTURE_FOLDER}/{name}") for name in names)
+                        script = (f"for path in {paths}; do "
+                                  "if test -L \"$path\" || test -e \"$path\"; then exit 1; fi; "
+                                  "done; echo testmap-journey-fixtures-absent")
+                        if adb_shell(serial, "sh", "-c", script) != "testmap-journey-fixtures-absent":
+                            raise ValueError("Owned Android AI journey files remain on device")
+                        baseline = state.get("journey_output_ids_before")
+                        if baseline is not None:
+                            raw = adb_shell(
+                                serial, "content", "query", "--uri", MEDIA, "--projection", "_id",
+                                "--where", EXPORT_OUTPUT_FILTER,
+                            )
+                            current = {row["_id"] for row in export_media_rows(raw, {"_id"})}
+                            if current != set(baseline):
+                                raise ValueError("Unexpected unclaimed Android AI journey export remains; retained for recovery")
                 except Exception as exc:
                     errors.append(str(exc))
         else:
@@ -1350,6 +1456,7 @@ def _restore_setup(state: dict) -> None:
         state["restore_errors"] = errors
         _save_setup(state)
         raise SetupRestoreError(f"{'; '.join(errors)}; recovery backup: {state['journal']}")
+    state.pop("restore_errors", None)
     state["phase"] = "restored"
     _save_setup(state)
     Path(state["lock"]).unlink(missing_ok=True)

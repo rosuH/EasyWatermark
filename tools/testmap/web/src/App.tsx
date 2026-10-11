@@ -12,7 +12,7 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { api, post, useResource } from "./api";
+import { ApiError, api, post, useResource } from "./api";
 import type {
   DevicesResponse,
   ExecutionMode,
@@ -20,6 +20,7 @@ import type {
   MapResponse,
   RunsResponse,
   RunStarted,
+  StatusResponse,
   TasksResponse,
 } from "./api-types";
 import { type Catalog, type Lang, duration, humanError, title } from "./model";
@@ -45,6 +46,11 @@ function Workspace() {
       view === "history" ? "/api/runs" : null,
       5000,
       revision,
+    ),
+    status = useResource<StatusResponse>(
+      view === "catalog" ? "/api/status" : null,
+      view === "catalog" ? 2000 : 0,
+      revision,
     );
   const [draft, setDraft] = useState<string[]>([]),
     [settings, setSettings] = useState(false),
@@ -57,13 +63,34 @@ function Workspace() {
     [device, setDevice] = useState("auto"),
     [repeat, setRepeat] = useState(1),
     [starting, setStarting] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [journeyDevice, setJourneyDevice] = useState(""),
+    [journeyStarting, setJourneyStarting] = useState(false),
+    [journeyError, setJourneyError] = useState("");
   const routeKey = JSON.stringify([draft, device]);
   const routePlan =
     routePreview?.key === routeKey ? routePreview.plan : undefined;
   const routeError =
     routePreview?.key === routeKey ? routePreview.error : undefined;
   const allDevices = Object.values(devices.data || {}).flat();
+  const androidDevices = devices.data?.android || [];
+  const journeyTask = tasks.data?.runnable.find(
+    (candidate) =>
+      candidate.id === "android-ai-journey" &&
+      candidate.builder === "e2e-runner" &&
+      candidate.needs_device === "android",
+  );
+  const boundJourneyDevice = androidDevices.find(
+    (candidate) => candidate.id === journeyDevice,
+  );
+  const journeyBusy = status.data?.active === true;
+  const canStartJourney =
+    !!journeyTask &&
+    !tasks.error &&
+    !devices.error &&
+    !journeyBusy &&
+    !journeyStarting &&
+    boundJourneyDevice?.state === "ready";
   const routeDeviceMismatch =
     executionMode === "route" &&
     routePlan?.platform &&
@@ -143,6 +170,30 @@ function Workspace() {
       setError(humanError(e, lang));
     } finally {
       setStarting(false);
+    }
+  };
+  const startJourney = async () => {
+    if (!canStartJourney || !journeyTask || !boundJourneyDevice) return;
+    setJourneyStarting(true);
+    setJourneyError("");
+    try {
+      await post<RunStarted>("/api/run", {
+        tasks: [journeyTask.id],
+        device: boundJourneyDevice.id,
+        repeat: 1,
+        execution_mode: "independent",
+      });
+      setRunId(null);
+      setView("run");
+      refresh();
+    } catch (e) {
+      setJourneyError(
+        e instanceof ApiError && e.status === 409
+          ? `${t("Another run is active. Wait for it to finish or stop it, then retry.", "已有任务正在运行。请等待其完成或先停止，再重试。")} ${e.message}`
+          : humanError(e, lang),
+      );
+    } finally {
+      setJourneyStarting(false);
     }
   };
   const label = (id: string) => {
@@ -252,15 +303,156 @@ function Workspace() {
             />
           </div>
         ) : view === "catalog" ? (
-          <CatalogView
-            catalog={catalog.data}
-            map={map.data}
-            draft={draft}
-            routeMode={executionMode === "route"}
-            toggle={toggle}
-            refresh={refresh}
-            openRun={openRun}
-          />
+          <>
+            <section
+              className="android-journey panel"
+              aria-labelledby="android-journey-title"
+            >
+              <div className="android-journey-copy">
+                <span className="eyebrow">
+                  {t("ANDROID · REAL UI FLOW", "Android · 真实界面流程")}
+                </span>
+                <h2 id="android-journey-title">
+                  {t("Android AI journey", "Android AI 完整流程")}
+                </h2>
+                <p>
+                  {t(
+                    "Pick a photo → edit watermark text → change typeface and style → export.",
+                    "选择照片 → 修改水印文字 → 修改字体与样式 → 导出。",
+                  )}
+                </p>
+                <small>
+                  {t(
+                    "Uses an isolated test photo and attempts to restore device state after the run.",
+                    "使用隔离测试图片，并在运行结束后尝试还原设备状态。",
+                  )}
+                </small>
+              </div>
+              <div className="android-journey-controls">
+                <label htmlFor="android-journey-device">
+                  {t("Android device", "Android 设备")}
+                </label>
+                <select
+                  id="android-journey-device"
+                  value={journeyDevice}
+                  onChange={(event) => {
+                    setJourneyDevice(event.target.value);
+                    setJourneyError("");
+                  }}
+                  disabled={!androidDevices.length}
+                >
+                  <option value="">
+                    {androidDevices.length
+                      ? t("Choose a device…", "选择设备…")
+                      : t(
+                          "No Android device available",
+                          "没有可用的 Android 设备",
+                        )}
+                  </option>
+                  {androidDevices.map((candidate) => (
+                    <option
+                      key={candidate.id}
+                      value={candidate.id}
+                      disabled={candidate.state !== "ready"}
+                    >
+                      {candidate.name} · {candidate.state}
+                    </option>
+                  ))}
+                </select>
+                <small className="android-journey-binding">
+                  {boundJourneyDevice
+                    ? `${t("Bound to", "绑定设备")}: ${boundJourneyDevice.name} (${boundJourneyDevice.id}) · ${boundJourneyDevice.state}`
+                    : t(
+                        "Select one ready Android device.",
+                        "请选择一台就绪的 Android 设备。",
+                      )}
+                </small>
+                {journeyBusy && (
+                  <p className="danger-text android-journey-state">
+                    {t("A run is already active", "当前已有任务运行")}
+                    {status.data?.id ? ` · ${status.data.id}` : ""}
+                    {t(
+                      ". Wait or stop it in Execution.",
+                      "。请等待完成或在“执行”中停止。",
+                    )}
+                  </p>
+                )}
+                <div className="row">
+                  <Button
+                    variant="default"
+                    disabled={!canStartJourney}
+                    onClick={() => void startJourney()}
+                  >
+                    <Play size={14} />
+                    {journeyStarting
+                      ? t("Starting…", "正在启动…")
+                      : t("Run Android AI journey", "运行 Android AI 完整流程")}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={refresh}>
+                    <RefreshCw size={13} />
+                    {t("Refresh devices", "刷新设备")}
+                  </Button>
+                </div>
+              </div>
+              {(tasks.error ||
+                devices.error ||
+                status.error ||
+                journeyError ||
+                (tasks.data && !journeyTask) ||
+                (devices.data && !androidDevices.length) ||
+                (boundJourneyDevice &&
+                  boundJourneyDevice.state !== "ready")) && (
+                <div className="android-journey-feedback">
+                  {tasks.error && <ErrorNotice>{tasks.error}</ErrorNotice>}
+                  {devices.error && <ErrorNotice>{devices.error}</ErrorNotice>}
+                  {status.error && (
+                    <small className="danger-text">
+                      {t(
+                        "Could not check whether another run is active. The server will check again when you start.",
+                        "无法检查是否有任务正在运行。启动时服务器会再次检查。",
+                      )}{" "}
+                      {status.error}
+                    </small>
+                  )}
+                  {journeyError && <ErrorNotice>{journeyError}</ErrorNotice>}
+                  {tasks.data && !journeyTask && (
+                    <small className="danger-text">
+                      {t(
+                        "This runner does not expose the Android AI journey task.",
+                        "此 runner 未提供 Android AI 完整流程任务。",
+                      )}
+                    </small>
+                  )}
+                  {devices.data && !androidDevices.length && (
+                    <small className="danger-text">
+                      {t(
+                        "Connect an Android device, then refresh.",
+                        "连接 Android 设备后刷新。",
+                      )}
+                    </small>
+                  )}
+                  {boundJourneyDevice &&
+                    boundJourneyDevice.state !== "ready" && (
+                      <small className="danger-text">
+                        {t(
+                          "Selected device is not ready. Choose a ready device or refresh.",
+                          "所选设备尚未就绪。请选择就绪设备或刷新。",
+                        )}
+                      </small>
+                    )}
+                </div>
+              )}
+            </section>
+            <CatalogView
+              catalog={catalog.data}
+              map={map.data}
+              draft={draft}
+              routeMode={executionMode === "route"}
+              toggle={toggle}
+              refresh={refresh}
+              openRun={openRun}
+            />
+          </>
         ) : view === "run" ? (
           <RunView
             key={runId || "current"}
