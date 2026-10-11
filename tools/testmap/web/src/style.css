@@ -1364,3 +1364,49 @@ dialog.settings-backdrop::backdrop {
   align-items: center;
   gap: 4px;
 }
+
+.android-journey {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 22px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 20px 22px;
+  border-color: #34445d;
+}
+.android-journey-copy h2 {
+  margin-bottom: 7px;
+  font-size: 19px;
+}
+.android-journey-copy p {
+  margin-bottom: 8px;
+  color: #bdc9db;
+  font-size: 13px;
+}
+.android-journey-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.android-journey-controls label,
+.android-journey-binding,
+.android-journey-state {
+  grid-column: 1 / -1;
+}
+.android-journey-controls label {
+  font-size: 11px;
+}
+.android-journey-controls select {
+  width: 100%;
+}
+.android-journey-feedback {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+@media (max-width: 1150px) {
+  .android-journey {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

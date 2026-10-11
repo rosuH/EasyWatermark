@@ -56,6 +56,7 @@ from testmap_run import (  # noqa: E402
     BusyError,
     StopForbiddenError,
     RunManager,
+    e2e_artifact_path,
     git_info,
     confirmation_views,
     edge_badges,
@@ -292,6 +293,7 @@ class Handler(BaseHTTPRequestHandler):
                             "heavy": spec["heavy"],
                             "platforms": list(spec.get("platforms") or ["desktop"]),
                             "needs_device": spec.get("needs_device"),
+                            "builder": spec.get("builder"),
                         }
                         for tid, spec in TASK_SPECS.items()
                     ],
@@ -306,6 +308,22 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/runs":
             self._json(200, {"runs": run_summaries()})
+            return
+        if path.startswith("/api/runs/") and "/e2e/" in path:
+            rest = path[len("/api/runs/") :]
+            run_id, _, relative = rest.partition("/e2e/")
+            rec = load_run(run_id)
+            is_e2e = bool(rec and any(
+                isinstance(task, dict) and task.get("builder") == "e2e-runner"
+                for task in rec.get("tasks") or []
+            ))
+            found = e2e_artifact_path(run_id, relative) if is_e2e else None
+            if not found:
+                self._json(404, {"error": "e2e artifact not found"})
+                return
+            mime = {".png": "image/png", ".md": "text/markdown; charset=utf-8",
+                    ".json": "application/json; charset=utf-8"}.get(found.suffix.lower(), "application/octet-stream")
+            self._send(200, found.read_bytes(), mime)
             return
         if path.startswith("/api/runs/") and "/steps/" in path:
             rest = path[len("/api/runs/") :]
