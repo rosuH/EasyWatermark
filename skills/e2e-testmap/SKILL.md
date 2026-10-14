@@ -20,11 +20,12 @@ Triggers: a named edge (`pick-to-editor`, `launch-to-about`, …), “跑测试 
 
 ```bash
 scripts/e2e-console.sh
-scripts/e2e-run.sh edge:<id>@android#agent
-scripts/e2e-run.sh edge:<id>@ios#agent
+scripts/e2e-run.sh edge:<id>#agent
+scripts/e2e-run.sh edge:<id>@android#agent --device <serial>
+scripts/e2e-run.sh edge:<id>@ios#agent --device <udid>
 ```
 
-If `http://127.0.0.1:8931/api/status` is up, POST the task so the watch pane follows. Queue `edge:<id>@android#agent` (the runner mirrors a supported `@ios#agent` twin and runs the two lanes in parallel). The execution view shows the selected mobile lanes with their own steps. Desktop host checks remain available as tasks; their witness images are not device video. Do not auto-open the native scrcpy window.
+If `http://127.0.0.1:8931/api/status` is up, POST the task so the watch pane follows. With `"device":"auto"` (or omitted), queueing `edge:<id>#agent` or `edge:<id>@android#agent` mirrors a supported `@ios#agent` twin via `expand_mobile_parallel` and runs the two lanes in parallel; passing a concrete `"device":"<serial-or-udid>"` pins execution to that single device's platform lane only. The execution view shows the selected mobile lanes with their own steps. Desktop host checks remain available as tasks; their witness images are not device video. Do not auto-open the native scrcpy window.
 
 ```bash
 curl -sS -X POST http://127.0.0.1:8931/api/run \

@@ -133,10 +133,11 @@ fun GradientMaskedLogo(
             elapsed += frameMs
         }
     }
-    val p = pos.floatValue
 
-    val meshPainter = remember(p) {
+    // Painter block re-runs in DrawScope each draw and reads [pos.floatValue]. Keep one instance.
+    val meshPainter = remember {
         MeshGradientPainter(rows = 2, columns = 2, hasBicubicColor = true) {
+            val p = pos.floatValue
             // Large field travel so the wash is as readable as the old linear sweep.
             // pos=1 → colors biased top-left/amber; pos=0.1 → pull toward cyan bottom-right.
             val ox = (1.1f - p) * 0.9f - 0.45f
@@ -174,7 +175,7 @@ fun GradientMaskedLogo(
                 // Read pos in the layer so draw invalidates without recomposing the tree.
                 .graphicsLayer {
                     blendMode = BlendMode.SrcAtop
-                    translationX = p * 0.001f
+                    translationX = pos.floatValue * 0.001f
                 }
                 .paint(meshPainter),
         )
