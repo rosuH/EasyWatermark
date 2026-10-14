@@ -249,30 +249,19 @@ fun calculateInSampleSize(
     reqWidth: Int,
     reqHeight: Int
 ): Int {
+    require(reqWidth > 0 && reqHeight > 0) { "Requested bitmap dimensions must be positive" }
     // Raw height and width of image
     Log.i(
         "generateImage", "w = $width, h = $height, reqW = $reqWidth, reqH = $reqHeight"
     )
     var inSampleSize = 1
 
-    if (height > reqHeight || width > reqWidth) {
-
-        val halfHeight: Int = height / 2
-        val halfWidth: Int = width / 2
-
-        // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-        // height and width larger than the requested height and width.
-        while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
-            inSampleSize *= 2
-        }
-
-// var totalPixels = (width / inSampleSize) * (height / inSampleSize)
-// val totalReqPixels = reqWidth * reqHeight * 2
-// while (totalPixels > totalReqPixels) {
-// inSampleSize *= 2;
-// Log.i(TAG, "totalPixels = $totalPixels, totalReqPixels = $totalReqPixels, inSample -> $inSampleSize")
-// totalPixels = (width / inSampleSize) * (height / inSampleSize)
-// }
+    val halfHeight = height / 2
+    val halfWidth = width / 2
+    // FIT_CENTER needs either dimension to cover the pane, not both. Keeping the
+    // short edge for a panorama can leave a full-size bitmap on the UI Canvas.
+    while (halfHeight / inSampleSize >= reqHeight || halfWidth / inSampleSize >= reqWidth) {
+        inSampleSize *= 2
     }
 
     return inSampleSize

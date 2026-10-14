@@ -13,6 +13,11 @@ import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.nio.ByteBuffer
+import java.util.zip.CRC32
+import java.util.zip.Deflater
+import java.util.zip.DeflaterOutputStream
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -26,6 +31,45 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class BatchShareOverlayAliveTest {
+
+    @Test
+    fun shareOversizedPanoramaAndTallScreenshot_editorPreviewRendersWithoutCanvasCrash() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val uris = listOf(
+            insertPngBytes(
+                context.contentResolver,
+                "ewm_oversized_panorama_49861x1350.png",
+                streamedBandPngBytes(width = 49_861, height = 1_350),
+            ) ?: error("MediaStore insert failed for 49861x1350 panorama"),
+            insertPngBytes(
+                context.contentResolver,
+                "ewm_oversized_tall_1350x49861.png",
+                streamedBandPngBytes(width = 1_350, height = 49_861),
+            ) ?: error("MediaStore insert failed for 1350x49861 tall screenshot"),
+        )
+        try {
+            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                setClassName(context.packageName, "me.rosuh.easywatermark.ui.MainActivity")
+                type = "image/png"
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+            val activity = instrumentation.startActivitySync(intent)
+            assertNotNull(activity)
+            val deadline = SystemClock.uptimeMillis() + OVERSIZED_HOLD_MS
+            while (SystemClock.uptimeMillis() < deadline) {
+                assertFalse("editor finishing on oversized image — RecordingCanvas crash", activity.isFinishing)
+                assertFalse("editor destroyed on oversized image — RecordingCanvas crash", activity.isDestroyed)
+                Thread.sleep(250)
+            }
+            assertFalse(activity.isFinishing)
+            assertFalse(activity.isDestroyed)
+        } finally {
+            uris.forEach { context.contentResolver.delete(it, null, null) }
+        }
+    }
 
     @Test
     fun shareFortyEight_editorActivityStaysAlive() {
@@ -67,8 +111,13 @@ class BatchShareOverlayAliveTest {
         resolver: android.content.ContentResolver,
         displayName: String,
         seed: Int,
+    ): Uri? = insertPngBytes(resolver, displayName, solidPngBytes(seed))
+
+    private fun insertPngBytes(
+        resolver: android.content.ContentResolver,
+        displayName: String,
+        png: ByteArray,
     ): Uri? {
-        val png = solidPngBytes(seed)
         return try {
             if (Build.VERSION.SDK_INT >= 29) {
                 val values = ContentValues().apply {
@@ -102,6 +151,82 @@ class BatchShareOverlayAliveTest {
         }
     }
 
+    /**
+     * Streams a synthetic 8-bit RGB PNG without allocating a full-size [Bitmap] in the test
+     * process (49,861 × 1,350 × 4 = 269,249,400 bytes decoded).
+     */
+    private fun streamedBandPngBytes(width: Int, height: Int): ByteArray {
+        val topRow = ByteArray(1 + width * 3).apply {
+            for (x in 0 until width) {
+                val i = 1 + x * 3
+                this[i] = 25.toByte()
+                this[i + 1] = 77.toByte()
+                this[i + 2] = 128.toByte()
+            }
+        }
+        val midRow = ByteArray(1 + width * 3).apply {
+            for (x in 0 until width) {
+                val i = 1 + x * 3
+                this[i] = 255.toByte()
+                this[i + 1] = 255.toByte()
+                this[i + 2] = 255.toByte()
+            }
+        }
+        val bottomRow = ByteArray(1 + width * 3).apply {
+            for (x in 0 until width) {
+                val i = 1 + x * 3
+                this[i] = 232.toByte()
+                this[i + 1] = 183.toByte()
+                this[i + 2] = 70.toByte()
+            }
+        }
+        val idatCompressed = ByteArrayOutputStream().use { compressedOut ->
+            DeflaterOutputStream(compressedOut, Deflater(Deflater.BEST_COMPRESSION)).use { deflater ->
+                val band = 56
+                for (y in 0 until height) {
+                    val row = when {
+                        y < band -> topRow
+                        y >= height - band -> bottomRow
+                        else -> midRow
+                    }
+                    deflater.write(row)
+                }
+            }
+            compressedOut.toByteArray()
+        }
+        val ihdr = ByteBuffer.allocate(13)
+            .putInt(width)
+            .putInt(height)
+            .put(8.toByte())
+            .put(2.toByte())
+            .put(0.toByte())
+            .put(0.toByte())
+            .put(0.toByte())
+            .array()
+
+        return ByteArrayOutputStream().use { out ->
+            DataOutputStream(out).use { dos ->
+                dos.write(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A))
+                writePngChunk(dos, "IHDR", ihdr)
+                writePngChunk(dos, "IDAT", idatCompressed)
+                writePngChunk(dos, "IEND", ByteArray(0))
+            }
+            out.toByteArray()
+        }
+    }
+
+    private fun writePngChunk(dos: DataOutputStream, tag: String, data: ByteArray) {
+        val tagBytes = tag.toByteArray(Charsets.US_ASCII)
+        val crc = CRC32().apply {
+            update(tagBytes)
+            update(data)
+        }
+        dos.writeInt(data.size)
+        dos.write(tagBytes)
+        dos.write(data)
+        dos.writeInt(crc.value.toInt())
+    }
+
     private fun solidPngBytes(seed: Int): ByteArray {
         val bmp = Bitmap.createBitmap(1280, 720, Bitmap.Config.ARGB_8888)
         Canvas(bmp).drawColor(
@@ -117,5 +242,6 @@ class BatchShareOverlayAliveTest {
     private companion object {
         const val BATCH = 48
         const val HOLD_MS = 20_000L
+        const val OVERSIZED_HOLD_MS = 5_000L
     }
 }

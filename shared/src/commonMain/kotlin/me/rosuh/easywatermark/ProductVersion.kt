@@ -5,6 +5,6 @@ package me.rosuh.easywatermark
  * `BuildConfig.VERSION_NAME`). Hosts must not hard-code platform labels like `"iOS"`.
  */
 object ProductVersion {
-    const val NAME: String = "3.0.2"
-    const val CODE: Int = 30002
+    const val NAME: String = "3.0.3"
+    const val CODE: Int = 30003
 }
