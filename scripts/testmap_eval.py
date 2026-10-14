@@ -145,12 +145,14 @@ def render_report(
     stability: list[dict] | None = None,
     repeats: int = 3,
     confirm: str = "",
+    report: dict | None = None,
 ) -> str:
-    report = select_report(range_arg)
+    report = report if report is not None else select_report(range_arg)
     edges = report.get("edges") or []
     expected = expected_effect(change, edges)
     l3 = selected_l3(report)
     select_blob = [
+        *([f"error: {report.get('error')}"] if report.get("error") else []),
         f"range: {report.get('label')}",
         f"owners: {', '.join(report.get('owners') or [])}",
         f"edges: {', '.join(edges) or '(none)'}",

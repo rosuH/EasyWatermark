@@ -84,15 +84,18 @@ export function edgeTasks(run: RunDetail | undefined, edgeId: string) {
     (t) => (t.edge || t.edge_id || t.id.slice(5).split("@")[0]) === edgeId,
   );
 }
+export function startedEdgeTasks(run: RunDetail | undefined, edgeId: string) {
+  return edgeTasks(run, edgeId).filter(
+    (t) => !(t.state === "stopped" && t.duration_s == null),
+  );
+}
 export function canConfirm(run: RunDetail | undefined, edgeId: string) {
   if (
     !run ||
     ["running", "pending", "paused", "interrupted"].includes(run.state)
   )
     return false;
-  const tasks = edgeTasks(run, edgeId).filter(
-    (t) => !(t.state === "stopped" && t.duration_s == null),
-  );
+  const tasks = startedEdgeTasks(run, edgeId);
   return (
     tasks.length > 0 &&
     tasks.every((t) => ["passed", "review_required"].includes(t.state))

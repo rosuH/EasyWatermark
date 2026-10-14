@@ -862,6 +862,34 @@ class L1ProductUiTest {
     }
 
     @Test
+    fun openSourceExit_secondBackStaysOnAbout() = runComposeUiTest {
+        L1Live.activeTest = "openSourceExit_secondBackStaysOnAbout"
+        val session = L1Session()
+        setContent { L1ProductTree(session, motionPolicy = MotionPolicy.Full) }
+        waitForTag("sharedComposeLaunchScreen")
+        onNodeWithTag("launchAboutButton", useUnmergedTree = true).performClick()
+        waitForTag("aboutBack")
+        val openSource = l1String(Res.string.about_title_open_source)
+        onNodeWithText(openSource, useUnmergedTree = true)
+            .performScrollTo()
+            .performClick()
+        awaitIdle()
+        waitForTag("openSourceBack")
+        assertTrue(session.showOpenSource)
+        mainClock.autoAdvance = false
+        onNodeWithTag("openSourceBack", useUnmergedTree = true).performClick()
+        mainClock.advanceTimeByFrame()
+        assertFalse(session.showOpenSource)
+        assertEquals(ProductShellNav.Route.About, session.route)
+        onNodeWithTag("aboutBack", useUnmergedTree = true).performTouchInput { click() }
+        assertEquals(ProductShellNav.Route.About, session.route)
+        mainClock.autoAdvance = true
+        awaitIdle()
+        assertEquals(ProductShellNav.Route.About, session.route)
+        onNodeWithTag("aboutBack", useUnmergedTree = true).assertIsEnabled()
+    }
+
+    @Test
     fun aboutEnter_midAnimationBackReturns() = runComposeUiTest {
         L1Live.activeTest = "aboutEnter_midAnimationBackReturns"
         val session = L1Session()

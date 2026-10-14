@@ -57,8 +57,8 @@ fun OpenSourceOverlayHost(
         // while this overlay is open. A clickable scrim would merge the title
         // into a fullscreen a11y node.
         OpenSourceScreen(
-            onBack = onBack,
-            onOpenLink = onOpenLink,
+            onBack = { if (visible) onBack() },
+            onOpenLink = { if (visible) onOpenLink(it) },
             backIcon = backIcon,
             modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding,

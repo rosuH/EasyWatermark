@@ -140,7 +140,14 @@ fun ProductShellHost(
     val showAbout = route == ProductShellNav.Route.About
     val aboutCover = updateTransition(showAbout, label = "aboutOverlay")
     val aboutPresent = aboutCover.currentState || aboutCover.targetState
-    val aboutBackArmed = showAbout && !openSourceOpen
+    val openSourceCover = updateTransition(openSourceOpen, label = "openSourceOverlayArmed")
+    val openSourceSlide = openSourceCover.animateFloat(
+        transitionSpec = { ProductShellTransitions.shortFloatSpec(motionPolicy) },
+        label = "openSourceSlide",
+    ) { shown -> if (shown) 1f else 0f }
+    val openSourcePresent =
+        openSourceCover.currentState || openSourceCover.targetState || openSourceSlide.value > 0f
+    val aboutBackArmed = showAbout && !openSourcePresent
     // One transition drives both the swap and [LocalShellObscured]. A parent
     // graphicsLayer around this tree is About-only: Launch↔Editor already has
     // its own slide layers, and a full-screen parent layer forces both pages
@@ -248,7 +255,7 @@ fun ProductShellHost(
                             }
                         },
                 )
-                CompositionLocalProvider(LocalShellObscured provides openSourceOpen) {
+                CompositionLocalProvider(LocalShellObscured provides openSourcePresent) {
                     content(ProductShellNav.Route.About)
                 }
             }

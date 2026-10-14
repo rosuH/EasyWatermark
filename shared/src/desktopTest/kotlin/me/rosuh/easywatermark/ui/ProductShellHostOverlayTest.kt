@@ -73,6 +73,8 @@ class ProductShellHostOverlayTest {
         assertTrue(src.contains("mutableFloatStateOf"))
         assertTrue(src.contains("delay("), "mesh must not pin a 60fps InfiniteTransition clock")
         assertTrue(!src.contains("rememberInfiniteTransition"))
+        assertTrue(!src.contains("remember(p)"), "meshPainter must not rebuild every tick in composition")
+        assertTrue(src.contains("val meshPainter = remember {"))
     }
 
     @Test

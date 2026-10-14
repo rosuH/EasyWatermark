@@ -7,7 +7,13 @@ import type {
   MapResponse,
   RunDetail,
 } from "./api-types";
-import { canConfirm, edgeTasks, humanError, stepHref } from "./model";
+import {
+  canConfirm,
+  edgeTasks,
+  humanError,
+  startedEdgeTasks,
+  stepHref,
+} from "./model";
 import { Button } from "./components/ui/button";
 import { ErrorNotice, Language, Screenshot, Status, useT } from "./ui";
 export function Confirm({
@@ -99,7 +105,11 @@ export function Confirm({
     }
   };
   const tasks = edgeTasks(result.data, edge.id),
-    covered = new Set(tasks.map((task) => task.platform).filter(Boolean));
+    covered = new Set(
+      startedEdgeTasks(result.data, edge.id)
+        .map((task) => task.platform)
+        .filter(Boolean),
+    );
   const current =
     !!confirmation && confirmation.run_id === runId && !confirmation.stale;
   return (

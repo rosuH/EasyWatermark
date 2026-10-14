@@ -377,6 +377,32 @@ class BackendChecks(unittest.TestCase):
             self.assertEqual(2, verify.main(['--change', 'test', '--run', '--sha', 'test', '--repeats', '3', '--ios-device', 'qa-udid', '--out', str(Path(folder)/'verify.md')]))
             collect.assert_called_once_with(selected, 3, True, android_device=None, ios_device='qa-udid')
 
+    def test_verify_blocks_when_select_report_fails(self):
+        failed_report = {
+            'ok': False,
+            'error': 'missing map.yaml',
+            'label': None,
+            'paths': [],
+            'buckets': {},
+            'owners': [],
+            'edges': [],
+            'docs_only': False,
+            'no_hit': False,
+            'platform_change': [],
+            'agent': [],
+            'artemis': [],
+            'none_edges': [],
+            'suggest_l1': False,
+            'suggest_guard': False,
+            'shared_ui_all_l1': False,
+            'l3': [],
+        }
+        with tempfile.TemporaryDirectory() as folder, patch.object(verify, 'select_report', return_value=failed_report), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            out_path = Path(folder) / 'failed-select-verify.md'
+            code = verify.main(['--change', 'test select failure', '--run', '--out', str(out_path)])
+            self.assertEqual(2, code)
+            self.assertIn('error: missing map.yaml', out_path.read_text(encoding='utf-8'))
+
     def test_verify_binds_both_platforms_without_losing_selected_attempts(self):
         selected = [{'cmd': f'edge:test-{n}@{platform}#agent', 'platform': platform}
                     for platform, count in [('android', 25), ('ios', 22)] for n in range(count)]

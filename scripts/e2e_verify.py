@@ -151,13 +151,21 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     repeats = max(1, args.repeats)
     report = select_report(args.range)
-    if report.get("docs_only"):
+    select_error = report.get("error") or (
+        "select_report returned ok=False" if report.get("ok") is False else None
+    )
+    if select_error:
+        print(f"select failed: {select_error}", file=sys.stderr)
+    elif report.get("docs_only"):
         print("docs-only: generator + guard; no agent repeats", file=sys.stderr)
     sha = args.sha or _git_sha()
     try:
         stability = collect_stability(
-            report.get("agent") or [], repeats, args.run,
-            android_device=args.android_device, ios_device=args.ios_device,
+            report.get("agent") or [],
+            repeats,
+            args.run and not select_error,
+            android_device=args.android_device,
+            ios_device=args.ios_device,
         )
     except (ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
         print(f"verify execution refused: {exc}", file=sys.stderr)
@@ -177,6 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         stability=stability,
         repeats=repeats,
         confirm=args.confirm,
+        report=report,
     )
     out = (
         Path(args.out)
@@ -186,8 +195,9 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
     print(out)
-    if blocking:
-        print(f"stability block: {len(blocking)} agent task(s)", file=sys.stderr)
+    if select_error or blocking:
+        if blocking:
+            print(f"stability block: {len(blocking)} agent task(s)", file=sys.stderr)
         return 2
     return 0
 

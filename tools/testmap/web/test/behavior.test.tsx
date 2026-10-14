@@ -203,6 +203,35 @@ describe("Human confirmation uses mock transport only", () => {
     await screen.findByText(/Refresh the page, then try again/);
     expect(confirmCalls()).toHaveLength(1);
   });
+  it("does not count a never-started stopped task as platform coverage", async () => {
+    render(
+      <Confirm
+        edge={edge}
+        map={map}
+        refresh={() => {}}
+        openRun={() => {}}
+        runResult={{
+          data: {
+            ...record,
+            tasks: [
+              record.tasks[0],
+              {
+                id: "edge:pick@ios#agent",
+                edge: "pick",
+                platform: "ios",
+                state: "stopped",
+                duration_s: null,
+                steps: [],
+                cases: [],
+              },
+            ],
+          } as unknown as RunDetail,
+        }}
+      />,
+    );
+    expect(screen.getByText(/ios is not included in this run/)).toBeTruthy();
+    expect(screen.getByText("Based on android")).toBeTruthy();
+  });
 });
 it("keeps clicked historical evidence pinned when live steps advance", async () => {
   const task = {
