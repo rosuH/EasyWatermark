@@ -28,6 +28,54 @@ import { CatalogView } from "./Catalog";
 import { RunView } from "./Run";
 import { Button } from "./components/ui/button";
 import { CopyButton, Empty, ErrorNotice, Language, Status, useT } from "./ui";
+
+const ANDROID_JOURNEY_SCENARIOS = [
+  {
+    id: "android-ai-journey",
+    taskLabel: "Android AI journey: pick, edit and export",
+    titleEn: "Android AI journey",
+    titleZh: "Android AI 完整流程",
+    optionEn: "Pick, edit and export",
+    optionZh: "选择、编辑并导出",
+    descriptionEn:
+      "Pick a photo → edit watermark text → change typeface and style → export.",
+    descriptionZh: "选择照片 → 修改水印文字 → 修改字体与样式 → 导出。",
+    runEn: "Run Android AI journey",
+    runZh: "运行 Android AI 完整流程",
+  },
+  {
+    id: "android-large-image-preview",
+    taskLabel: "Android large image preview: diagnose Canvas crash",
+    titleEn: "Android large image preview",
+    titleZh: "Android 大图预览",
+    optionEn: "Large-image preview crash",
+    optionZh: "大图预览崩溃复现",
+    descriptionEn:
+      "Open an isolated 49,861 × 1,350 photo in the editor and capture whether the Canvas preview crash reproduces.",
+    descriptionZh:
+      "在编辑器中打开隔离的 49,861 × 1,350 图片，并记录 Canvas 预览崩溃是否复现。",
+    runEn: "Run large-image crash reproduction",
+    runZh: "运行大图崩溃复现",
+  },
+] as const;
+
+type AndroidJourneyScenario = (typeof ANDROID_JOURNEY_SCENARIOS)[number];
+type AndroidJourneyScenarioId = AndroidJourneyScenario["id"];
+
+function findJourneyTask(
+  tasks: TasksResponse | undefined,
+  scenario: AndroidJourneyScenario,
+) {
+  return tasks?.runnable.find(
+    (candidate) =>
+      candidate.id === scenario.id &&
+      candidate.label === scenario.taskLabel &&
+      candidate.builder === "e2e-runner" &&
+      candidate.needs_device === "android" &&
+      candidate.platforms.includes("android"),
+  );
+}
+
 function Workspace() {
   const lang = ReactLanguage();
   const t = useT();
@@ -65,6 +113,8 @@ function Workspace() {
     [starting, setStarting] = useState(false),
     [error, setError] = useState(""),
     [journeyDevice, setJourneyDevice] = useState(""),
+    [journeyScenarioId, setJourneyScenarioId] =
+      useState<AndroidJourneyScenarioId>("android-ai-journey"),
     [journeyStarting, setJourneyStarting] = useState(false),
     [journeyError, setJourneyError] = useState("");
   const routeKey = JSON.stringify([draft, device]);
@@ -74,12 +124,12 @@ function Workspace() {
     routePreview?.key === routeKey ? routePreview.error : undefined;
   const allDevices = Object.values(devices.data || {}).flat();
   const androidDevices = devices.data?.android || [];
-  const journeyTask = tasks.data?.runnable.find(
-    (candidate) =>
-      candidate.id === "android-ai-journey" &&
-      candidate.builder === "e2e-runner" &&
-      candidate.needs_device === "android",
-  );
+  const journeyScenario = ANDROID_JOURNEY_SCENARIOS.find(
+    (scenario) => scenario.id === journeyScenarioId,
+  )!;
+  const journeyTask = findJourneyTask(tasks.data, journeyScenario);
+  const journeyScenarioAvailable = (scenario: AndroidJourneyScenario) =>
+    !!findJourneyTask(tasks.data, scenario);
   const boundJourneyDevice = androidDevices.find(
     (candidate) => candidate.id === journeyDevice,
   );
@@ -313,12 +363,12 @@ function Workspace() {
                   {t("ANDROID · REAL UI FLOW", "Android · 真实界面流程")}
                 </span>
                 <h2 id="android-journey-title">
-                  {t("Android AI journey", "Android AI 完整流程")}
+                  {t(journeyScenario.titleEn, journeyScenario.titleZh)}
                 </h2>
                 <p>
                   {t(
-                    "Pick a photo → edit watermark text → change typeface and style → export.",
-                    "选择照片 → 修改水印文字 → 修改字体与样式 → 导出。",
+                    journeyScenario.descriptionEn,
+                    journeyScenario.descriptionZh,
                   )}
                 </p>
                 <small>
@@ -329,6 +379,36 @@ function Workspace() {
                 </small>
               </div>
               <div className="android-journey-controls">
+                <label htmlFor="android-journey-scenario">
+                  {t("Android scenario", "Android 场景")}
+                </label>
+                <select
+                  id="android-journey-scenario"
+                  value={journeyScenarioId}
+                  onChange={(event) => {
+                    setJourneyScenarioId(
+                      event.target.value as AndroidJourneyScenarioId,
+                    );
+                    setJourneyError("");
+                  }}
+                  disabled={journeyBusy || journeyStarting}
+                >
+                  {ANDROID_JOURNEY_SCENARIOS.map((scenario) => {
+                    const available = journeyScenarioAvailable(scenario);
+                    return (
+                      <option
+                        key={scenario.id}
+                        value={scenario.id}
+                        disabled={!available}
+                      >
+                        {t(scenario.optionEn, scenario.optionZh)}
+                        {!available
+                          ? t(" · unavailable", " · 不可用")
+                          : ""}
+                      </option>
+                    );
+                  })}
+                </select>
                 <label htmlFor="android-journey-device">
                   {t("Android device", "Android 设备")}
                 </label>
@@ -386,7 +466,7 @@ function Workspace() {
                     <Play size={14} />
                     {journeyStarting
                       ? t("Starting…", "正在启动…")
-                      : t("Run Android AI journey", "运行 Android AI 完整流程")}
+                      : t(journeyScenario.runEn, journeyScenario.runZh)}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={refresh}>
                     <RefreshCw size={13} />
@@ -418,8 +498,8 @@ function Workspace() {
                   {tasks.data && !journeyTask && (
                     <small className="danger-text">
                       {t(
-                        "This runner does not expose the Android AI journey task.",
-                        "此 runner 未提供 Android AI 完整流程任务。",
+                        "This runner does not expose the selected Android scenario.",
+                        "此 runner 未提供所选 Android 场景。",
                       )}
                     </small>
                   )}

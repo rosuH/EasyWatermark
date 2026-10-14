@@ -10,7 +10,11 @@ import {
 import App from "../src/App";
 
 vi.mock("../src/Catalog", () => ({
-  CatalogView: () => <p>Catalog view</p>,
+  CatalogView: ({ toggle }: { toggle: (id: string) => void }) => (
+    <button onClick={() => toggle("edge:pick-to-editor@android#agent")}>
+      Add draft task
+    </button>
+  ),
 }));
 vi.mock("../src/Run", () => ({
   RunView: () => <p>Run view</p>,
@@ -23,9 +27,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it("binds one ready Android device and starts only the AI journey when the runner is idle", async () => {
+function renderJourney(activeInitially: boolean) {
   localStorage.setItem("testmap-language", "en");
-  let active = true;
+  let active = activeInitially;
   const runBodies: unknown[] = [];
   const response = (body: unknown) => new Response(JSON.stringify(body));
   const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
@@ -38,7 +42,16 @@ it("binds one ready Android device and starts only the AI journey when the runne
         runnable: [
           {
             id: "android-ai-journey",
-            label: "Android AI journey",
+            label: "Android AI journey: pick, edit and export",
+            builder: "e2e-runner",
+            needs_device: "android",
+            platforms: ["android"],
+            cmd: [],
+            heavy: false,
+          },
+          {
+            id: "android-large-image-preview",
+            label: "Android large image preview: diagnose Canvas crash",
             builder: "e2e-runner",
             needs_device: "android",
             platforms: ["android"],
@@ -96,22 +109,37 @@ it("binds one ready Android device and starts only the AI journey when the runne
         selection: ["android-ai-journey"],
       });
     }
-    throw new Error(`Unexpected request ${path}`);
+    throw new Error("Unexpected request " + path);
   });
   vi.stubGlobal("fetch", fetchMock);
-
   render(<App />);
+  return {
+    fetchMock,
+    runBodies,
+    setActive(value: boolean) {
+      active = value;
+    },
+  };
+}
+
+it("keeps the edit-and-export journey as default and starts only it on one ready device", async () => {
+  const { fetchMock, runBodies, setActive } = renderJourney(true);
+  const scenario = await screen.findByRole("combobox", {
+    name: "Android scenario",
+  });
   const run = await screen.findByRole("button", {
     name: "Run Android AI journey",
   });
+  expect((scenario as HTMLSelectElement).value).toBe("android-ai-journey");
   expect(await screen.findByText(/A run is already active/)).toBeTruthy();
   expect((run as HTMLButtonElement).disabled).toBe(true);
 
+  fireEvent.click(screen.getByRole("button", { name: "Add draft task" }));
   fireEvent.change(screen.getByRole("combobox", { name: "Android device" }), {
     target: { value: "adb-1" },
   });
   expect(screen.getByText("Bound to: Pixel 8 (adb-1) · ready")).toBeTruthy();
-  active = false;
+  setActive(false);
   fireEvent.click(screen.getByRole("button", { name: "Refresh devices" }));
   await waitFor(() => expect((run as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(run);
@@ -120,6 +148,44 @@ it("binds one ready Android device and starts only the AI journey when the runne
   expect(runBodies).toEqual([
     {
       tasks: ["android-ai-journey"],
+      device: "adb-1",
+      repeat: 1,
+      execution_mode: "independent",
+    },
+  ]);
+  expect(
+    fetchMock.mock.calls.some(([path]) => path === "/api/route-plan"),
+  ).toBe(false);
+});
+
+it("starts the large-image crash reproduction as its own independent task", async () => {
+  const { fetchMock, runBodies, setActive } = renderJourney(true);
+  const scenario = await screen.findByRole("combobox", {
+    name: "Android scenario",
+  });
+  setActive(false);
+  fireEvent.click(screen.getByRole("button", { name: "Refresh devices" }));
+  await waitFor(() => expect((scenario as HTMLSelectElement).disabled).toBe(false));
+  fireEvent.change(scenario, {
+    target: { value: "android-large-image-preview" },
+  });
+  expect(
+    screen.getByText(/49,861 × 1,350 photo in the editor/),
+  ).toBeTruthy();
+  const run = await screen.findByRole("button", {
+    name: "Run large-image crash reproduction",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Add draft task" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Android device" }), {
+    target: { value: "adb-1" },
+  });
+  await waitFor(() => expect((run as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(run);
+
+  await screen.findByText("Run view");
+  expect(runBodies).toEqual([
+    {
+      tasks: ["android-large-image-preview"],
       device: "adb-1",
       repeat: 1,
       execution_mode: "independent",

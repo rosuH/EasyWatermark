@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused, device-free lifecycle and evidence checks for the Android AI journey."""
+"""Focused, device-free lifecycle and evidence checks for Android E2E tasks."""
 
 from __future__ import annotations
 
@@ -110,14 +110,54 @@ class AndroidE2EContractTests(unittest.TestCase):
 
     def test_selection_is_one_explicit_android_run(self):
         runner._validate_e2e_selection([runner.E2E_TASK_ID], "emulator-5554", 1, "independent")
+        runner._validate_e2e_selection([runner.E2E_LARGE_IMAGE_TASK_ID], "emulator-5554", 1, "independent")
         for args in (
             ([runner.E2E_TASK_ID, "guard"], "emulator-5554", 1, "independent"),
+            ([runner.E2E_TASK_ID, runner.E2E_LARGE_IMAGE_TASK_ID], "emulator-5554", 1, "independent"),
+            ([runner.E2E_LARGE_IMAGE_TASK_ID], "auto", 1, "independent"),
+            ([runner.E2E_LARGE_IMAGE_TASK_ID], "emulator-5554", 2, "independent"),
             ([runner.E2E_TASK_ID], "auto", 1, "independent"),
             ([runner.E2E_TASK_ID], "emulator-5554", 2, "independent"),
             ([runner.E2E_TASK_ID], "emulator-5554", 1, "route"),
         ):
             with self.subTest(args=args), self.assertRaises(ValueError):
                 runner._validate_e2e_selection(*args)
+
+    def test_large_image_crash_proof_requires_fresh_same_pid_decode_and_native_failure(self):
+        started_ms = 1_800_000_000_000
+        ended_ms = started_ms + 10_000
+        logs = "\n".join((
+            f"1800000000.100 28296 30063 I BitmapUtils: reqW x reqH = 544 x 700, outWidth x outHeight = 49861 x 1350, inSampleSize = 1",
+            f"1800000001.000 28296 28296 E AndroidRuntime: FATAL EXCEPTION: main",
+            f"1800000001.000 28296 28296 E AndroidRuntime: Process: me.rosuh.easywatermark.debug, PID: 28296",
+            f"1800000001.000 28296 28296 E AndroidRuntime: java.lang.RuntimeException: Canvas: trying to draw too large(269249400bytes) bitmap.",
+        ))
+        match = runner._e2e_canvas_crash_match(logs, started_ms, ended_ms)
+        self.assertEqual(28296, match["process_id"])
+        self.assertEqual({
+            "req_width": 544, "req_height": 700, "width": 49861, "height": 1350, "sample": 1,
+        }, match["request"])
+
+        stale_decode = logs.replace("1800000000.100", "1799999999.999")
+        self.assertIsNone(runner._e2e_canvas_crash_match(stale_decode, started_ms, ended_ms))
+        split_process = logs.replace("28296 30063 I BitmapUtils", "28297 30063 I BitmapUtils")
+        self.assertIsNone(runner._e2e_canvas_crash_match(split_process, started_ms, ended_ms))
+        wrong_sample = logs.replace("inSampleSize = 1", "inSampleSize = 2")
+        self.assertIsNone(runner._e2e_canvas_crash_match(wrong_sample, started_ms, ended_ms))
+
+        fixture = {"name": "ewm-suite-e2ejourney-" + "a" * 32 + "-A.png",
+                   "uri": "content://media/external_primary/images/media/7",
+                   "sha256": "a" * 64, "marker": "e2ejourney-" + "a" * 32}
+        result = {"status": "failed", "fixture": dict(fixture)}
+        with patch.object(setup, "adb", return_value=logs), \
+             patch.object(setup, "_device_clock", return_value={"device_ms": ended_ms}):
+            self.assertTrue(runner._e2e_canvas_crash_proof(
+                "emulator-5554", "20261013T120000-abcdef12", started_ms, result, fixture,
+            )["bug_reproduced"])
+            result["status"] = "passed"
+            self.assertFalse(runner._e2e_canvas_crash_proof(
+                "emulator-5554", "20261013T120000-abcdef12", started_ms, result, fixture,
+            )["bug_reproduced"])
 
     def test_home_journey_fixture_set_contains_only_a(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -284,13 +324,19 @@ class AndroidE2EContractTests(unittest.TestCase):
             trace = root / "results" / "journey" / "trace.md"
             trace.parent.mkdir(parents=True)
             trace.write_text("trace", encoding="utf-8")
+            crash_proof = root / "canvas-crash-proof.json"
+            crash_proof.write_text("{}", encoding="utf-8")
             (root / "testmap-result.json").write_text(json.dumps({
+                "scenario": runner.E2E_LARGE_IMAGE_SCENARIO,
                 "trace_path": "results/journey/trace.md", "steps": []
             }), encoding="utf-8")
             self.assertEqual(trace.resolve(), runner.e2e_artifact_path(run_id, "results/journey/trace.md"))
+            self.assertEqual(crash_proof.resolve(), runner.e2e_artifact_path(run_id, "canvas-crash-proof.json"))
             self.assertIsNone(runner.e2e_artifact_path(run_id, "../trace.md"))
             self.assertIsNone(runner.e2e_artifact_path(run_id, "results/journey/trace.js"))
             self.assertIsNone(runner.e2e_artifact_path("../../outside", "report.json"))
+            (root / "testmap-result.json").write_text(json.dumps({"scenario": runner.E2E_EXPORT_SCENARIO}), encoding="utf-8")
+            self.assertIsNone(runner.e2e_artifact_path(run_id, "canvas-crash-proof.json"))
 
     def test_task_api_exposes_builder_and_device_requirement(self):
         handler = object.__new__(console.Handler)
@@ -304,6 +350,10 @@ class AndroidE2EContractTests(unittest.TestCase):
         self.assertEqual("e2e-runner", task["builder"])
         self.assertEqual("android", task["needs_device"])
         self.assertEqual(["android"], task["platforms"])
+        diagnostic = next(row for row in payload["runnable"] if row["id"] == runner.E2E_LARGE_IMAGE_TASK_ID)
+        self.assertEqual("e2e-runner", diagnostic["builder"])
+        self.assertEqual("android", diagnostic["needs_device"])
+        self.assertEqual(["android"], diagnostic["platforms"])
 
     def test_artifact_api_serves_only_a_run_owned_e2e_artifact(self):
         run_id = "20261011T120000-abcdef12"

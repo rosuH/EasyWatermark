@@ -17,10 +17,28 @@ const runIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const output = process.env.EWM_E2E_OUTPUT?.trim() ?? '';
 const manifestPath = process.env.EWM_E2E_SETUP_STATE?.trim() ?? '';
 const device = process.env.EWM_E2E_DEVICE?.trim() ?? '';
+const scenario = process.env.EWM_E2E_SCENARIO?.trim() || 'android-edit-export';
 const modelId = process.env.EWM_E2E_MODEL?.trim() || 'cursor/auto';
 const baseURL = process.env.EWM_E2E_BASE_URL?.trim() || 'http://127.0.0.1:3425/v1';
 const outputRelative = `.runs/${runId}`;
 const outputRoot = path.resolve(cwd, outputRelative);
+const scenarios = {
+  'android-edit-export': {
+    testFile: 'tests/android-edit-export.e2e.ts',
+    expectedActCount: 3,
+    expectedAssertCount: 1,
+    requiresExpectedText: true,
+    requiredScreenshots: ['journey-edited', 'journey-after-export'],
+  },
+  'android-large-image-preview': {
+    testFile: 'tests/android-large-image-preview.e2e.ts',
+    expectedActCount: 1,
+    expectedAssertCount: 0,
+    requiresExpectedText: false,
+    requiredScreenshots: [],
+  },
+};
+const scenarioConfig = scenarios[scenario];
 let manifest;
 let report;
 let childExitCode;
@@ -43,6 +61,7 @@ function writeResult(status, reason) {
   mkdirSync(outputRoot, { recursive: true });
   const result = {
     status,
+    scenario,
     ...(reason ? { reason } : {}),
     model: actualModel ?? modelId,
     provider: 'magpie',
@@ -147,8 +166,11 @@ if (!runIdPattern.test(runId)) {
     manifest = JSON.parse(readFileSync(path.resolve(cwd, manifestPath), 'utf8'));
     if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) throw new Error('Setup manifest is not an object.');
     if (manifest.testmap_run_id !== runId) throw new Error('Setup manifest run ID does not match this output run.');
+    if (!scenarioConfig) throw new Error('EWM_E2E_SCENARIO is not an allowed scenario.');
     if (process.env.EWM_E2E_FIXTURE_NAME !== manifest.fixture_name) throw new Error('Fixture name does not match the setup manifest.');
-    if (process.env.EWM_E2E_EXPECT_TEXT !== manifest.expected_text) throw new Error('Expected watermark text does not match the setup manifest.');
+    if (scenarioConfig.requiresExpectedText && process.env.EWM_E2E_EXPECT_TEXT !== manifest.expected_text) {
+      throw new Error('Expected watermark text does not match the setup manifest.');
+    }
     if (device !== 'emulator-5554') throw new Error('Only emulator-5554 is allowed for this journey.');
     if (modelId !== 'cursor/auto') throw new Error('Only the authorized Magpie model cursor/auto is allowed.');
     const endpoint = new URL(baseURL);
@@ -164,8 +186,16 @@ if (!runIdPattern.test(runId)) {
     if (typeof manifest.fixture_sha256 !== 'string' || !/^[a-fA-F0-9]{64}$/.test(manifest.fixture_sha256)) {
       throw new Error('Setup manifest fixture SHA-256 is invalid.');
     }
-    if (typeof manifest.marker !== 'string' || !manifest.marker || typeof manifest.expected_text !== 'string' || manifest.expected_text.length < 6 || manifest.expected_text.length > 96 || /[\u0000-\u001f]/.test(manifest.expected_text)) {
-      throw new Error('Setup manifest marker or expected watermark text is invalid.');
+    if (typeof manifest.marker !== 'string' || !manifest.marker) {
+      throw new Error('Setup manifest marker is invalid.');
+    }
+    if (scenarioConfig.requiresExpectedText && (
+      typeof manifest.expected_text !== 'string' ||
+      manifest.expected_text.length < 6 ||
+      manifest.expected_text.length > 96 ||
+      /[\u0000-\u001f]/.test(manifest.expected_text)
+    )) {
+      throw new Error('Setup manifest expected watermark text is invalid.');
     }
   } catch (error) {
     block(error instanceof Error ? error.message : 'Setup manifest validation failed.');
@@ -179,6 +209,7 @@ if (!runIdPattern.test(runId)) {
       E2E_TELEMETRY_DISABLED: '1',
       EWM_E2E_BASE_URL: baseURL,
       EWM_E2E_MODEL: modelId,
+      EWM_E2E_SCENARIO: scenario,
       AGENT_DEVICE_STATE_DIR: path.resolve(cwd, '.e2e', 'agent-device', runId),
     };
     const cli = path.join(cwd, 'node_modules', 'e2e', 'dist', 'cli', 'bin.js');
@@ -190,7 +221,7 @@ if (!runIdPattern.test(runId)) {
       '--reporter', 'list',
       '--trace', 'on',
       '--no-cache',
-      'tests/android-edit-export.e2e.ts',
+      scenarioConfig?.testFile ?? 'tests/android-edit-export.e2e.ts',
     ];
 
     try {
@@ -220,20 +251,20 @@ if (!runIdPattern.test(runId)) {
     modelProof = normalizeAgentModelEvidence(steps, {
       expectedProvider: 'magpie.chat',
       expectedModel: modelId,
-      expectedActCount: 3,
-      expectedAssertCount: 1,
+      expectedActCount: scenarioConfig?.expectedActCount ?? 0,
+      expectedAssertCount: scenarioConfig?.expectedAssertCount ?? 0,
       configuredEndpoint: baseURL,
     });
     actualModel = modelProof.model;
     if (!modelProof.verified) {
-      reasons.push('Each live agent.act and agent.assert step must record Magpie magpie.chat cursor/auto model calls, with the configured loopback endpoint recorded separately.');
+      reasons.push('The selected scenario did not produce complete native model evidence for Magpie magpie.chat cursor/auto and its configured loopback endpoint.');
     }
 
     const attempts = result?.attempts ?? [];
     const allArtifacts = attempts.flatMap((item) => item.artifacts ?? []);
     const artifactById = new Map(allArtifacts.map((artifact) => [artifact.id, artifact]));
     const screenshotByStep = screenshotsByStep(steps, artifactById, artifactPath);
-    for (const label of ['journey-edited', 'journey-after-export']) {
+    for (const label of scenarioConfig?.requiredScreenshots ?? []) {
       if (!namedScreenshotPath(steps, screenshotByStep, label)) {
         reasons.push('The native report is missing the step-associated ' + label + ' PNG.');
       }
@@ -251,7 +282,7 @@ if (!runIdPattern.test(runId)) {
       ...(screenshotByStep.get(step.id) ? { screenshot: screenshotByStep.get(step.id) } : {}),
       duration_ms: step.durationMs,
     }));
-    const status = normalizeRunStatus({ nativeStatus: report?.run?.status, attempts, reasons });
+    const status = normalizeRunStatus({ nativeStatus: report?.run?.status, attempts, reasons, scenario });
     writeResult(status, reasons.length ? reasons.join(' ') : undefined);
     process.exitCode = status === 'passed' ? 0 : status === 'blocked' ? 2 : childExitCode || 1;
   }
