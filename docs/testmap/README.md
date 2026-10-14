@@ -22,6 +22,8 @@ The CLI is the only runner. The web client can select tasks, start a CLI run, st
 
 Mobile Agent Device tasks can expand to supported Android and iOS lanes. Review the actual task list and selected devices before starting. Desktop remains host/L1 coverage; a witness image is not Desktop device video. Do not close existing emulators, clear user data, or open native scrcpy windows automatically. Warn before sustained emulator and build load; cap Gradle with `--max-workers=8`.
 
+The Android E2E runner exposes `android-ai-journey` and the diagnostic `android-large-image-preview` task. Each must run alone, once, on an explicitly selected Android device. The preview task creates one owned 49,861×1,350 banded PNG, then checks fresh same-process decode and Canvas-fatal logs; `bug_reproduced` is separate from the native test failure. It does not claim an export, and fixture/private-state restoration remains required.
+
 ### Preparation and recovery
 
 Preparation backs up the preference files it changes before resetting them. The private recovery journal stays inside the task's evidence directory; a device lock under `build/testmap/setup-backups/` points to it. Normal completion, failure, and Stop attempt restoration. A restore failure fails the task, retains the backup, and blocks another setup on that device in this checkout. A hard kill or device loss can prevent immediate restoration.

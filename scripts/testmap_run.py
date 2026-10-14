@@ -126,6 +126,10 @@ ARTIFACTS_DIR = REPO_ROOT / "docs" / "testmap" / "artifacts"
 WITNESS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.png$")
 RUN_ID_RE = re.compile(r"^[0-9T]{15}-[0-9a-f]+(-[0-9]+)?$")
 E2E_TASK_ID = "android-ai-journey"
+E2E_LARGE_IMAGE_TASK_ID = "android-large-image-preview"
+E2E_EXPORT_SCENARIO = "android-edit-export"
+E2E_LARGE_IMAGE_SCENARIO = "android-large-image-preview"
+E2E_TASK_IDS = frozenset({E2E_TASK_ID, E2E_LARGE_IMAGE_TASK_ID})
 E2E_RUNNER_DIR = REPO_ROOT / "tools" / "testmap" / "runner"
 E2E_RUNNER_TIMEOUT_S = 840
 E2E_OUTPUT_LIMIT = 128 * 1024 * 1024
@@ -261,6 +265,19 @@ TASK_SPECS: dict[str, dict] = {
         "platforms": ["android"],
         "needs_device": "android",
         "builder": "e2e-runner",
+        "e2e_scenario": E2E_EXPORT_SCENARIO,
+        "setup": "home",
+        "cmd": ["npm", "run", "android:journey", "--", "--no-cache"],
+        "cwd": "tools/testmap/runner",
+    },
+    E2E_LARGE_IMAGE_TASK_ID: {
+        "label": "Android large image preview: diagnose Canvas crash",
+        "parse_xml": False,
+        "heavy": True,
+        "platforms": ["android"],
+        "needs_device": "android",
+        "builder": "e2e-runner",
+        "e2e_scenario": E2E_LARGE_IMAGE_SCENARIO,
         "setup": "home",
         "cmd": ["npm", "run", "android:journey", "--", "--no-cache"],
         "cwd": "tools/testmap/runner",
@@ -531,16 +548,17 @@ def resolve_task_spec(tid: str) -> dict:
 def _validate_e2e_selection(task_ids: list[str], device: str | None, repeats: int, execution_mode: str) -> None:
     if len(task_ids) != len(set(task_ids)):
         raise ValueError("duplicate task selections are not allowed")
-    if E2E_TASK_ID not in task_ids:
+    selected = [task_id for task_id in task_ids if task_id in E2E_TASK_IDS]
+    if not selected:
         return
-    if task_ids != [E2E_TASK_ID]:
-        raise ValueError("Android AI journey must run alone to keep one Android controller")
+    if len(task_ids) != 1 or len(selected) != 1:
+        raise ValueError("Android E2E task must run alone to keep one Android controller")
     if execution_mode != "independent":
-        raise ValueError("Android AI journey supports independent execution only")
+        raise ValueError("Android E2E task supports independent execution only")
     if type(repeats) is not int or repeats != 1:
-        raise ValueError("Android AI journey requires repeat=1")
+        raise ValueError("Android E2E task requires repeat=1")
     if not isinstance(device, str) or not device.strip() or device.strip() == "auto":
-        raise ValueError("Android AI journey requires one explicitly selected Android device")
+        raise ValueError("Android E2E task requires one explicitly selected Android device")
 
 
 def _record_task(tid: str, spec: dict) -> dict:
@@ -564,6 +582,7 @@ def _record_task(tid: str, spec: dict) -> dict:
         "xml_base": spec.get("xml_base"),
         "needs_device": spec.get("needs_device"),
         "builder": spec.get("builder"),
+        "e2e_scenario": spec.get("e2e_scenario"),
         "only_testing": list(spec.get("only_testing") or []),
         "device_request": spec.get("device_request") or "auto",
         "env": dict(spec.get("env") or {}),
@@ -949,6 +968,7 @@ def task_run_spec(task: dict) -> dict:
         "xml_base": task.get("xml_base"),
         "needs_device": task.get("needs_device"),
         "builder": task.get("builder"),
+        "e2e_scenario": task.get("e2e_scenario"),
         "only_testing": list(task.get("only_testing") or []),
         "device_request": task.get("device_request") or "auto",
         "env": dict(task.get("env") or {}),
@@ -3290,6 +3310,12 @@ def e2e_artifact_path(run_id: str, relative: str) -> Path | None:
         return None
     root = RUNS_DIR / run_id / "e2e"
     try:
+        if len(parts) == 1 and parts[0] == "canvas-crash-proof.json":
+            manifest_path = _e2e_file(root, "testmap-result.json", limit=2 * 1024 * 1024)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if not isinstance(manifest, dict) or manifest.get("scenario") != E2E_LARGE_IMAGE_SCENARIO:
+                return None
+            return _e2e_file(root, relative, limit=64 * 1024)
         if len(parts) == 1 and parts[0] in {
             "testmap-result.json", "backend-proof.json", "export-file.png", "export-control-events.json"
         }:
@@ -3325,6 +3351,8 @@ def _e2e_links(run_id: str, result: dict) -> list[dict]:
                ("trace", str(result.get("trace_path") or "")),
                ("screenshot", "export-file.png"), ("result", "backend-proof.json"),
                ("trace", "export-control-events.json")]
+    if result.get("scenario") == E2E_LARGE_IMAGE_SCENARIO:
+        entries.append(("result", "canvas-crash-proof.json"))
     links = []
     for kind, relative in entries:
         if relative and e2e_artifact_path(run_id, relative):
@@ -3351,10 +3379,17 @@ def _e2e_final_status(code: int, reason: str, result: dict | None, proof: dict) 
         return "failed"
     if code == 130:
         return "stopped"
+    if proof.get("bug_reproduced") is True:
+        return "failed"
     if result and result.get("status") == "blocked":
         return "failed" if proof.get("runner_started") else "blocked"
     if result and result.get("status") == "failed":
         return "failed"
+    if (proof.get("scenario") == E2E_LARGE_IMAGE_SCENARIO
+            and result and result.get("status") == "passed" and code == 0
+            and proof.get("output_baseline", {}).get("status") == "verified"
+            and proof.get("restore", {}).get("status") == "verified"):
+        return "review_required"
     if (result and result.get("status") == "passed" and code == 0
             and proof.get("export", {}).get("status") == "verified"
             and proof.get("restore", {}).get("status") == "verified"):
@@ -3379,11 +3414,14 @@ def _e2e_stop_task_state(extra: dict) -> str:
     return "failed" if _e2e_restore_failed(extra) else "stopped"
 
 
-def _e2e_load_result(output: Path, expected_fixture: dict | None = None) -> dict:
+def _e2e_load_result(output: Path, expected_fixture: dict | None = None,
+                     expected_scenario: str | None = None) -> dict:
     path = _e2e_file(output, "testmap-result.json", limit=2 * 1024 * 1024)
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict) or value.get("status") not in {"passed", "failed", "blocked"}:
         raise ValueError("E2E runner result has an unknown status")
+    if expected_scenario and value.get("scenario") != expected_scenario:
+        raise ValueError("E2E runner result does not identify the selected scenario")
     steps = value.get("steps")
     if not isinstance(steps, list) or len(steps) > 64:
         raise ValueError("E2E runner result has invalid steps")
@@ -3405,20 +3443,24 @@ def _e2e_load_result(output: Path, expected_fixture: dict | None = None) -> dict
         if value.get("provider") != "magpie" or value.get("model") != "cursor/auto":
             raise ValueError("Successful E2E result does not identify the configured Magpie model")
         fixture = value.get("fixture")
-        if expected_fixture and (not isinstance(fixture, dict) or any(
-                fixture.get(key) != expected_fixture.get(key) for key in ("name", "uri", "sha256"))):
-            raise ValueError("Successful E2E result is not bound to the owned picker fixture")
         report = _e2e_file(output, value["report_path"])
         trace = _e2e_file(output, value["trace_path"])
         if report.suffix != ".json" or trace.suffix != ".md" or not trace.read_text(encoding="utf-8", errors="replace").strip():
             raise ValueError("Successful E2E report or trace is empty or has an unexpected type")
         json.loads(report.read_text(encoding="utf-8"))
+    fixture = value.get("fixture")
+    fixture_keys = tuple(key for key in ("name", "uri", "sha256", "marker")
+                         if expected_fixture and key in expected_fixture)
+    if (expected_fixture and (not isinstance(fixture, dict) or any(
+            fixture.get(key) != expected_fixture.get(key) for key in fixture_keys))):
+        raise ValueError("E2E result is not bound to the owned picker fixture")
     return value
 
 
-def _e2e_publish_steps(result: dict, output: Path, run_id: str, on_steps) -> None:
+def _e2e_publish_steps(result: dict, output: Path, run_id: str, on_steps,
+                       task_id: str = E2E_TASK_ID) -> None:
     root = RUNS_DIR / run_id
-    identity = {"edge": E2E_TASK_ID, "repeat": {"k": 1, "n": 1}}
+    identity = {"edge": task_id, "repeat": {"k": 1, "n": 1}}
     rows = []
     shot_root = root / "steps"
     for index, value in enumerate(result.get("steps") or [], 1):
@@ -3455,6 +3497,124 @@ def _e2e_query(serial: str, uri: str, projection: str, where: str | None = None,
         args.extend(["--where", where])
     raw = setup.adb_shell(serial, *args, timeout=timeout)
     return setup.export_media_rows(raw, set(projection.split(":")))
+
+
+_E2E_EPOCH_LOG_ROW = re.compile(
+    r"^\s*(?P<seconds>[0-9]+\.[0-9]+)\s+(?P<pid>[0-9]+)\s+(?P<tid>[0-9]+)\s+"
+    r"(?P<priority>[VDIWEF])\s+(?P<tag>[A-Za-z0-9_.-]+):\s*(?P<message>.*)$"
+)
+_E2E_BITMAP_DECODE = re.compile(
+    r"reqW x reqH = (?P<req_width>[0-9]+) x (?P<req_height>[0-9]+), "
+    r"outWidth x outHeight = (?P<width>[0-9]+) x (?P<height>[0-9]+), "
+    r"inSampleSize = (?P<sample>[0-9]+)"
+)
+
+
+def _e2e_canvas_crash_match(log_text: str, started_device_ms: int, ended_device_ms: int) -> dict | None:
+    """Match only a fresh same-process oversized decode followed by the Canvas fatal."""
+    if (type(started_device_ms) is not int or type(ended_device_ms) is not int
+            or started_device_ms <= 0 or ended_device_ms < started_device_ms):
+        return None
+    rows = []
+    for line in str(log_text or "").splitlines():
+        match = _E2E_EPOCH_LOG_ROW.match(line)
+        if not match:
+            continue
+        timestamp_ms = int(float(match.group("seconds")) * 1000)
+        if timestamp_ms < started_device_ms or timestamp_ms > ended_device_ms:
+            continue
+        rows.append({
+            "timestamp_ms": timestamp_ms,
+            "pid": int(match.group("pid")),
+            "tag": match.group("tag"),
+            "message": match.group("message"),
+        })
+    matches = []
+    for fatal in rows:
+        if fatal["tag"] != "AndroidRuntime" or "FATAL EXCEPTION: main" not in fatal["message"]:
+            continue
+        pid = fatal["pid"]
+        fatal_window = [row for row in rows if row["pid"] == pid
+                        and 0 <= row["timestamp_ms"] - fatal["timestamp_ms"] <= 3000
+                        and row["tag"] == "AndroidRuntime"]
+        process_line = next((row for row in fatal_window
+                             if row["message"] == f"Process: me.rosuh.easywatermark.debug, PID: {pid}"), None)
+        canvas_line = next((row for row in fatal_window
+                            if "Canvas: trying to draw too large(269249400bytes) bitmap." in row["message"]), None)
+        decode = None
+        for row in rows:
+            if (row["pid"] != pid or row["tag"] != "BitmapUtils"
+                    or row["timestamp_ms"] > fatal["timestamp_ms"]
+                    or fatal["timestamp_ms"] - row["timestamp_ms"] > 30_000):
+                continue
+            decoded = _E2E_BITMAP_DECODE.search(row["message"])
+            if not decoded:
+                continue
+            values = {key: int(value) for key, value in decoded.groupdict().items()}
+            if (values["width"] == 49861 and values["height"] == 1350 and values["sample"] == 1
+                    and values["req_width"] > 0 and values["req_height"] > 675):
+                decode = (row, values)
+                break
+        if process_line and canvas_line and decode:
+            decode_row, request = decode
+            matches.append({
+                "process_id": pid,
+                "decode_at_device_ms": decode_row["timestamp_ms"],
+                "fatal_at_device_ms": fatal["timestamp_ms"],
+                "request": request,
+                "matched_log_lines": [
+                    {"device_ms": row["timestamp_ms"], "pid": pid,
+                     "tag": row["tag"], "message": row["message"]}
+                    for row in (decode_row, fatal, process_line, canvas_line)
+                ],
+            })
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _e2e_canvas_crash_proof(serial: str, run_id: str, started_device_ms: int,
+                            result: dict | None, fixture: dict) -> dict:
+    import testmap_setup as setup
+    base = {
+        "scenario": E2E_LARGE_IMAGE_SCENARIO,
+        "run_id": run_id,
+        "device": serial,
+        "fixture": fixture,
+        "native_status": (result or {}).get("status"),
+        "bug_reproduced": False,
+    }
+    try:
+        raw = setup.adb(serial, ["logcat", "-d", "-v", "epoch", "-s",
+                                 "BitmapUtils:I", "AndroidRuntime:E"], timeout=20)
+        ended_device_ms = setup._device_clock(serial)["device_ms"]
+        match = _e2e_canvas_crash_match(raw, started_device_ms, ended_device_ms)
+        fixture_result = (result or {}).get("fixture")
+        fixture_matches = isinstance(fixture_result, dict) and all(
+            fixture_result.get(key) == fixture.get(key) for key in ("name", "uri", "sha256", "marker")
+        )
+        base.update(
+            started_at_device_ms=started_device_ms,
+            ended_at_device_ms=ended_device_ms,
+            fixture_matches=fixture_matches,
+            signature=match,
+        )
+        base["bug_reproduced"] = bool(match and fixture_matches and (result or {}).get("status") == "failed")
+        if base["bug_reproduced"]:
+            base["status"] = "verified"
+            base["reason"] = "Fresh same-process decode and Canvas fatal match the owned oversized fixture."
+        elif not match:
+            base["status"] = "not_reproduced"
+            base["reason"] = "No unique fresh same-process oversized decode and Canvas fatal pair was found."
+        elif not fixture_matches:
+            base["status"] = "unverified"
+            base["reason"] = "Runner result is not bound to the exact owned fixture."
+        else:
+            base["status"] = "unverified"
+            base["reason"] = "Native runner did not report a failed test for the matched crash."
+    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired, KeyError) as exc:
+        base.update(status="unverified", reason=f"Could not verify fresh Android crash logs: {exc}")
+    return base
 
 
 def _e2e_claim_export(state: dict, run_id: str, serial: str, source_uri: str,
@@ -3531,8 +3691,15 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
                             on_spec=None, on_steps=None, should_stop=None):
     import testmap_setup as setup
     run_id = Path(str(spec.get("step_evidence_root") or "")).name
+    scenario = str(spec.get("e2e_scenario") or E2E_EXPORT_SCENARIO)
+    large_image = scenario == E2E_LARGE_IMAGE_SCENARIO
+    scenario_task_id = E2E_LARGE_IMAGE_TASK_ID if large_image else E2E_TASK_ID
+    task_evidence = spec.get("step_evidence_task") if isinstance(spec.get("step_evidence_task"), dict) else {}
+    task_id = str(task_evidence.get("id") or scenario_task_id)
     if not RUN_ID_RE.fullmatch(run_id):
         return 2, [], {"e2e_runner": {"status": "blocked", "reason": "Testmap run identity is missing"}}
+    if scenario not in {E2E_EXPORT_SCENARIO, E2E_LARGE_IMAGE_SCENARIO} or task_id != scenario_task_id:
+        return 2, [], {"e2e_runner": {"status": "blocked", "reason": "E2E task and scenario do not match"}}
     device = spec.get("device") if isinstance(spec.get("device"), dict) else {}
     serial = str(device.get("id") or "")
     if not serial or serial in {"auto", "<device>"}:
@@ -3542,13 +3709,15 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
     archive = run_root / "e2e"
     runner_output = E2E_RUNNER_DIR / ".runs" / run_id
     proof = {"status": "unverified", "run_id": run_id, "device": serial,
+             "task_id": task_id, "scenario": scenario,
              "human_confirmation": False, "restore": {"status": "pending"},
-             "export": {"status": "unverified"}}
+             "export": {"status": "not_expected" if large_image else "unverified"}}
     result = None
     setup_state = None
     before_ids: set[str] = set()
     baseline_captured = False
     source_uri = ""
+    started_device_ms = None
     code = 2
     reason = "Android AI journey did not complete"
     archived_bytes = 0
@@ -3568,10 +3737,12 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
         setup_state = apply_setup(
             "home", platform="android", folder=setup_folder, marker="e2ejourney",
             serial=serial, should_stop=should_stop, android_ai_journey_run_id=run_id,
+            android_ai_scenario=scenario,
         )
         if (setup_state.get("setup") != "home" or not re.fullmatch(r"e2ejourney-[a-f0-9]{32}", setup_state.get("marker", ""))
                 or setup_state.get("serial") != serial or setup_state.get("phase") != "active"
                 or setup_state.get("android_ai_journey_run_id") != run_id
+                or setup_state.get("android_ai_scenario") != scenario
                 or setup_state.get("journey_control_files_cleared") is not True
                 or setup_state.get("export_control") is not None):
             raise ValueError("Android home setup is not bound to this journey")
@@ -3584,7 +3755,16 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
         fixture = Path(setup_state["fixtures"]["A"])
         fixture_data = fixture.read_bytes()
         fixture_sha = hashlib.sha256(fixture_data).hexdigest()
-        if fixture.is_symlink() or fixture.parent != Path(setup_state["journal"]).parent or fixture_sha != setup_state["export_source"]["sha256"]:
+        fixture_valid = (not fixture.is_symlink()
+                         and fixture.parent == Path(setup_state["journal"]).parent)
+        if large_image:
+            fixture_valid = (fixture_valid and fixture_data.startswith(b"\x89PNG\r\n\x1a\n")
+                             and int.from_bytes(fixture_data[16:20], "big") == 49861
+                             and int.from_bytes(fixture_data[20:24], "big") == 1350
+                             and setup_state.get("export_source") is None)
+        else:
+            fixture_valid = (fixture_valid and fixture_sha == setup_state["export_source"]["sha256"])
+        if not fixture_valid:
             raise ValueError("Journey fixture identity changed during setup")
         source_id = str(setup_state.get("source_id") or "")
         if not re.fullmatch(r"[1-9][0-9]*", source_id):
@@ -3597,12 +3777,14 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
         source_bytes = setup.export_provider_read(serial, source_uri, limit=2 * 1024 * 1024, timeout=10)
         if source_rows != [{"_id": source_id}] or source_bytes != fixture_data:
             raise ValueError("Journey source URI does not read back the unique owned fixture")
-        expected_text = "EWM-" + run_id
         manifest = {
             "testmap_run_id": run_id, "fixture_name": fixture.name,
             "fixture_uri": source_uri, "fixture_sha256": fixture_sha,
-            "marker": setup_state["marker"], "expected_text": expected_text,
+            "marker": setup_state["marker"],
         }
+        expected_text = "EWM-" + run_id
+        if not large_image:
+            manifest["expected_text"] = expected_text
         manifest_path = setup_folder / "e2e-setup-state.json"
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         os.chmod(manifest_path, 0o400)
@@ -3613,22 +3795,31 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
             "EWM_E2E_BASE_URL": "http://127.0.0.1:3425/v1",
             "EWM_E2E_MODEL": "cursor/auto",
             "EWM_E2E_API_KEY": "magpie",
+            "EWM_E2E_SCENARIO": scenario,
             "EWM_E2E_DEVICE": serial,
             "EWM_E2E_OUTPUT": f".runs/{run_id}",
             "EWM_E2E_SETUP_STATE": str(manifest_path.resolve()),
             "EWM_E2E_FIXTURE_NAME": fixture.name,
-            "EWM_E2E_EXPECT_TEXT": expected_text,
             "EWM_E2E_RUN_ID": run_id,
         }
+        if not large_image:
+            env["EWM_E2E_EXPECT_TEXT"] = expected_text
+        else:
+            env.pop("EWM_E2E_EXPECT_TEXT", None)
         proof.update(source_uri=source_uri, source_sha256=fixture_sha, fixture_name=fixture.name,
                      marker=setup_state["marker"], output_ids_before=sorted(before_ids, key=int),
                      runner_output=f".runs/{run_id}", model=None, provider=None)
+        proof["fixture"] = {"name": fixture.name, "uri": source_uri,
+                            "sha256": fixture_sha, "marker": setup_state["marker"]}
         if callable(on_spec):
             on_spec({**spec, "e2e_output": str(archive), "device": device})
         logf.write("setup recovery backup: " + str(setup_state["journal"]) + "\n")
         logf.write(f"journey fixture: {fixture.name} ({fixture_sha})\n")
+        logf.write(f"scenario: {scenario}\n")
         logf.write(f"\n## spawn: npm run android:journey -- --no-cache (cwd {E2E_RUNNER_DIR})\n")
         logf.flush()
+        started_device_ms = setup._device_clock(serial)["device_ms"]
+        proof["runner_started_at_device_ms"] = started_device_ms
         proof["runner_started"] = True
         proc = subprocess.Popen(
             ["npm", "run", "android:journey", "--", "--no-cache"],
@@ -3651,17 +3842,20 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
             archived_bytes = _archive_e2e_output(runner_output, archive)
             result = _e2e_load_result(runner_output, {
                 "name": fixture.name, "uri": source_uri, "sha256": fixture_sha,
-            })
+                "marker": setup_state["marker"],
+            }, expected_scenario=scenario)
             proof.update(model=result.get("model"), provider=result.get("provider"),
                          runner_status=result.get("status"), runner_reason=result.get("reason"),
                          report_path=result.get("report_path"), trace_path=result.get("trace_path"),
                          archived_bytes=archived_bytes)
-            _e2e_publish_steps(result, runner_output, run_id, on_steps)
+            _e2e_publish_steps(result, runner_output, run_id, on_steps, task_id=task_id)
             if code not in {124, 130}:
                 if result.get("status") != "passed":
                     reason = result.get("reason") or f"E2E runner reported {result.get('status')}"
                 elif code != 0:
                     reason = f"E2E runner exited with status {code}"
+                elif large_image:
+                    reason = "Large image preview completed; checking crash evidence and cleanup"
                 else:
                     reason = "Runner journey passed; verifying real Android export file"
         except (ValueError, OSError, json.JSONDecodeError) as exc:
@@ -3685,16 +3879,53 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
         reason = str(exc)
         code = 2
     finally:
+        if large_image and proof.get("runner_started") and started_device_ms is not None:
+            crash_proof = _e2e_canvas_crash_proof(
+                serial, run_id, started_device_ms, result, proof.get("fixture") or {},
+            )
+            proof["canvas_crash"] = crash_proof
+            proof["bug_reproduced"] = crash_proof.get("bug_reproduced") is True
+            if proof["bug_reproduced"]:
+                pid = (crash_proof.get("signature") or {}).get("process_id")
+                reason = f"Fresh oversized-image Canvas crash reproduced in app PID {pid}."
+                if code == 0:
+                    code = 1
+            elif result and result.get("status") == "passed" and code == 0:
+                reason = "Large image preview completed; the exact Canvas crash was not reproduced."
         if setup_state is not None:
             if setup_state.get("android_ai_journey_run_id") == run_id and baseline_captured:
-                try:
-                    _e2e_claim_export(setup_state, run_id, serial, source_uri, before_ids, archive, proof)
-                except Exception as exc:
-                    proof.setdefault("export", {}).update(status="unverified", reason=str(exc))
-                    if code != 130:
-                        code = 2
-                    reason = (reason + "; " if reason else "") + "real export verification failed: " + str(exc)
-            if result and result.get("status") == "passed" and code == 0 and proof.get("export", {}).get("status") == "verified":
+                if large_image:
+                    try:
+                        after_rows = _e2e_query(serial, setup.MEDIA, "_id", setup.EXPORT_OUTPUT_FILTER)
+                        after_ids = {row["_id"] for row in after_rows}
+                        unchanged = len(after_rows) == len(after_ids) and after_ids == before_ids
+                        proof["output_baseline"] = {
+                            "status": "verified" if unchanged else "failed",
+                            "before_count": len(before_ids), "after_count": len(after_ids),
+                            "unchanged": unchanged,
+                        }
+                        proof["export"] = {
+                            "status": "not_expected" if unchanged else "unexpected_output",
+                            "output_rows_unchanged": unchanged,
+                        }
+                        if not unchanged:
+                            raise ValueError("Unexpected MediaStore output appeared during the crash reproduction")
+                    except Exception as exc:
+                        proof["output_baseline"] = {"status": "failed", "reason": str(exc)}
+                        proof["export"] = {"status": "not_expected", "reason": str(exc)}
+                        if code != 130:
+                            code = 2
+                        reason = (reason + "; " if reason else "") + "output baseline verification failed: " + str(exc)
+                else:
+                    try:
+                        _e2e_claim_export(setup_state, run_id, serial, source_uri, before_ids, archive, proof)
+                    except Exception as exc:
+                        proof.setdefault("export", {}).update(status="unverified", reason=str(exc))
+                        if code != 130:
+                            code = 2
+                        reason = (reason + "; " if reason else "") + "real export verification failed: " + str(exc)
+            if (not large_image and result and result.get("status") == "passed" and code == 0
+                    and proof.get("export", {}).get("status") == "verified"):
                 reason = "Runner and exported PNG are verified; human review remains"
             try:
                 restore_setup(setup_state)
@@ -3714,6 +3945,26 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
             proof.update(model=result.get("model"), provider=result.get("provider"),
                          runner_status=result.get("status"), runner_reason=result.get("reason"),
                          report_path=result.get("report_path"), trace_path=result.get("trace_path"))
+        if large_image and proof.get("runner_started"):
+            crash_proof_path = archive / "canvas-crash-proof.json"
+            crash_record = {
+                **(proof.get("canvas_crash") or {}),
+                "task_id": task_id,
+                "output_baseline": proof.get("output_baseline") or {"status": "unverified"},
+                "restore": {
+                    "status": proof.get("restore", {}).get("status"),
+                    "journal": proof.get("restore", {}).get("journal"),
+                    "fixtures_cleanup": proof.get("fixtures_cleanup"),
+                },
+            }
+            try:
+                crash_proof_path.write_text(json.dumps(crash_record, indent=2) + "\n", encoding="utf-8")
+                proof["crash_proof_path"] = crash_proof_path.name
+            except OSError as exc:
+                proof["crash_proof_error"] = str(exc)
+                if code != 130:
+                    code = 2
+                reason = (reason + "; " if reason else "") + "crash proof could not be saved: " + str(exc)
         proof["status"] = _e2e_final_status(code, reason, result, proof)
         proof["reason"] = reason
         proof["evidence_links"] = []
@@ -3725,7 +3976,9 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
         except OSError:
             pass
     case_status = "review_required" if proof.get("status") == "review_required" else "failed" if proof.get("status") == "failed" else "not-in-report"
-    cases = ([{"name": "Android AI journey: pick, edit and export", "ref": "",
+    case_name = ("Android large image preview: diagnose Canvas crash" if large_image
+                 else "Android AI journey: pick, edit and export")
+    cases = ([{"name": case_name, "ref": "",
                "status": case_status, "raw_status": str((result or {}).get("status") or proof["status"]),
                "message": reason}]
              if case_status != "not-in-report" else [])

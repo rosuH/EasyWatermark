@@ -16,10 +16,10 @@ test('normalizes native agent APIs without treating provider-default as the conf
     calls: 2,
   };
   const steps = [
-    { id: 'select', kind: 'act', api: 'agent.act', model, metrics: { modelCalls: 2 } },
-    { id: 'style', kind: 'agent', api: 'agent.act', model, metrics: { modelCalls: 2 } },
-    { id: 'assert', kind: 'assert', api: 'agent.assert', model, metrics: { modelCalls: 1 } },
-    { id: 'export', kind: 'act', api: 'agent.act', model, metrics: { modelCalls: 2 } },
+    { id: 'select', kind: 'act', api: 'agent.act', status: 'passed', model, metrics: { modelCalls: 2 } },
+    { id: 'style', kind: 'act', api: 'agent.act', status: 'passed', model, metrics: { modelCalls: 2 } },
+    { id: 'assert', kind: 'assert', api: 'agent.assert', status: 'passed', model, metrics: { modelCalls: 1 } },
+    { id: 'export', kind: 'act', api: 'agent.act', status: 'passed', model, metrics: { modelCalls: 2 } },
   ];
 
   const proof = normalizeAgentModelEvidence(steps, {
@@ -69,12 +69,14 @@ test('rejects mismatched native model identity and non-loopback configured endpo
       id: 'act',
       api: 'agent.act',
       kind: 'act',
+      status: 'passed',
       model: { provider: 'other.chat', model: 'cursor/auto', endpoint: 'provider-default', calls: 1 },
     },
     {
       id: 'assert',
       api: 'agent.assert',
       kind: 'assert',
+      status: 'passed',
       model: { provider: 'magpie.chat', model: 'cursor/auto', endpoint: 'provider-default', calls: 1 },
     },
   ], {
@@ -90,6 +92,30 @@ test('rejects mismatched native model identity and non-loopback configured endpo
   assert.equal(proof.agent_steps[0].provider_model_verified, false);
 });
 
+test('keeps an incomplete large-image act as partial model evidence', () => {
+  const proof = normalizeAgentModelEvidence([
+    {
+      id: 'preview',
+      api: 'agent.act',
+      kind: 'act',
+      status: 'failed',
+      model: { provider: 'magpie.chat', model: 'cursor/auto', endpoint: 'provider-default', calls: 3 },
+      metrics: { modelCalls: 3 },
+    },
+  ], {
+    expectedProvider: 'magpie.chat',
+    expectedModel: 'cursor/auto',
+    expectedActCount: 1,
+    expectedAssertCount: 0,
+    configuredEndpoint: 'http://127.0.0.1:3425/v1',
+  });
+
+  assert.equal(proof.verified, false);
+  assert.equal(proof.evidence_state, 'partial');
+  assert.equal(proof.calls, 3);
+  assert.equal(proof.agent_steps[0].status, 'failed');
+});
+
 
 test('classifies a started STEP_TIMEOUT as failed even when the native run is blocked', () => {
   assert.equal(normalizeRunStatus({
@@ -98,4 +124,10 @@ test('classifies a started STEP_TIMEOUT as failed even when the native run is bl
     reasons: ['The journey test did not pass.'],
   }), 'failed');
   assert.equal(normalizeRunStatus({ nativeStatus: 'blocked', attempts: [], reasons: ['No test was selected.'] }), 'blocked');
+  assert.equal(normalizeRunStatus({
+    nativeStatus: 'blocked',
+    scenario: 'android-large-image-preview',
+    attempts: [{ status: 'failed', startedAt: '2026-10-13T10:00:00Z', error: { code: 'APP_UNREACHABLE' } }],
+    reasons: ['The preview journey did not pass.'],
+  }), 'failed');
 });

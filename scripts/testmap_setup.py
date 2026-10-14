@@ -49,6 +49,8 @@ from testmap_stop import CLEANUP_CMD_TIMEOUT_S, RESTORE_BUDGET_S, terminate_proc
 _CLEANUP_DEADLINE = contextvars.ContextVar("setup_cleanup_deadline", default=None)
 _SETUP_STOP = contextvars.ContextVar("setup_stop", default=None)
 _ANDROID_AI_JOURNEY_RESTORE_BUDGET_S = 15
+ANDROID_AI_JOURNEY_SCENARIOS = frozenset({"android-edit-export", "android-large-image-preview"})
+ANDROID_LARGE_IMAGE_PREVIEW_SIZE = (49861, 1350)
 
 MAP_PATH = REPO_ROOT / "docs" / "testmap" / "map.yaml"
 ANDROID_PACKAGE = "me.rosuh.easywatermark.debug"
@@ -232,6 +234,23 @@ def make_fixtures(folder: Path, marker: str, *, keys: tuple[str, ...] | None = N
     if "icon" in paths:
         write_png(paths["icon"], 128, 128, lambda y: bytes((223, 48, 48)) * 128)
     return paths
+
+
+def make_large_image_preview_fixture(folder: Path, marker: str) -> dict[str, Path]:
+    """Build the one fixed oversized-image diagnostic fixture for Testmap."""
+    if not re.fullmatch(r"e2ejourney-[a-f0-9]{32}", str(marker)):
+        raise ValueError("Large-image preview fixture requires an owned Android AI journey marker")
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    width, height = ANDROID_LARGE_IMAGE_PREVIEW_SIZE
+    path = folder / f"ewm-suite-{marker}-A.png"
+    write_png(
+        path,
+        width,
+        height,
+        lambda y: _band_row(width, y, height, (25, 77, 128), (255, 255, 255), (232, 183, 70)),
+    )
+    return {"A": path}
 
 
 def push_android_fixtures(serial: str, fixtures: dict[str, Path]) -> None:
@@ -1064,10 +1083,15 @@ def _validate_setup(state: dict) -> None:
         and re.fullmatch(r"e2ejourney-[a-f0-9]{32}", marker_value)
     )
     journey_run_id = state.get("android_ai_journey_run_id")
+    journey_scenario = state.get("android_ai_scenario", "android-edit-export")
     if journey_run_id is not None and (
             not journey_scope or not isinstance(journey_run_id, str)
-            or not re.fullmatch(EXPORT_RUN_ID, journey_run_id)):
+            or not re.fullmatch(EXPORT_RUN_ID, journey_run_id)
+            or not isinstance(journey_scenario, str)
+            or journey_scenario not in ANDROID_AI_JOURNEY_SCENARIOS):
         raise ValueError("Invalid Android AI journey identity")
+    if journey_run_id is None and "android_ai_scenario" in state:
+        raise ValueError("Android AI scenario is missing its run identity")
     if ("journey_control_files_cleared" in state
             and type(state["journey_control_files_cleared"]) is not bool):
         raise ValueError("Invalid Android AI journey control-file clearing proof")
@@ -1162,14 +1186,16 @@ def apply_setup(setup: str, *, platform: str, folder: Path, marker: str,
                 export_cancel_run_id: str | None = None, ios_export_run_id: str | None = None,
                 ios_export_mode: str | None = None, failure_run_id: str | None = None,
                 export_success_run_id: str | None = None,
-                android_ai_journey_run_id: str | None = None) -> dict:
+                android_ai_journey_run_id: str | None = None,
+                android_ai_scenario: str | None = None) -> dict:
     token = _SETUP_STOP.set(should_stop)
     try:
         return _apply_setup(setup, platform=platform, folder=folder, marker=marker, serial=serial, udid=udid,
                             export_cancel_run_id=export_cancel_run_id, ios_export_run_id=ios_export_run_id,
                             ios_export_mode=ios_export_mode, failure_run_id=failure_run_id,
                             export_success_run_id=export_success_run_id,
-                            android_ai_journey_run_id=android_ai_journey_run_id)
+                            android_ai_journey_run_id=android_ai_journey_run_id,
+                            android_ai_scenario=android_ai_scenario)
     finally:
         _SETUP_STOP.reset(token)
 
@@ -1187,6 +1213,7 @@ def _apply_setup(
     failure_run_id: str | None = None,
     export_success_run_id: str | None = None,
     android_ai_journey_run_id: str | None = None,
+    android_ai_scenario: str | None = None,
 ) -> dict:
     """Back up before mutation; restore even when preparation itself fails."""
     platform = platform.lower()
@@ -1224,6 +1251,12 @@ def _apply_setup(
             or failure_run_id is not None or not isinstance(android_ai_journey_run_id, str)
             or not re.fullmatch(EXPORT_RUN_ID, android_ai_journey_run_id)):
         raise ValueError("Android AI journey setup is restricted to its home fixture")
+    if android_ai_scenario is not None and (
+            android_ai_journey_run_id is None or not isinstance(android_ai_scenario, str)
+            or android_ai_scenario not in ANDROID_AI_JOURNEY_SCENARIOS):
+        raise ValueError("Android AI scenario is restricted to a validated journey setup")
+    if android_ai_journey_run_id is not None and android_ai_scenario is None:
+        android_ai_scenario = "android-edit-export"
     folder = Path(folder)
     if android_ai_journey_run_id is not None and (
             folder.name != "e2e-setup" or folder.parent.name != android_ai_journey_run_id):
@@ -1235,6 +1268,7 @@ def _apply_setup(
                  source_id=None, damaged_remote=None)
     if android_ai_journey_run_id is not None:
         state["android_ai_journey_run_id"] = android_ai_journey_run_id
+        state["android_ai_scenario"] = android_ai_scenario
     if export_cancel_run_id is not None:
         state["export_control"] = {"mode": "hold-next", "run_id": export_cancel_run_id}
     if export_success_run_id is not None:
@@ -1256,8 +1290,13 @@ def _apply_setup(
             if setup == "wide":
                 state["display_backup"] = record_display(serial)
             journey_setup = android_ai_journey_run_id is not None
-            fixtures = make_fixtures(folder, marker, keys=("A",) if journey_setup else None)
-            if export_success_run_id is not None or android_ai_journey_run_id is not None:
+            if state.get("android_ai_scenario") == "android-large-image-preview":
+                fixtures = make_large_image_preview_fixture(folder, marker)
+            else:
+                fixtures = make_fixtures(folder, marker, keys=("A",) if journey_setup else None)
+            if (export_success_run_id is not None
+                    or (android_ai_journey_run_id is not None
+                        and state.get("android_ai_scenario") != "android-large-image-preview")):
                 # Owned synthetic A receives metadata before MediaStore import or editor decode.
                 sentinel = "EWM-EXIF-" + marker
                 value = sentinel.encode("ascii") + b"\0"

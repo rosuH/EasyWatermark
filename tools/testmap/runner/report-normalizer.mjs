@@ -9,6 +9,7 @@ export function normalizeAgentModelEvidence(steps, options) {
       return {
         api: step.api,
         kind: step.kind,
+        status: step.status,
         provider: model.provider,
         model: model.model,
         calls,
@@ -24,7 +25,8 @@ export function normalizeAgentModelEvidence(steps, options) {
     agentSteps.length === options.expectedActCount + options.expectedAssertCount &&
     agentSteps.every((step) =>
       step.provider_model_verified &&
-      step.native_endpoint === 'provider-default',
+      step.native_endpoint === 'provider-default' &&
+      step.status === 'passed',
     ) &&
     configuredEndpoint !== undefined;
 
@@ -41,6 +43,7 @@ export function normalizeAgentModelEvidence(steps, options) {
     configured_endpoint_valid: configuredEndpoint !== undefined,
     calls: agentSteps.reduce((total, step) => total + step.calls, 0),
     agent_steps: agentSteps,
+    evidence_state: verified ? 'complete' : agentSteps.some((step) => step.calls > 0) ? 'partial' : 'none',
     verified,
   };
 }
@@ -92,7 +95,11 @@ function safeNativeEndpoint(value) {
 }
 
 
-export function normalizeRunStatus({ nativeStatus, attempts, reasons }) {
+export function normalizeRunStatus({ nativeStatus, attempts, reasons, scenario }) {
+  const startedAttemptFailed = (attempts ?? []).some((attempt) =>
+    attempt?.status === 'failed' && typeof attempt.startedAt === 'string'
+  );
+  if (scenario === 'android-large-image-preview' && startedAttemptFailed) return 'failed';
   const startedStepTimeout = (attempts ?? []).some((attempt) =>
     attempt?.status === 'failed' &&
     typeof attempt.startedAt === 'string' &&
