@@ -104,7 +104,7 @@ class BitmapUtilsTest {
         )
         expectedUnswappedQuadrants.forEach { (orientation, expectedQuadrant) ->
             val source = File(app.cacheDir, "b3-sampled-orientation-$orientation.jpg").apply {
-                writeBytes(jpegWithOrientation(orientation, width = 400, height = 100))
+                writeBytes(jpegWithOrientation(orientation, width = 512, height = 128))
             }
             val notSwapped = decodeSampledBitmapFromResourceSync(
                 resolver = app.contentResolver,
@@ -115,11 +115,11 @@ class BitmapUtilsTest {
 
             assertEquals(
                 "orientation $orientation must not swap sampling bounds",
-                1,
+                16,
                 notSwapped.inSample,
             )
-            assertEquals("orientation $orientation width", 400, notSwapped.bitmap.width)
-            assertEquals("orientation $orientation height", 100, notSwapped.bitmap.height)
+            assertEquals("orientation $orientation width", 32, notSwapped.bitmap.width)
+            assertEquals("orientation $orientation height", 8, notSwapped.bitmap.height)
             assertEquals(
                 "orientation $orientation sampled quadrant",
                 expectedQuadrant,
@@ -137,8 +137,8 @@ class BitmapUtilsTest {
                 writeBytes(
                     jpegWithOrientation(
                         orientation = orientation,
-                        width = 400,
-                        height = 100,
+                        width = 512,
+                        height = 128,
                     ),
                 )
             }
@@ -150,8 +150,8 @@ class BitmapUtilsTest {
             ).data!!
 
             assertEquals("orientation $orientation must swap sampling bounds", 4, swapped.inSample)
-            assertEquals("orientation $orientation width", 25, swapped.bitmap.width)
-            assertEquals("orientation $orientation height", 100, swapped.bitmap.height)
+            assertEquals("orientation $orientation width", 32, swapped.bitmap.width)
+            assertEquals("orientation $orientation height", 128, swapped.bitmap.height)
             assertEquals(
                 "orientation $orientation sampled quadrant",
                 expectedQuadrant,
@@ -225,9 +225,8 @@ class BitmapUtilsTest {
     }
 
     @Test
-    fun previewSampleSize_keepsNativeWhenHalfWouldUndershootPane() {
-        // OnePlus 8T editor pane vs a 1080-wide source (device logcat 2026-08-16).
-        assertEquals(1, calculateInSampleSize(1080, 3500, 1012, 1330))
+    fun previewSampleSize_fitsPaneWithoutKeepingUnusedShortEdgePixels() {
+        assertEquals(2, calculateInSampleSize(1080, 3500, 1012, 1330))
         // Source already smaller than the pane must not force a subsample.
         assertEquals(1, calculateInSampleSize(800, 600, 1012, 1330))
     }
@@ -235,6 +234,26 @@ class BitmapUtilsTest {
     @Test
     fun previewSampleSize_stillPowerOfTwoWhenBothHalvesExceedPane() {
         assertEquals(2, calculateInSampleSize(4000, 3000, 1012, 1330))
+    }
+
+    @Test
+    fun previewSampleSize_boundsPanoramasAndHandlesIntegerLimit() {
+        assertEquals(32, calculateInSampleSize(49861, 1350, 1012, 1330))
+        assertEquals(32, calculateInSampleSize(1350, 49861, 1330, 1012))
+        assertEquals(1, calculateInSampleSize(2023, 2659, 1012, 1330))
+        assertEquals(2, calculateInSampleSize(2024, 2660, 1012, 1330))
+        assertEquals(1 shl 30, calculateInSampleSize(Int.MAX_VALUE, 1, 1, 1))
+        assertEquals(1 shl 30, calculateInSampleSize(1, Int.MAX_VALUE, 1, 1))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun previewSampleSize_rejectsZeroPaneWidth() {
+        calculateInSampleSize(49861, 1350, 0, 1330)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun previewSampleSize_rejectsNegativePaneHeight() {
+        calculateInSampleSize(49861, 1350, 1012, -1)
     }
 
     @Test
