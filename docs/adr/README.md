@@ -34,5 +34,5 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0031](0031-desktop-packaging-ci-not-pr-required.md) | Desktop packaging CI: weekly/master-push + Build packages button; not a PR required check; no third-party path classifiers | **Proposed** |
 | [0032](0032-android-splash-then-launch-fade-serial.md) | Android splash then Launch fade are serial; iOS launch fill matches first screen (`#262611`, no icon) | **Accepted** (owner 2026-08-26) |
 | [0033](0033-live-overlay-preview.md) | Editor preview is a live two-layer overlay; export still bakes | **Proposed** — Implemented, pending device sign-off |
-| [0034](0034-one-click-android-play-ship.md) | Ship Android release: CREATE = GitHub + Play; PLAY = resume Play from that Release | **Proposed** |
+| [0034](0034-one-click-android-play-ship.md) | Ship release: CREATE = GitHub (Android + unsigned Desktop) + Play; PLAY = resume Play | **Proposed** |
 | [0036](0036-pin-r8-pg-map-id.md) | Next GitHub APK pins R8 pg-map-id to 64 zeros before signing; Play AAB/mapping not pinned | **Proposed** |

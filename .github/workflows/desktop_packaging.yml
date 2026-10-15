@@ -6,11 +6,13 @@ name: Desktop packaging
 #   - push master (native on.push.paths): merge-SHA qualification
 #   - schedule (weekly): full 3-OS qualification regardless of paths
 #   - workflow_call from Build packages: selected Desktop OS only
-# Manual Run button is Build packages (`build_packages.yml`), not this file.
+#   - workflow_call from Ship release (CREATE): all three OS → GitHub Release assets
+# Manual Run button for ad-hoc artifacts is Build packages (`build_packages.yml`).
 # Matrix host-local packages only (official CMP rule — no cross-OS packaging):
 #   ubuntu-latest → DEB, windows-latest → MSI, macos-latest (ARM64) → DMG
 # Honesty:
-# - Artifacts are UNSIGNED and short-lived; not release/notarized/Authenticode outputs.
+# - Artifacts are UNSIGNED; not notarized/Authenticode. CREATE still attaches them
+#   to the GitHub Release with *-UNSIGNED names (ADR-0034).
 # - packageDistributionForCurrentOS is a current-host aggregate, not a cross-builder.
 # - macOS lane proves Apple Silicon only (macos-latest = arm64); no Intel claim.
 # - Cross-OS green is pending real GitHub-hosted runner execution after coordinator push.
@@ -140,6 +142,8 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+          # workflow_call inherits caller github.sha (CREATE = dispatch SHA).
+          ref: ${{ github.sha }}
 
       - name: Assert host architecture (fail-closed when matrix.arch set)
         if: matrix.arch != ''

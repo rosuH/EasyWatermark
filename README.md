@@ -72,7 +72,7 @@ Use a developer-run channel:
 |---|---|
 | [App Store](https://apps.apple.com/app/id6806811093) | iOS |
 | [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark) | Paid edition, same code — supports ongoing development |
-| [GitHub Releases](https://github.com/rosuH/EasyWatermark/releases) | Latest APK |
+| [GitHub Releases](https://github.com/rosuH/EasyWatermark/releases) | Latest APK + unsigned Desktop (Linux / Windows / macOS arm64) |
 | [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/) | Free, reproducible Android build |
 
 Listings elsewhere are unofficial. On Android, check the package name `me.rosuh.easywatermark` before you install.
