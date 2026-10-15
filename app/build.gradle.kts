@@ -115,6 +115,10 @@ android {
 
     packaging {
         resources.excludes.add("DebugProbesKt.bin")
+        // EasyWatermark has no first-party JNI; transitive AndroidX .so files are already
+        // stripped upstream. Keep them as-is so release APK bytes do not vary when a build
+        // environment does or does not have AGP's default NDK preinstalled (#443).
+        jniLibs.keepDebugSymbols.add("**/*.so")
     }
 
     namespace = "me.rosuh.easywatermark"

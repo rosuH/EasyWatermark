@@ -21,8 +21,15 @@ Order is fixed:
 
 Play AAB and `mapping.txt` are not pinned. Do not change R8/ProGuard or app source. Fail the job if `classes.dex` does not contain exactly two copies of that 64-hex string.
 
+### Pre-stripped AndroidX `.so` packaging (#443)
+
+EasyWatermark ships no first-party JNI; the only `.so` files in the APK (`libandroidx.graphics.path.so`, `libdatastore_shared_counter.so`) are already stripped in their upstream AndroidX AARs. AGP’s `StripDebugSymbolsTask` queries `NdkHandler.getNdkPlatform(downloadOkay = false)` against the default NDK (`28.2.13676358`), so it runs `llvm-strip --strip-unneeded` (rewriting `.shstrtab` in `libdatastore_shared_counter.so`) only when that exact NDK happens to be preinstalled on the build host. When `ubuntu-24.04` runner image `20261004.327.1` dropped NDK `28.2.13676358` before the 3.0.3 release, GitHub Actions packaged the AAR `.so` files untouched while IzzyOnDroid’s NDK-28.2 container stripped them.
+
+`app/build.gradle.kts` sets `packaging.jniLibs.keepDebugSymbols.add("**/*.so")` so `:app:stripReleaseDebugSymbols` copies transitive `.so` files as-is on every host, independent of installed NDKs.
+
 ## Consequences
 
 - F-Droid/Izzy can apply the same 64-zero pin instead of chasing each release hash.
 - 3.0.0 stays the published exception (they pinned that build’s real id).
+- 3.0.3 upstream APK contains the untouched AAR `.so` files (reproduces when built without NDK 28.2); future releases keep that same unmutated `.so` layout regardless of host NDK state.
 - Signing must keep the Python zipalign extra field (`--alignment-preserved`).
