@@ -978,7 +978,7 @@ class SetupSafetyChecks(unittest.TestCase):
         for kwargs in ({"pair":"180 1700000000180 180"}, {"wall":(base,base+201)}, {"mono":(500,900)}, {"pair":"bad"}):
             with self.assertRaises(ValueError): sample(**kwargs)
 
-    def fixtures(self, folder, marker):
+    def fixtures(self, folder, marker, *, keys=None):
         path = Path(folder) / f'ewm-suite-{marker}-A.png'
         path.write_bytes(b'synthetic image')
         return {'A': path}
@@ -1398,7 +1398,7 @@ import testmap_setup as setup
 root = pathlib.Path(os.environ['FAKE_DEVICE_ROOT'])
 setup.adb_bin = lambda: str(root / 'tools/adb')
 setup.SETUP_BACKUPS = root / 'locks'
-def fixtures(folder, marker):
+def fixtures(folder, marker, *, keys=None):
     path = pathlib.Path(folder) / ('ewm-suite-' + marker + '-A.png')
     path.write_bytes(b'fixture')
     return {'A': path}
