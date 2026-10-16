@@ -1,7 +1,7 @@
 # ADR-0036: Pin R8 pg-map-id on the GitHub APK
 
 **Status:** Proposed  
-**Related:** ADR-0034 (Ship Android release)
+**Related:** ADR-0034 (Ship release)
 
 ## Context
 

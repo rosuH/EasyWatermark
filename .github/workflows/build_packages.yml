@@ -1,7 +1,8 @@
 name: Build packages
 
 # Artifact-only button: pick platforms, download artifacts. Does NOT create a
-# GitHub Release, tag, or Play upload. Store ship is `release.yml` (CREATE).
+# GitHub Release, tag, or Play upload. Store + GitHub ship is `release.yml`
+# (CREATE = Android signed + Desktop unsigned on the Release, then Play).
 # Desktop installers are unsigned (ADR-0031 / ADR-0013). Android APK/AAB are
 # signed via the `release` environment. iOS IPA is not here (Xcode Cloud).
 
