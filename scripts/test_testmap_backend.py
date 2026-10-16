@@ -436,6 +436,17 @@ class BackendChecks(unittest.TestCase):
             self.assertEqual([run_ids[0 if item['platform'] == 'android' else 1]] * 3, row['run_ids'])
             self.assertEqual(3, len(row['evidence']))
 
+    def test_mobile_mirror_only_for_auto_device(self):
+        tasks = ['edge:launch-to-about@android#agent']
+        twin = ['edge:launch-to-about@android#agent', 'edge:launch-to-about@ios#agent']
+        with patch.dict(os.environ, {'TESTMAP_NO_EXPAND': ''}), patch.object(runner, 'expand_task', return_value=[]):
+            self.assertEqual(twin, runner.expand_mobile_parallel(tasks, None))
+            self.assertEqual(twin, runner.expand_mobile_parallel(tasks, 'auto'))
+            self.assertEqual(tasks, runner.expand_mobile_parallel(tasks, 'emulator-5554'))
+            self.assertEqual(tasks, runner.expand_mobile_parallel(tasks, 'R5CT10abc'))
+            self.assertEqual(tasks, runner.expand_mobile_parallel(tasks, 'Pixel_9_Pro_XL'))
+            self.assertEqual([], runner.expand_mobile_parallel(tasks, 'CF9CE125-D6B2-4D40-B634-56C5E5B65CF4'))
+
     def test_verify_requires_all_bindings_before_resolution_or_spawn(self):
         selected = [{'cmd': f'edge:test@{platform}#agent', 'platform': platform} for platform in ['android', 'ios']]
         for invalid in [None, '', ' ', 'auto', ' AUTO ']:
