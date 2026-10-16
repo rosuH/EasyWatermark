@@ -808,7 +808,7 @@ def expand_mobile_parallel(task_ids: list[str], device_request: str | None = Non
     pinned = _pinned_platform(device_request)
     if pinned:
         return [tid for tid in task_ids if _task_platform(tid) in {None, pinned}]
-    if os.environ.get("TESTMAP_NO_EXPAND") == "1":
+    if (device_request or "auto").strip() not in {"", "auto"} or os.environ.get("TESTMAP_NO_EXPAND") == "1":
         return list(task_ids)
     out = list(task_ids)
     seen = set(out)
