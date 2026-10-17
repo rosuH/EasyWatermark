@@ -14,8 +14,7 @@ import java.io.File
 plugins {
     id(libs.plugins.android.application.get().pluginId)
     // S4d-360: AGP 9 built-in Kotlin — do not apply org.jetbrains.kotlin.android.
-    // Keep serialization + compose-compiler + ksp (still separate compiler plugins).
-    id(libs.plugins.kotlin.serialization.get().pluginId)
+    // Keep compose-compiler + ksp (still separate compiler plugins).
     id(libs.plugins.ksp.get().pluginId)
 //    id(libs.plugins.hilt.plugin.get().pluginId)
     alias(libs.plugins.compose.compiler)
@@ -287,9 +286,6 @@ dependencies {
 //    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
     implementation(libs.androidx.lifecycle.runtime.compose)
 
-//    implementation("androidx.navigation:navigation-compose:2.7.4")
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.kotlinx.serialization.json)
     implementation(project(":shared"))
 
 //    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")

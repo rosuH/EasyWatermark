@@ -1,5 +1,7 @@
 package me.rosuh.easywatermark.ui
 
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.JobState
@@ -7,6 +9,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -121,4 +124,61 @@ class IosPhotosPersistTest {
         assertEquals(1, photosCalls)
         assertEquals(1, result.photosFailureMessages.size)
     }
+
+    @Test
+    fun retryPhotosFailure_skipsPreviouslySaved_andAccumulatesSuccess() = runBlocking {
+        val a = "/tmp/retry-a.png"
+        val b = "/tmp/retry-b.png"
+        val items = listOf(successItem(a), successItem(b))
+        val first = persistRenderSuccessesToPhotos(
+            images = items,
+            loadBytes = { if (it == a) byteArrayOf(1) else byteArrayOf(2) },
+            photosSave = IosPhotosSaveEdge { bytes, complete ->
+                complete(bytes[0] == 1.toByte(), "write failed")
+            },
+        )
+        assertEquals(1, first.persistedCount)
+        assertEquals(setOf(a), first.persistedPaths)
+        assertEquals(1, first.photosFailureMessages.size)
+        val retried = mutableListOf<String>()
+        val second = persistRenderSuccessesToPhotos(
+            images = items,
+            loadBytes = { retried += it; byteArrayOf(2) },
+            photosSave = IosPhotosSaveEdge { _, complete -> complete(true, null) },
+            alreadyPersistedPaths = first.persistedPaths,
+        )
+        assertEquals(listOf(b), retried)
+        assertEquals(2, second.persistedCount)
+        assertEquals(setOf(a, b), second.persistedPaths)
+        assertTrue(second.photosFailureMessages.isEmpty())
+    }
+
+    @Test
+    fun cancelDuringPhotosSave_awaitsSubmittedWrite_andStopsBeforeNext() = runBlocking {
+        val items = listOf(successItem("/tmp/cancel-a.png"), successItem("/tmp/cancel-b.png"))
+        var cancelRequested = false
+        var calls = 0
+        var complete: ((Boolean, String?) -> Unit)? = null
+        val pending = async(start = CoroutineStart.UNDISPATCHED) {
+            persistRenderSuccessesToPhotos(
+                images = items,
+                loadBytes = { byteArrayOf(1) },
+                photosSave = IosPhotosSaveEdge { _, onComplete ->
+                    calls++
+                    complete = onComplete
+                },
+                shouldStop = { cancelRequested },
+            )
+        }
+        assertEquals(1, calls)
+        cancelRequested = true
+        assertFalse(pending.isCompleted, "Submitted Photos save must still be awaited")
+        complete!!(true, null)
+        val result = pending.await()
+        assertEquals(2, result.renderSuccessCount)
+        assertEquals(1, result.persistedCount)
+        assertEquals(1, calls, "Cancellation must prevent the next Photos submission")
+        assertTrue(result.photosFailureMessages.isEmpty())
+    }
+
 }

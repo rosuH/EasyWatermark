@@ -9,8 +9,10 @@ import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -112,6 +114,7 @@ class MainViewModel (
         )
     }
     private var iconImportJob: Job? = null
+    private var pickerImportJob: Job? = null
 
     init {
         // Phase 2: shared export loop uses Android port (wrap of legacy generateImage).
@@ -345,17 +348,15 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
         loadGallery()
     }
 
-    fun selectGallery(selectedList: List<Image>) {
+    fun selectGallery(selectedList: List<Image>, append: Boolean = false) {
         if (selectedList.isEmpty()) return
-        launch {
+        val before = launchScreenUiStateFlow.value
+        pickerImportJob?.cancel()
+        pickerImportJob = launch {
             val imageInfoList = withContext(Dispatchers.Default) {
-                selectedList.map { imageInfoWithProbedSize(it.uri) }
+                selectedList.distinctBy { it.uri }.map { imageInfoWithProbedSize(it.uri) }
             }
-            enterEditor(
-                selected = imageInfoList,
-                gallerySnapshot = selectedList,
-                waterMark = persistedWaterMark(),
-            )
+            commitPickedImages(imageInfoList, selectedList, append, before)
         }
     }
 
@@ -384,8 +385,10 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             }
 
             is Action.SystemPickerImageSelected -> {
-                launch(Dispatchers.Default) {
-                    enterEditorFromSystemUris(action.uriList)
+                val before = launchScreenUiStateFlow.value
+                pickerImportJob?.cancel()
+                pickerImportJob = launch(Dispatchers.Default) {
+                    enterEditorFromSystemUris(action.uriList, action.append, before)
                 }
             }
         }
@@ -395,17 +398,54 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
  * System Photo Picker URIs → session editor.
  * Always enter from the raw picker URIs; enrichment is best-effort metadata only and must
  * Not block selection when MediaStore join fails (partial access / non-MediaStore URIs).     */
-    private suspend fun enterEditorFromSystemUris(uriList: List<Uri>) {
+    private suspend fun enterEditorFromSystemUris(
+        uriList: List<Uri>,
+        append: Boolean,
+        before: LaunchScreenState,
+    ) {
         if (uriList.isEmpty()) return
-        val refs = uriList.map { it.toMediaRef() }
+        val refs = uriList.distinct().map { it.toMediaRef() }
         val imageInfoList = refs.map { imageInfoWithProbedSize(it) }
         val library = mediaLibrary ?: AndroidMediaLibraryPort(applicationContext.contentResolver)
-        val gallerySnapshot = runCatching { library.enrichPickerRefs(refs) }.getOrDefault(emptyList())
-        enterEditor(
-            selected = imageInfoList,
-            gallerySnapshot = gallerySnapshot,
-            waterMark = persistedWaterMark(),
-        )
+        val gallerySnapshot = try {
+            library.enrichPickerRefs(refs)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            emptyList()
+        }
+        commitPickedImages(imageInfoList, gallerySnapshot, append, before)
+    }
+
+    private suspend fun commitPickedImages(
+        newly: List<ImageInfo>,
+        gallerySnapshot: List<Image>,
+        append: Boolean,
+        before: LaunchScreenState,
+    ) = withContext(Dispatchers.Main.immediate) {
+        while (true) {
+            ensureActive()
+            val previous = launchScreenUiStateFlow.value
+            if (previous.uiState != before.uiState ||
+                previous.selectedImageList.map { it.uri } != before.selectedImageList.map { it.uri }
+            ) return@withContext
+            val waterMark = if (append) previous.waterMark else persistedWaterMark()
+            val selected = ProductShellNav.mergePickedSelection(
+                previous.selectedImageList, newly, append,
+            ).distinctBy { it.uri }
+            val focus = ProductShellNav.focusAfterPick(selected, append, previous.curImageInfo)
+            // Waiting for Session publication can allow a newer offset, focus, or watermark.
+            // Re-read and merge that state instead of publishing the stale snapshot.
+            if (publishEditorSelectionIf(
+                    stillValid = { launchScreenUiStateFlow.value === previous },
+                    selected = selected,
+                    waterMark = waterMark,
+                    focusUriIfNotFirst = focus?.uri,
+                    gallerySnapshot = if (append) (previous.imageList + gallerySnapshot).distinctBy { it.uri }
+                        else gallerySnapshot,
+                )
+            ) return@withContext
+        }
     }
 
     private fun imageInfoWithProbedSize(ref: MediaRef): ImageInfo {

@@ -23,6 +23,8 @@ internal data class PhotosPersistBatchResult(
     val renderSuccessCount: Int,
     /** Items where Photos edge reported success after await. */
     val persistedCount: Int,
+    /** Successful Photos writes, retained for retry within the same sheet batch. */
+    val persistedPaths: Set<String> = emptySet(),
     /** Per-item Photos failure messages (order of failed Photos attempts). */
     val photosFailureMessages: List<String> = emptyList(),
 )
@@ -35,28 +37,36 @@ internal suspend fun persistRenderSuccessesToPhotos(
     images: List<ImageInfo>,
     loadBytes: (filePath: String) -> ByteArray?,
     photosSave: IosPhotosSaveEdge,
+    shouldStop: () -> Boolean = { false },
+    alreadyPersistedPaths: Set<String> = emptySet(),
 ): PhotosPersistBatchResult {
-    var renderSuccessCount = 0
-    var persistedCount = 0
+    val renderSuccessCount = images.count {
+        it.jobState is JobState.Success &&
+            !(it.result?.data as? MediaRef)?.value.isNullOrBlank()
+    }
+    val persistedPaths = alreadyPersistedPaths.toMutableSet()
     val failures = mutableListOf<String>()
     for (info in images) {
+        // A submitted PhotoKit write must finish; cancellation stops the next submission.
+        if (shouldStop()) break
         val ref = (info.result?.data as? MediaRef)?.value
         if (info.jobState !is JobState.Success || ref.isNullOrBlank()) continue
-        renderSuccessCount += 1
+        if (ref in persistedPaths) continue
         val encodedBytes = loadBytes(ref) ?: run {
             failures += "missing export bytes for $ref"
             continue
         }
         val (ok, message) = awaitPhotosSave(photosSave, encodedBytes)
         if (ok) {
-            persistedCount += 1
+            persistedPaths += ref
         } else {
             failures += message ?: "Photos save failed"
         }
     }
     return PhotosPersistBatchResult(
         renderSuccessCount = renderSuccessCount,
-        persistedCount = persistedCount,
+        persistedCount = persistedPaths.size,
+        persistedPaths = persistedPaths,
         photosFailureMessages = failures,
     )
 }

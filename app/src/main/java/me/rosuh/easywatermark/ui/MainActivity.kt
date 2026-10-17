@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -306,6 +307,7 @@ class MainActivity : ComponentActivity() {
                             // E0: Session owns product route (Launch/Editor/About). Activity only
                             // owns presentation/system edges (picker, gallery dialog, export, links).
                             var showGalleryDialog by remember { mutableStateOf(false) }
+                            var appendPickedImages by rememberSaveable { mutableStateOf(false) }
                             var showOpenSource by remember { mutableStateOf(false) }
                             var showSaveSheet by remember { mutableStateOf(false) }
                             var storeOpenTemplates by remember { mutableIntStateOf(0) }
@@ -452,13 +454,15 @@ class MainActivity : ComponentActivity() {
                             }
                             val pickMultipleMedia =
                                 rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+                                    val append = appendPickedImages
+                                    appendPickedImages = false
                                     if (uris.isNotEmpty()) {
                                         Log.i(
                                             TAG,
                                             "PhotoPicker Number of items selected: ${uris.size}"
                                         )
                                         // System picker → Session EnterEditor (productRoute from Session).
-                                        viewModel.process(Action.SystemPickerImageSelected(uris))
+                                        viewModel.process(Action.SystemPickerImageSelected(uris, append))
                                         showGalleryDialog = false
                                     } else {
                                         Log.i(TAG, "PhotoPicker No media selected")
@@ -473,6 +477,7 @@ class MainActivity : ComponentActivity() {
                                     if (hasReadableMediaAccess(this@MainActivity, results)) {
                                         showGalleryDialog = true
                                     } else {
+                                        appendPickedImages = false
                                         Log.i(TAG, "Media permission denied (full and partial)")
                                     }
                                 }
@@ -491,7 +496,8 @@ class MainActivity : ComponentActivity() {
                                     galleryPermissionLauncher.launch(mediaPermissionRequestKeys())
                                 }
                             }
-                            val onPickImages: () -> Unit = {
+                            val onPickImages: (Boolean) -> Unit = { append ->
+                                appendPickedImages = append
                                 if (userPreferences.preferInAppGallery) {
                                     openInAppGallery()
                                 } else {
@@ -512,6 +518,7 @@ class MainActivity : ComponentActivity() {
                                 showEditorExitConfirm = true
                             }
                             BackHandler(enabled = showGalleryDialog) {
+                                appendPickedImages = false
                                 showGalleryDialog = false
                                 viewModel.process(Action.DialogDismiss(false))
                             }
@@ -558,7 +565,7 @@ class MainActivity : ComponentActivity() {
                                                 startLogoAnimation = startLogoAnimation,
                                                 onPickImage = {
                                                     startLogoAnimation = false
-                                                    onPickImages()
+                                                    onPickImages(false)
                                                 },
                                                 onGoAbout = {
                                                     viewModel.openAbout(
@@ -603,7 +610,7 @@ class MainActivity : ComponentActivity() {
                                                         me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor,
                                                     )
                                                 },
-                                                onAddMoreImages = onPickImages,
+                                                onAddMoreImages = { onPickImages(true) },
                                                 onShowSaveDialog = {
                                                     showSaveSheet = true
                                                 },
@@ -682,6 +689,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 Dialog(
                                     onDismissRequest = {
+                                        appendPickedImages = false
                                         showGalleryDialog = false
                                         viewModel.process(Action.DialogDismiss(false))
                                     },
@@ -697,15 +705,21 @@ class MainActivity : ComponentActivity() {
                                             )
                                         },
                                         onDismiss = { selectedImages ->
-                                            showGalleryDialog = false
-                                            if (selectedImages.isNotEmpty()) {
-                                                // selectGallery → EnterEditor (Session uiState=Editor).
-                                                viewModel.selectGallery(selectedImages)
-                                            } else {
-                                                viewModel.process(Action.DialogDismiss(false))
+                                            if (showGalleryDialog) {
+                                                val append = appendPickedImages
+                                                appendPickedImages = false
+                                                showGalleryDialog = false
+                                                if (selectedImages.isNotEmpty()) {
+                                                    viewModel.selectGallery(selectedImages, append)
+                                                } else {
+                                                    viewModel.process(Action.DialogDismiss(false))
+                                                }
                                             }
                                         },
-                                        onPickImageViaSystem = openSystemPhotoPicker,
+                                        onPickImageViaSystem = {
+                                            showGalleryDialog = false
+                                            openSystemPhotoPicker()
+                                        },
                                     )
                                 }
                             }

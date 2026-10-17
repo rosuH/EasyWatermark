@@ -116,6 +116,8 @@ private enum StoreCaptureHooks {
     private static let hookTag = 5_599_005
 
     static func attach(to hostView: UIView, onScene: @escaping (String) -> Void) {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("-storeCaptureHooks") || arguments.contains("-storeSeedScene") else { return }
         if hostView.viewWithTag(hookTag) != nil { return }
         let bar = StoreCaptureHookBar()
         bar.tag = hookTag
