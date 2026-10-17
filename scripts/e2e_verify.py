@@ -73,58 +73,63 @@ def collect_stability(
                     f"--{platform}-device requires an exact device ID, not an alias; "
                     f"use {resolved['id']}"
                 )
-    for platform, lane_cmds in lanes.items():
+    if lanes:
+        argv = [sys.executable, str(SCRIPTS / "testmap_run.py"), "--source", "verify", "--repeat", str(repeats)]
+        for platform in ("android", "ios"):
+            if platform in lanes:
+                argv.extend([f"--{platform}-device", devices[platform]])
+        argv.extend(cmds)
         try:
             proc = subprocess.Popen(
-                [
-                    sys.executable,
-                    str(SCRIPTS / "testmap_run.py"),
-                    "--source",
-                    "verify",
-                    "--device",
-                    devices[platform],
-                    "--repeat",
-                    str(repeats),
-                    *lane_cmds,
-                ],
-                cwd=REPO_ROOT,
-                env={**os.environ, "TESTMAP_NO_EXPAND": "1"},
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                argv, cwd=REPO_ROOT, env={**os.environ, "TESTMAP_NO_EXPAND": "1"},
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 start_new_session=True,
             )
         except OSError as exc:
-            print(f"{platform} runner start failed: {exc}", file=sys.stderr)
-            failed_cmds.update(lane_cmds)
-            continue
-        output = io.StringIO()
-        exit_code = _tee_child(proc, output, tee_stdout=True)
-        run_id = ""
-        for line in output.getvalue().splitlines():
-            if line.startswith("testmap run "):
-                run_id = line.split()[2]
-                break
-        rec = load_run(run_id) if run_id else None
-        if exit_code != 0 or not rec or rec.get("state") not in {"passed", "review_required"}:
-            failed_cmds.update(lane_cmds)
-        for task in (rec or {}).get("tasks") or []:
-            cmd = str(task.get("id") or "")
-            if cmd not in lane_cmds:
-                continue
-            grouped[cmd].append(
-                {
-                    "run_id": run_id,
-                    "state": task.get("state") or "failed",
-                    "evidence_dir": task.get("evidence_dir") or "",
-                    "flake_class": "",
-                }
-            )
-        if exit_code != 0 and not run_id:
-            for cmd in lane_cmds:
-                grouped[cmd].append(
-                    {"run_id": "", "state": "failed", "evidence_dir": "", "flake_class": "timeout_or_spawn"}
+            print(f"runner start failed: {exc}", file=sys.stderr)
+            failed_cmds.update(cmds)
+        else:
+            output = io.StringIO()
+            exit_code = _tee_child(proc, output, tee_stdout=True)
+            run_id = ""
+            for line in output.getvalue().splitlines():
+                if line.startswith("testmap run "):
+                    run_id = line.split()[2]
+                    break
+            rec = load_run(run_id) if run_id else None
+            if not rec:
+                failed_cmds.update(cmds)
+            else:
+                for task in rec.get("tasks") or []:
+                    cmd = str(task.get("id") or "")
+                    if cmd not in grouped:
+                        continue
+                    expected_platform = cmd.rsplit("@", 1)[-1].split("#", 1)[0]
+                    expected_device = devices[expected_platform]
+                    actual_device = task.get("device") or {}
+                    bound = (
+                        task.get("platform") == expected_platform
+                        and task.get("device_request") == expected_device
+                        and isinstance(actual_device, dict)
+                        and actual_device.get("id") == expected_device
+                    )
+                    grouped[cmd].append({
+                        "run_id": run_id,
+                        "state": (task.get("state") or "failed") if bound else "failed",
+                        "evidence_dir": task.get("evidence_dir") or "",
+                        "flake_class": "" if bound else "device_binding_missing_or_mismatch",
+                    })
+                # A known bad/missing task already blocks its own row. An otherwise
+                # unexplained aggregate failure must not be hidden by all-good rows.
+                all_good = all(
+                    len(grouped[cmd]) == repeats
+                    and all(row["state"] in {"passed", "review_required"} for row in grouped[cmd])
+                    for cmd in cmds
                 )
+                if (exit_code != 0 or rec.get("state") not in {"passed", "review_required"}) and all_good:
+                    failed_cmds.update(cmds)
+                elif exit_code != 0 or rec.get("state") not in {"passed", "review_required"}:
+                    failed_cmds.update(cmd for cmd in cmds if len(grouped[cmd]) != repeats)
     summaries = [summarize_stability(cmd, grouped.get(cmd, []), repeats) for cmd in cmds]
     for row in summaries:
         if row["cmd"] in failed_cmds and row["verdict"] in {"stable", "not_run"}:

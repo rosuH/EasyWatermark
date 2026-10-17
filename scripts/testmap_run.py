@@ -5789,9 +5789,12 @@ def _read_installed_packages(rec: dict, logf) -> str:
     reasons: list[str] = []
     device = str(rec.get("device") or "auto")
     wanted = None if device in {"", "auto"} else device
+    device_requests = rec.get("device_requests") or {}
     for plat in _task_platforms(rec):
         try:
-            chosen = resolve_device(plat, wanted)
+            chosen = resolve_device(plat, device_requests.get(plat) or wanted)
+            if plat in device_requests and chosen["id"] != device_requests[plat]:
+                raise ValueError(f"{plat} device changed from exact requested ID {device_requests[plat]}")
             if plat == "android":
                 info = android_installed(str(chosen["id"]))
             else:
@@ -5911,18 +5914,53 @@ def run_foreground(
     source: str = "manual",
     repeats: int = 1,
     execution_mode: str = "independent",
+    android_device: str | None = None,
+    ios_device: str | None = None,
 ) -> int:
     """Run tasks in this process. The record is on disk before the first case."""
     origin = source if source in {"manual", "select", "verify"} else "manual"
     if not isinstance(execution_mode, str) or execution_mode not in {"independent", "route"}:
         raise ValueError("execution_mode must be independent or route")
+    requested = {
+        plat: value.strip()
+        for plat, value in (("android", android_device), ("ios", ios_device))
+        if value is not None
+    }
+    if requested:
+        if device is not None:
+            raise ValueError("--device cannot be combined with --android-device or --ios-device")
+        if execution_mode != "independent" or any(tid in E2E_TASK_IDS for tid in task_ids):
+            raise ValueError("platform-specific device pins require independent mobile tasks")
+        for plat, value in requested.items():
+            if not value or value.lower() == "auto":
+                raise ValueError(f"--{plat}-device requires an exact device ID")
+        selected_platforms = {
+            _task_lane(spec)
+            for tid in task_ids
+            for _expanded_id, spec in expand_task(tid, "auto")
+        } & {"android", "ios"}
+        if selected_platforms != set(requested):
+            raise ValueError(
+                f"device pins must match selected mobile platforms: "
+                f"{', '.join(sorted(selected_platforms)) or 'none'}"
+            )
+        # Resolve every explicit pin before creating a run or starting either lane.
+        for plat, value in requested.items():
+            chosen = resolve_device(plat, value)
+            if chosen["id"] != value:
+                raise ValueError(f"--{plat}-device requires an exact device ID, not an alias; use {chosen['id']}")
     _validate_e2e_selection(task_ids, device, repeats, execution_mode)
     if execution_mode == "route" and (type(repeats) is not int or not 1 <= repeats <= 20):
         raise ValueError("repeat must be from 1 to 20")
     plan = route_plan(task_ids, device or "auto") if execution_mode == "route" else None
     if plan is not None and not plan["supported"]:
         raise ValueError(plan["reason"])
-    rec = new_record(task_ids if plan else expand_mobile_parallel(task_ids, device), device)
+    rec = new_record(task_ids if plan or requested else expand_mobile_parallel(task_ids, device), device)
+    if requested:
+        rec["device_requests"] = requested
+        for task in rec["tasks"]:
+            if task.get("platform") in requested:
+                task["device_request"] = requested[task["platform"]]
     rec["execution_mode"] = execution_mode
     rec["source"] = origin
     rec["pid"] = os.getpid()
@@ -6352,9 +6390,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--device",
-        default="auto",
+        default=None,
         help="Device id from `python3 scripts/testmap_devices.py`, or auto.",
     )
+    parser.add_argument("--android-device", help="Exact Android ID for selected Android tasks.")
+    parser.add_argument("--ios-device", help="Exact iOS ID for selected iOS tasks.")
     parser.add_argument(
         "--source",
         default="manual",
@@ -6395,7 +6435,11 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
     try:
-        return run_foreground(args.tasks, args.device, source=args.source, repeats=args.repeat, execution_mode=args.execution_mode)
+        return run_foreground(
+            args.tasks, args.device, source=args.source, repeats=args.repeat,
+            execution_mode=args.execution_mode,
+            android_device=args.android_device, ios_device=args.ios_device,
+        )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

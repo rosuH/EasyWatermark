@@ -13,7 +13,7 @@ scripts/e2e-console.sh
 scripts/e2e-run.sh --list
 scripts/e2e-run.sh edge:launch-to-about@android#agent
 scripts/e2e-select.sh origin/master...HEAD
-scripts/e2e-verify.sh --change 'Describe the change' --range origin/master...HEAD --run
+scripts/e2e-verify.sh --change 'Describe the change' --range origin/master...HEAD --run --android-device '<authorized-serial>' --ios-device '<authorized-udid>'
 ```
 
 Open the local console at `http://127.0.0.1:8931`. The console serves the built client from `tools/testmap/web/dist/index.html`; running it does not require Node. See the [web client guide](../../tools/testmap/web/README.md) to change or build the client. The web source, dependencies, lockfile, and build output stay inside that directory; project data stays here.
