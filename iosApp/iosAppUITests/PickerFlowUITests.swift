@@ -1020,19 +1020,31 @@ final class PickerFlowUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         let options = app.descendants(matching: .any)["sharedComposeEditorOptions"].firstMatch
         let templatesScroll = app.descendants(matching: .any)["templatesSection"].firstMatch
+        let templateList = app.descendants(matching: .any)["templateListSheet"].firstMatch
         while Date() < deadline {
             if elementIsOnScreen(element, in: app) {
                 return true
             }
+            let id = element.identifier
             let dir: ScrollDir = {
-                if element.exists && element.frame.maxY < app.frame.minY + 8 { return .down }
+                let top: CGFloat
+                if id.hasPrefix("templateRow-") || id.hasPrefix("templateDeleteButton-") {
+                    let add = app.descendants(matching: .any)["templateAddButton"].firstMatch
+                    top = add.exists ? add.frame.maxY : app.frame.minY + 8
+                } else {
+                    top = app.frame.minY + 8
+                }
+                if element.exists && element.frame.maxY < top { return .down }
                 return .up
             }()
-            let id = element.identifier
             if id.hasPrefix("sharedCompose") {
                 swipeComposeOptions(options: options, app: app, direction: dir)
-            } else if id.hasPrefix("saveTemplate") || id.hasPrefix("templateRow")
-                        || id.hasPrefix("deleteTemplate") || id == "templatesSection" {
+            } else if id.hasPrefix("templateRow-") || id.hasPrefix("templateDeleteButton-") {
+                if templateList.exists {
+                    if dir == .up { templateList.swipeUp() } else { templateList.swipeDown() }
+                }
+            } else if id.hasPrefix("saveTemplate") || id.hasPrefix("deleteTemplate")
+                        || id == "templatesSection" {
                 swipeTemplates(templatesScroll: templatesScroll, app: app, direction: dir)
             } else if id.contains("Witness") {
                 // Witnesses sit below the fill-height host; app swipe moves the root VStack if needed.
@@ -1062,6 +1074,17 @@ final class PickerFlowUITests: XCTestCase {
         // witnesses themselves (they live in or below that strip by design).
         var usable = visible
         let id = element.identifier
+        if id.hasPrefix("templateRow-") || id.hasPrefix("templateDeleteButton-") {
+            let sheet = app.descendants(matching: .any)["templateListSheet"].firstMatch
+            let add = app.descendants(matching: .any)["templateAddButton"].firstMatch
+            guard sheet.exists, add.exists else { return false }
+            let body = visible.intersection(sheet.frame)
+            let center = CGPoint(x: frame.midX, y: frame.midY)
+            // Compose can expose an off-screen LazyColumn row with a frame over the sheet title.
+            // Only a row centered below the title and inside the actual sheet can be tapped.
+            return !body.isNull && center.y > add.frame.maxY
+                && body.insetBy(dx: 4, dy: 4).contains(center)
+        }
         let isEditorOption =
             id.hasPrefix("sharedCompose")
             || id.hasPrefix("Text color #")
