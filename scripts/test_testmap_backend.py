@@ -816,6 +816,41 @@ class SetupSafetyChecks(unittest.TestCase):
                                                "device": {"id": "fake-serial"}, "agent_device_output": str(self.root)}, io.StringIO())
                     self.assertEqual("home" if platform == "android" else "editor", call.call_args.args[0])
 
+    def test_ios_clamp_pan_and_filmstrip_switch_use_visible_logical_coordinates(self):
+        # Dedicated iOS QA simulator screenshots are 402x874 logical points. The
+        # preview and three thumbnail centers are visible in that viewport.
+        import shlex
+        scripts = setup.REPO_ROOT / "docs/testing/agent-device/scripts"
+        viewport = (0, 0, 402, 874)
+        preview = (12, 245, 390, 500)
+        strip = (120, 613, 329, 663)
+
+        def inside(point, rect):
+            return rect[0] <= point[0] < rect[2] and rect[1] <= point[1] < rect[3]
+
+        clamp = runner.parse_script(scripts / "editor-clamp-drag@ios.ad", "ios")
+        single = next(row for row in clamp if row["command"] == "press" and row["args"] == 'label="Single"')
+        pans = [row for row in clamp if row["command"] == "gesture" and
+                shlex.split(row["args"])[0] == "pan"]
+        self.assertEqual(1, len(pans))
+        _, x, y, dx, dy, duration = shlex.split(pans[0]["args"])
+        origin = (int(x), int(y))
+        end = (origin[0] + int(dx), origin[1] + int(dy))
+        self.assertNotEqual((0, 0), (int(dx), int(dy)))
+        self.assertGreater(int(duration), 0)
+        self.assertTrue(all(inside(point, viewport) and inside(point, preview) for point in (origin, end)))
+        self.assertLess(single["n"], pans[0]["n"])
+
+        film = runner.parse_script(scripts / "editor-filmstrip-switch@ios.ad", "ios")
+        taps = [row for row in film if row["command"] == "press" and
+                len(row["args"].split()) == 2 and all(part.isdecimal() for part in row["args"].split())]
+        self.assertEqual(2, len(taps))
+        first, second = [tuple(map(int, row["args"].split())) for row in taps]
+        self.assertNotEqual(first, second)
+        self.assertTrue(all(inside(point, viewport) and inside(point, strip) for point in (first, second)))
+        self.assertGreater(first[0], viewport[2] / 2)  # B right of centered A.
+        self.assertLess(second[0], viewport[2] / 2)  # A left after B recenters.
+
     def mixed_private_backup(self):
         names = setup.ANDROID_CONFIG + setup.EXPORT_CONTROL_PATHS
         backup = {name: (b'original\x00user preferences\xff' if index == 1 else None)
