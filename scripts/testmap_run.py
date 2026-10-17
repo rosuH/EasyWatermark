@@ -2178,8 +2178,10 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
                             matching("wait", "sharedComposeExportCounts", "Processed 1 · Succeeded 0 · Failed 1"),
                             matching("wait", "sharedComposeExportRetryFailed")]
             else:
-                required[0] = matching("press", "sharedComposeExportCancel")
-                required.insert(3, matching("wait", "分享", absent=True))
+                required = [matching("press", "sharedComposeExportCancel"),
+                            matching("wait", "sharedComposeExportOutcomeDetail", "Export cancelled (0 of 1 saved)"),
+                            matching("wait", "sharedComposeExportPrimary", "Share", absent=True),
+                            matching("wait", "View in gallery", absent=True)]
             retry_required = [matching("press", "sharedComposeExportRetryFailed"),
                               matching("wait", "sharedComposeExportCounts", "Processed 1 · Succeeded 1 · Failed 0"),
                               matching("wait", "sharedComposeExportPrimary", "Share")]
