@@ -1,6 +1,6 @@
 context platform=ios
 env TEMPLATE="EWM TEMPLATE AGENT DEVICE"
-open me.rosuh.easywatermark.ios --relaunch
+open me.rosuh.easywatermark.ios --relaunch --launch-args=-storeCaptureHooks
 press id="store-seed-editor"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
 wait absent id="aboutBack" 5000

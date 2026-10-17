@@ -1668,10 +1668,10 @@ class IosProductRootHost(
                 } else {
                     ""
                 }
-                // Show cancellation or failure without destination prose.
+                // Keep the count-bearing cancellation summary visible in the outcome slot.
                 val outcomeDetailLine = when {
                     recovery.isCancelled ->
-                        stringResource(Res.string.dialog_save_error_cancelled)
+                        resultSummaryText
                     recovery.isAllFailed ->
                         stringResource(Res.string.dialog_save_error_generic)
                     else -> ""

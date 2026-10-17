@@ -1306,8 +1306,18 @@ class SetupSafetyChecks(unittest.TestCase):
             claim.assert_not_called()
         self.assertEqual(calls, (self.root / 'calls.jsonl').read_text())
 
-    def test_ios_export_success_scripts_wait_for_terminal_three_item_result(self):
+    def test_ios_seed_scripts_opt_in_and_exports_wait_for_terminal_results(self):
         import shlex
+        seed_scripts = [path for path in (setup.REPO_ROOT / "docs/testing/agent-device/scripts").glob("*@ios.ad")
+                        if 'press id="store-seed-editor"' in path.read_text()]
+        self.assertTrue(seed_scripts)
+        for path in seed_scripts:
+            with self.subTest(seed_script=path.name):
+                rows = runner.parse_script(path, "ios")
+                launch = next(row for row in rows if row["command"] == "open")
+                self.assertIn("--launch-args=-storeCaptureHooks", shlex.split(launch["args"]))
+                self.assertLess(launch["n"], next(row["n"] for row in rows if row["command"] == "press" and
+                                                     row["args"] == 'id="store-seed-editor"'))
         for edge in ("editor-style-then-export", "export-save-success", "export-system-share"):
             with self.subTest(edge=edge):
                 rows = runner.parse_script(setup.REPO_ROOT / f"docs/testing/agent-device/scripts/{edge}@ios.ad", "ios")
@@ -1325,6 +1335,25 @@ class SetupSafetyChecks(unittest.TestCase):
                     self.assertLess(share[1]["n"], next(row["n"] for row in rows if row["command"] == "wait" and "ActivityListView" in row["args"]))
                 else:
                     self.assertLess(terminal[0]["n"], next(row["n"] for row in rows if row["command"] == "close"))
+
+        cancel = runner.parse_script(setup.REPO_ROOT / "docs/testing/agent-device/scripts/export-cancel@ios.ad", "ios")
+        outcome = [row for row in cancel if row["command"] == "wait" and
+                   shlex.split(row["args"]) == ['id="sharedComposeExportOutcomeDetail" label="Export cancelled (0 of 1 saved)" visible', '15000']]
+        no_share = [row for row in cancel if row["command"] == "wait" and
+                    shlex.split(row["args"]) == ['absent', 'id="sharedComposeExportPrimary" label="Share, Share"', '5000']]
+        self.assertEqual(1, len(outcome))
+        self.assertEqual(1, len(no_share))
+        self.assertFalse(any('Export cancelled.' in row["args"] for row in cancel))
+        retry = next(row for row in cancel if row["command"] == "press" and
+                     row["args"] == 'id="sharedComposeExportRetryFailed"')
+        saved = next(row for row in cancel if row["command"] == "wait" and
+                     'Processed 1 · Succeeded 1 · Failed 0' in row["args"])
+        share = next(row for row in cancel if row["command"] == "wait" and
+                     shlex.split(row["args"]) == ['id="sharedComposeExportPrimary" label="Share, Share" visible', '15000'])
+        self.assertLess(outcome[0]["n"], no_share[0]["n"])
+        self.assertLess(no_share[0]["n"], retry["n"])
+        self.assertLess(retry["n"], saved["n"])
+        self.assertLess(saved["n"], share["n"])
 
     def test_ios_library_upsell_script_requires_visible_prompt_before_continue(self):
         import shlex

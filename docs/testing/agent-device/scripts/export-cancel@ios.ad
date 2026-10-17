@@ -1,5 +1,5 @@
 context platform=ios
-open me.rosuh.easywatermark.ios --relaunch
+open me.rosuh.easywatermark.ios --relaunch --launch-args=-storeCaptureHooks
 press id="store-seed-editor"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
 wait absent id="aboutBack" 5000
@@ -9,9 +9,8 @@ wait id="sharedComposeExportPrimary"
 press id="sharedComposeExportPrimary"
 wait id="sharedComposeExportCancel" 20000
 press id="sharedComposeExportCancel"
-wait "label=\"Export cancelled.\" || label=\"导出已取消。\"" 15000
-wait absent "label=\"Share\"" 5000
-wait absent "label=\"分享\"" 5000
+wait "id=\"sharedComposeExportOutcomeDetail\" label=\"Export cancelled (0 of 1 saved)\" visible" 15000
+wait absent "id=\"sharedComposeExportPrimary\" label=\"Share, Share\"" 5000
 wait absent "label=\"View in gallery\"" 5000
 wait id="sharedComposeExportRetryFailed"
 press id="sharedComposeExportRetryFailed"
