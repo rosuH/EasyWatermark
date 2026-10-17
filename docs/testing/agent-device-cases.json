@@ -666,6 +666,28 @@
       "honesty": "Debug-only, one-run control holds only the setup fixture, with a bounded watchdog and original private bytes/absence restored. Android binds the generated MediaStore URI; iOS Simulator binds a nonce-bearing private PNG through the existing editor seed. Evidence requires a real Cancel press, cancellation and no-Share/no-gallery assertions, exact ready/entered/cancelled/cleared events without watchdog, valid step screenshots and bounded device/SDK timing. In the same session Retry failed must export the same fixture through the normal port: Processed 1 / Succeeded 1 / Failed 0 and Share, plus View in gallery on Android only. iOS requires pre-authorized Photos add-only on a dedicated simulator. Missing either stage remains uncovered; SDK zero is not product pass or Human Confirm. On iOS, successful counts and Share establish real render Retry only, not Photos save. The gate keeps photos_status=pending_independent_device_evidence; Photos persistence requires separate run-bound device evidence and does not grant Human Confirm."
     },
     {
+      "id": "editor-font-system-select-export",
+      "title": "选择系统字体、查看预览并导出",
+      "edges": [
+        "editor-font-system-select-export"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-font-system-select-export@android.ad",
+        "ios": "docs/testing/agent-device/scripts/editor-font-system-select-export@ios.ad"
+      },
+      "honesty": "A real System font row is selected after filtering. The exact font names are pinned to the inspected Android 35 system image and iOS 26.5 simulator runtime; absence fails instead of substituting another font. Existing editor setup backs up and restores config; this case does not import into the private font store. Replay success and counts do not prove glyph fidelity: independently compare immediate preview and decoded export to the same fixture with the default-font control. iOS Photos persistence requires separate device evidence. No Human Confirm is minted."
+    },
+    {
       "id": "editor-style-then-export",
       "title": "改文字大小颜色透明度后导出",
       "edges": [

@@ -171,4 +171,4 @@ fun <T> EditorBottomControlsShell(
 }
 
 /** Fixed height for the active tool panel (slider+value row / segments / swatches). */
-internal val OptionControlPanelHeight = 64.dp
+internal val OptionControlPanelHeight = 96.dp

@@ -72,6 +72,8 @@ EXPORT_CONTROL = "files/testmap-export-control.json"
 EXPORT_EVENTS = "files/testmap-export-events.jsonl"
 EXPORT_CONTROL_PATHS = (EXPORT_CONTROL, EXPORT_EVENTS)
 EXPORT_RUN_ID = r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}"
+FONT_EXPORT_MARKER = r"editorfontsystem-[a-f0-9]{32}"
+FONT_EXPORT_NAME = r"ewm_out_[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\.png"
 
 IOS_EXPORT_CONTROL = "Documents/testmap-export-control.json"
 IOS_EXPORT_EVENTS = "Documents/testmap-export-events.jsonl"
@@ -1069,6 +1071,152 @@ def _restore_export_output(state: dict) -> None:
     _save_setup(state)
 
 
+def _font_ios_outputs(root: Path) -> dict[str, Path]:
+    temporary = root / "tmp"
+    if temporary.is_symlink() or not temporary.is_dir() or temporary.resolve().parent != root:
+        raise ValueError("Unsafe iOS font export temporary directory")
+    files = {}
+    for path in temporary.iterdir():
+        if not re.fullmatch(FONT_EXPORT_NAME, path.name):
+            continue
+        if path.is_symlink() or not path.is_file() or path.resolve().parent != temporary:
+            raise ValueError("Unsafe iOS font export path")
+        files[path.name] = path
+    if len(files) > 256:
+        raise ValueError("iOS font export temporary set exceeds bound")
+    return files
+
+
+def begin_font_export(state: dict, run_id: str, task_id: str) -> None:
+    """Snapshot only the new font edge's output namespace before replay."""
+    _validate_setup(state)
+    if (state["phase"] != "active" or state["setup"] != "editor"
+            or not re.fullmatch(FONT_EXPORT_MARKER, state["marker"])
+            or not re.fullmatch(EXPORT_RUN_ID, run_id)
+            or not re.fullmatch(r"[A-Za-z0-9:@#._-]{1,160}", task_id)
+            or state.get("font_export") is not None):
+        raise ValueError("Font export baseline requires the exact active edge and task")
+    if state["platform"] == "android":
+        raw = adb_shell(state["serial"], "content", "query", "--uri", MEDIA,
+                        "--projection", "_id", "--where", EXPORT_OUTPUT_FILTER, timeout=10)
+        baseline = sorted((row["_id"] for row in export_media_rows(raw, {"_id"})), key=int)
+        state["font_export"] = {"run_id": run_id, "task_id": task_id, "baseline_ids": baseline}
+    else:
+        root = Path(state["container"])
+        state["font_export"] = {"run_id": run_id, "task_id": task_id,
+                                "baseline_names": sorted(_font_ios_outputs(root))}
+    _validate_setup(state)
+    _save_setup(state)
+
+
+def _font_png_size(data: bytes) -> tuple[int, int]:
+    if (len(data) < 45 or len(data) > 64 * 1024 * 1024
+            or data[:16] != b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"):
+        raise ValueError("Font export is not a bounded PNG")
+    width, height = struct.unpack(">II", data[16:24])
+    if not (0 < width <= 20000 and 0 < height <= 20000):
+        raise ValueError("Font export PNG dimensions are invalid")
+    return width, height
+
+
+def capture_font_export(state: dict) -> dict:
+    """Copy actual font-edge PNG bytes before precise output cleanup."""
+    _validate_setup(state)
+    font = state.get("font_export")
+    if state["phase"] != "active" or not font:
+        raise ValueError("Font export capture requires its active baseline")
+    archive = Path(state["journal"]).parent / "font-export"
+    archive.mkdir(mode=0o700, exist_ok=False)
+    proof = {"run_id": font["run_id"], "task_id": font["task_id"],
+             "platform": state["platform"], "source_setup": "editor", "outputs": []}
+    if state["platform"] == "android":
+        serial = state["serial"]
+        raw = adb_shell(serial, "content", "query", "--uri", MEDIA,
+                        "--projection", "_id", "--where", EXPORT_OUTPUT_FILTER, timeout=10)
+        after = {row["_id"] for row in export_media_rows(raw, {"_id"})}
+        before = set(font["baseline_ids"])
+        added = after - before
+        if len(added) != 1 or after != before | added:
+            raise ValueError("Font export is not the unique new owned MediaStore row")
+        output_id = next(iter(added))
+        if output_id == str(state["source_id"]):
+            raise ValueError("Font export aliases the source fixture")
+        uri = MEDIA + "/" + output_id
+        raw = adb_shell(serial, "content", "query", "--uri", uri,
+                        "--projection", EXPORT_OUTPUT_PROJECTION, timeout=10)
+        rows = export_media_rows(raw, set(EXPORT_OUTPUT_PROJECTION.split(":")))
+        if len(rows) != 1:
+            raise ValueError("Font output row is missing or ambiguous")
+        row = rows[0]
+        if (row["_id"] != output_id or row["owner_package_name"] != ANDROID_PACKAGE
+                or row["relative_path"] != "Pictures/EasyWaterMark/"
+                or row["mime_type"] != "image/png" or row["is_pending"] != "0"
+                or not re.fullmatch(r"ewm_[0-9]+\.png", row["_display_name"])
+                or not re.fullmatch(r"[1-9][0-9]*", row["_size"])):
+            raise ValueError("Font output owner/path/publication differs")
+        data = export_provider_read(serial, uri, timeout=10)
+        data_again = export_provider_read(serial, uri, timeout=10)
+        if data != data_again or len(data) != int(row["_size"]):
+            raise ValueError("Font output bytes changed or differ from MediaStore size")
+        dimensions = _font_png_size(data)
+        if (str(dimensions[0]), str(dimensions[1])) != (row["width"], row["height"]):
+            raise ValueError("Font output dimensions differ from MediaStore")
+        source = Path(state["fixtures"]["A"])
+        if source.is_symlink() or not source.is_file() or source.parent != Path(state["journal"]).parent:
+            raise ValueError("Font source fixture is no longer owned")
+        source_uri = MEDIA + "/" + str(state["source_id"])
+        if export_provider_read(serial, source_uri, limit=1024*1024, timeout=10) != source.read_bytes():
+            raise ValueError("Font source fixture bytes changed")
+        image = archive / "export.png"
+        image.write_bytes(data)
+        digest = hashlib.sha256(data).hexdigest()
+        proof.update(source_uri=source_uri, source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+                     baseline_ids=font["baseline_ids"], after_ids=sorted(after, key=int))
+        proof["outputs"].append({"uri": uri, "row": row, "path": str(image),
+                                 "sha256": digest, "bytes": len(data), "dimensions": dimensions})
+        state["export_output"] = {"uri": uri, "fields": row, "sha256": digest, "cleanup": "claimed"}
+        _validate_setup(state)
+        _save_setup(state)
+    else:
+        root = Path(state["container"])
+        current = _font_ios_outputs(root)
+        baseline = set(font["baseline_names"])
+        names = set(current)
+        added = sorted(names - baseline)
+        if len(added) != 3 or names != baseline | set(added):
+            raise ValueError("Font iOS export is not exactly three new private PNGs")
+        proof.update(source_fixture="store-seed-editor (exact PhotoKit source IDs pending)",
+                     baseline_names=font["baseline_names"], after_names=sorted(names),
+                     photos_asset_identity="pending")
+        for name in added:
+            path = current[name]
+            data = path.read_bytes()
+            dimensions = _font_png_size(data)
+            image = archive / name
+            image.write_bytes(data)
+            proof["outputs"].append({"private_name": name, "path": str(image),
+                                     "sha256": hashlib.sha256(data).hexdigest(),
+                                     "bytes": len(data), "dimensions": dimensions})
+    manifest = archive / "export-font.json"
+    manifest.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
+    if state["platform"] == "ios":
+        for item in proof["outputs"]:
+            private = (Path(state["container"]) / "tmp" / item["private_name"])
+            if (private.is_symlink() or not private.is_file()
+                    or private.resolve().parent != Path(state["container"]) / "tmp"
+                    or hashlib.sha256(private.read_bytes()).hexdigest() != item["sha256"]):
+                raise ValueError("Claimed iOS temporary output changed before cleanup")
+        for item in proof["outputs"]:
+            private = Path(state["container"]) / "tmp" / item["private_name"]
+            private.unlink()
+            if private.exists() or private.is_symlink():
+                raise ValueError("Owned iOS temporary output cleanup failed")
+        proof["private_cleanup"] = "verified_deleted"
+        manifest.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
+    proof["manifest"] = str(manifest)
+    return proof
+
+
 def read_gallery_permission(serial: str) -> dict:
     """Snapshot only the debug package's runtime media-read grants and flags."""
     sdk = int(adb_shell(serial, "getprop", "ro.build.version.sdk", timeout=10))
@@ -1164,11 +1312,26 @@ def _validate_setup(state: dict) -> None:
             or not isinstance(control.get("run_id"), str)
             or not re.fullmatch(EXPORT_RUN_ID, control["run_id"])):
         raise ValueError("Invalid export control recovery scope")
+    font = state.get("font_export")
+    font_scope = (state["setup"] == "editor" and isinstance(marker_value, str)
+                  and re.fullmatch(FONT_EXPORT_MARKER, marker_value) is not None)
+    if font is not None:
+        baseline_key = "baseline_ids" if platform == "android" else "baseline_names"
+        baseline = font.get(baseline_key) if isinstance(font, dict) else None
+        pattern = r"[1-9][0-9]*" if platform == "android" else FONT_EXPORT_NAME
+        if (not font_scope or not isinstance(font, dict)
+                or set(font) != {"run_id", "task_id", baseline_key}
+                or not re.fullmatch(EXPORT_RUN_ID, str(font.get("run_id", "")))
+                or not re.fullmatch(r"[A-Za-z0-9:@#._-]{1,160}", str(font.get("task_id", "")))
+                or not isinstance(baseline, list) or len(baseline) > 256
+                or any(not isinstance(value, str) or not re.fullmatch(pattern, value) for value in baseline)
+                or len(set(baseline)) != len(baseline)):
+            raise ValueError("Invalid font export recovery scope")
     output = state.get("export_output")
     if output is not None:
         journey_output = journey_run_id is not None
         observed_output = bool(control and control.get("mode") == "observe-next")
-        if (platform != "android" or not (journey_output or observed_output)
+        if (platform != "android" or not (journey_output or observed_output or (font_scope and font))
                 or not isinstance(output, dict) or set(output) != {"uri", "fields", "sha256", "cleanup"}
                 or output.get("cleanup") not in {"claimed", "verified_deleted"}
                 or not re.fullmatch(r"content://media/(external|external_primary)/images/media/[1-9][0-9]*", str(output.get("uri", "")))

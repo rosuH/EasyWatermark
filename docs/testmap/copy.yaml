@@ -135,6 +135,9 @@ edges:
   export-cancel:
     en: Cancel an in-flight export
     zh: 取消正在进行的导出
+  editor-font-system-select-export:
+    en: Select a system font, preview it, and export
+    zh: 选择系统字体、查看预览并导出
   editor-style-then-export:
     en: Edit text, size, color, opacity, then export
     zh: 改文字、大小、颜色、透明度后导出
@@ -173,6 +176,12 @@ cases:
   L1ProductUiTest.editorTypefaceBoldUpdatesConfig:
     en: Style typeface Bold updates the live watermark
     zh: 样式里点粗体后水印立刻变粗
+  FontPanelSessionImportTest.onOpen_loads_distinct_sample_families:
+    en: Font panel loads distinct system font samples
+    zh: 字体面板加载不同系统字体样例
+  WatermarkFontCodecTest.round_trip_default_system_imported:
+    en: Font identity survives configuration encoding
+    zh: 字体身份在配置编解码后保持一致
   L1ProductUiTest.editorFilmstripSwitchChangesFocus:
     en: Tapping another filmstrip thumb hard-cuts the preview
     zh: 点胶片条另一张图，预览硬切过去

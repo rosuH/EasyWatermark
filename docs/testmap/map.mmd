@@ -54,6 +54,7 @@ flowchart TB
   about -->|about-bounds<br/>a:real i:real d:real| about
   editor -->|editor-clamp-drag<br/>a:real i:real d:real| editor
   save_export_sheet -->|export-cancel<br/>a:real i:real d:real| save_export_sheet
+  editor -->|editor-font-system-select-export<br/>a:real i:real d:real| save_export_sheet
   editor -->|editor-style-then-export<br/>a:real i:real d:real| save_export_sheet
 
   linkStyle 0 stroke:#bf9000,stroke-width:2px,stroke-dasharray:6 4
@@ -85,6 +86,7 @@ flowchart TB
   linkStyle 26 stroke:#38761d,stroke-width:2px
   linkStyle 27 stroke:#38761d,stroke-width:2px
   linkStyle 28 stroke:#38761d,stroke-width:2px
+  linkStyle 29 stroke:#38761d,stroke-width:2px
 
   classDef real fill:#d9ead3,stroke:#38761d,color:#1d1d1d
   classDef seam fill:#fff2cc,stroke:#bf9000,color:#1d1d1d

@@ -67,6 +67,7 @@ flowchart TB
   about -->|about-bounds<br/>a:real i:real d:real| about
   editor -->|editor-clamp-drag<br/>a:real i:real d:real| editor
   save_export_sheet -->|export-cancel<br/>a:real i:real d:real| save_export_sheet
+  editor -->|editor-font-system-select-export<br/>a:real i:real d:real| save_export_sheet
   editor -->|editor-style-then-export<br/>a:real i:real d:real| save_export_sheet
 
   linkStyle 0 stroke:#bf9000,stroke-width:2px,stroke-dasharray:6 4
@@ -98,6 +99,7 @@ flowchart TB
   linkStyle 26 stroke:#38761d,stroke-width:2px
   linkStyle 27 stroke:#38761d,stroke-width:2px
   linkStyle 28 stroke:#38761d,stroke-width:2px
+  linkStyle 29 stroke:#38761d,stroke-width:2px
 
   classDef real fill:#d9ead3,stroke:#38761d,color:#1d1d1d
   classDef seam fill:#fff2cc,stroke:#bf9000,color:#1d1d1d
@@ -142,6 +144,7 @@ Empty `cases: []` rows are honest gaps.
 | `about-bounds` | edge | real (1) | real (1) | real (1) | 1 |
 | `editor-clamp-drag` | normal | real (1) | real (1) | real (1) | 1 |
 | `export-cancel` | normal | real (2) | real (2) | real (3) | 3 |
+| `editor-font-system-select-export` | core | real (2) | real (2) | real (2) | 2 |
 | `editor-style-then-export` | core | real (1) | real (6) | real (1) | 6 |
 
 ## Gaps
@@ -150,7 +153,7 @@ No edges have an empty `cases` list.
 
 Edges with no L1/L2 driver (contract or perf only, or empty):
 
-- none
+- `editor-font-system-select-export`
 
 ## Coverage by layer
 
@@ -159,7 +162,7 @@ Browsable view: [`map.html`](map.html).
 
 ### L0
 
-Covered: 15 / 29.
+Covered: 16 / 30.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -178,10 +181,11 @@ Covered: 15 / 29.
 | `ios-library-read-upsell` | ios | 9 |
 | `editor-dual-pane-morph` | all | 11 |
 | `export-cancel` | all | 2 |
+| `editor-font-system-select-export` | all | 2 |
 
 ### L1
 
-Covered: 29 / 29.
+Covered: 29 / 30.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -217,11 +221,11 @@ Covered: 29 / 29.
 
 Lacking L1 (shared-UI `tag` trigger, no L1 case):
 
-- none
+- `editor-font-system-select-export`
 
 ### L2
 
-Covered: 10 / 29.
+Covered: 10 / 30.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -255,10 +259,11 @@ Lacking L2 (any `real`/`seam` drive, no L2 case):
 - `about-bounds`
 - `editor-clamp-drag`
 - `export-cancel`
+- `editor-font-system-select-export`
 
 ### L3
 
-Covered: 3 / 29.
+Covered: 3 / 30.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -695,6 +700,16 @@ Covered: 3 / 29.
   - Cancel before the first item leaves zero successes (`ExportCancellationSessionTest.c1_cancelBeforeFirstItem_zeroSuccess_notSaving_notFileNotFound`) (desktop)
 - L1:
   - Cancel hides while export is held and marks the job cancelled (`L1ProductUiTest.exportCancelStopsHeldJob`)
+
+### Select a system font, preview it, and export (`editor-font-system-select-export`)
+
+- Path: `editor` → `save_export_sheet`
+- Trigger: `tag` `editorFontEntryRow`
+- Drive: android `real`; ios `real`; desktop `real`
+- Owners: `shared/ui`, `shared/font`, `app`, `iosApp`, `desktopApp`
+- L0:
+  - Font panel loads distinct system font samples (`FontPanelSessionImportTest.onOpen_loads_distinct_sample_families`)
+  - Font identity survives configuration encoding (`WatermarkFontCodecTest.round_trip_default_system_imported`)
 
 ### Edit text, size, color, opacity, then export (`editor-style-then-export`)
 

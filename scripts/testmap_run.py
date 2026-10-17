@@ -84,6 +84,8 @@ from testmap_setup import (  # noqa: E402
     SetupRestoreError,
     android_installed,
     apply_setup,
+    begin_font_export,
+    capture_font_export,
     ios_installed,
     product_version,
     repair_failure_source,
@@ -1847,6 +1849,15 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         should_stop=should_stop,
         **cancel_options,
     )
+    if edge_id == "editor-font-system-select-export":
+        identity = spec.get("step_evidence_task") or {}
+        repeat = identity.get("repeat") or {}
+        task_id = f"{identity.get('id', '')}@r{repeat.get('k', 1)}of{repeat.get('n', 1)}"
+        try:
+            begin_font_export(state, Path(str(spec.get("step_evidence_root") or "")).name, task_id)
+        except BaseException:
+            restore_setup(state)
+            raise
     if logf is not None:
         logf.write(f"setup recovery backup: {state['journal']}\n")
         logf.flush()
@@ -4804,7 +4815,26 @@ def run_task(
                 if spec.get("builder") == "agent-device" and not (should_stop and should_stop()) and spec.get("edge_id") == "export-cancel":
                     _capture_cancel_surface(cmd, spec, logf, should_stop=should_stop)
             finally:
-                _restore_agent_setup(setup_state, logf)
+                try:
+                    if (code == 0 and spec.get("builder") == "agent-device"
+                            and spec.get("edge_id") == "editor-font-system-select-export"
+                            and setup_state is not None and not (should_stop and should_stop())):
+                        try:
+                            spec["font_export"] = capture_font_export(setup_state)
+                        except (ValueError, OSError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
+                            code = 2
+                            spec["font_export"] = {"status": "unverified", "reason": str(exc)}
+                            logf.write(f"font export capture failed: {exc}\n")
+                            logf.flush()
+                finally:
+                    _restore_agent_setup(setup_state, logf)
+                    if spec.get("font_export") and setup_state:
+                        spec["font_export"]["private_restored"] = setup_state.get("phase") == "restored"
+                        if setup_state.get("export_output"):
+                            spec["font_export"]["cleanup"] = setup_state["export_output"].get("cleanup")
+                        manifest = spec["font_export"].get("manifest")
+                        if manifest:
+                            Path(manifest).write_text(json.dumps(spec["font_export"], indent=2) + "\n", encoding="utf-8")
         finally:
             if tail is not None:
                 tail.join(timeout=3)
@@ -4833,6 +4863,8 @@ def run_task(
         _publish_artemis_live(spec)
     elif spec.get("builder") == "agent-device":
         extra = ingest_agent_device_result(spec, code)
+        if spec.get("font_export"):
+            extra["font_export"] = spec["font_export"]
         cases = extra.get("cases") or cases
         _publish_agent_device_live(spec)
     return code, cases, extra
@@ -5373,6 +5405,8 @@ class RunManager:
                 task["template_crud"] = extra["template_crud"]
             if extra.get("export_file"):
                 task["export_file"] = extra["export_file"]
+            if extra.get("font_export"):
+                task["font_export"] = extra["font_export"]
             if extra.get("filmstrip_switch"):
                 task["filmstrip_switch"] = extra["filmstrip_switch"]
             if extra.get("clamp_drag"):
@@ -5698,6 +5732,8 @@ def _execute_task(active: ActiveRun, rec: dict, task: dict, logf) -> None:
             task["template_crud"] = extra["template_crud"]
         if extra.get("export_file"):
             task["export_file"] = extra["export_file"]
+        if extra.get("font_export"):
+            task["font_export"] = extra["font_export"]
         if extra.get("filmstrip_switch"):
             task["filmstrip_switch"] = extra["filmstrip_switch"]
         if extra.get("clamp_drag"):

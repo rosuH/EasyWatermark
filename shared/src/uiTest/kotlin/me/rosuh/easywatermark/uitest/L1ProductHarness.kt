@@ -274,6 +274,7 @@ internal class L1Session {
                 is WatermarkConfigChange.Degree -> editor.updateDegree(change.degree)
                 is WatermarkConfigChange.TextSize -> editor.updateTextSize(change.size)
                 is WatermarkConfigChange.Typeface -> editor.updateTextTypeface(change.typeface)
+                is WatermarkConfigChange.FontSelection -> editor.updateFontSelection(change.ref, change.supportedStyles)
                 is WatermarkConfigChange.TextStyle -> editor.updateTextStyle(change.style)
                 is WatermarkConfigChange.TileMode -> editor.updateTileMode(change.tileMode)
                 is WatermarkConfigChange.HorizontalGap -> editor.updateHorizon(change.gap)

@@ -1150,6 +1150,32 @@ edges:
         ref: ExportCancellationSessionTest.c1_cancelBeforeFirstItem_zeroSuccess_notSaving_notFileNotFound
         platform: desktop
 
+  - id: editor-font-system-select-export
+    from: editor
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: editorFontEntryRow
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/font
+      - app
+      - iosApp
+      - desktopApp
+    priority: core
+    cases:
+      - layer: L0
+        ref: FontPanelSessionImportTest.onOpen_loads_distinct_sample_families
+      - layer: L0
+        ref: WatermarkFontCodecTest.round_trip_default_system_imported
+
   - id: editor-style-then-export
     from: editor
     to: save_export_sheet

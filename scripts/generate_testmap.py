@@ -32,7 +32,7 @@ PRIORITY_VALUES = frozenset({"core", "normal", "edge"})
 LAYER_VALUES = frozenset({"L0", "L1", "L2", "L3"})
 TRIGGER_KINDS = frozenset({"tag", "system", "prop"})
 PLATFORMS = ("android", "ios", "desktop")
-EXPECTED_EDGE_COUNT = 29
+EXPECTED_EDGE_COUNT = 30
 
 _KT_PACKAGE_RE = re.compile(r"^package\s+([\w.]+)", re.M)
 _KT_CLASS_RE = re.compile(

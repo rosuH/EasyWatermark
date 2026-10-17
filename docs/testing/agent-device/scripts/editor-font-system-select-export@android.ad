@@ -1,0 +1,34 @@
+context platform=android
+env WATERMARK="MWmW FONT"
+open me.rosuh.easywatermark.debug
+press label="Content"
+wait label="Text"
+press "label=\"👋 DO NOT REDISTRIBUTE\""
+wait "label=\"Edit watermark\""
+fill editable=true "${WATERMARK}"
+press label="Confirm"
+wait label="Save"
+wait absent label="Version" 5000
+press label="Style"
+wait label="Size"
+# Fixed emulator-5558 at 1080x2400: Aa/Style carousel icon, above the selected Style tab.
+press 493 2110
+wait "label=\"Choose watermark font\""
+wait stable 300 3000
+press "label=\"Choose watermark font\""
+wait label="Font"
+fill editable=true "NotoSerif-Regular"
+wait "label=\"NotoSerif-Regular\"" 15000
+# Fixed emulator-5558 at 1080x2400: candidate row seen in run 20261017T115017 step 18, below the same-named search field.
+press 300 900
+# Android AX omits this row's selected state; verify the applied font after Done.
+wait stable 300 3000
+press label="Done"
+wait text "NotoSerif-Regular" 15000
+wait stable 300 3000
+press label="Save"
+wait "label=\"Output format\""
+press value="PNG"
+press value="Export to the album"
+wait "label=\"Processed 1 · Succeeded 1 · Failed 0\"" 90000
+close
