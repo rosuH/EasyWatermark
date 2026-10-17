@@ -8,7 +8,7 @@ wait absent id="openSourceBack" 5000
 press id="watermarkTextContent"
 wait id="watermarkTextTemplateIcon"
 press id="watermarkTextTemplateIcon"
-wait text "模板列表"
+wait text "Template List"
 wait absent id="templateEditField" 5000
 press id="templateAddButton"
 wait id="templateEditField" 20000

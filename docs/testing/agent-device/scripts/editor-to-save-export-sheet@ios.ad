@@ -5,12 +5,12 @@ wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
 wait absent id="aboutBack" 5000
 wait absent id="openSourceBack" 5000
 press id="sharedComposeSaveButton"
-wait text "输出格式"
+wait text "Output format"
 press "label=\"JPEG, JPEG\""
-wait text "质量"
+wait text "Quality"
 press "label=\"PNG, PNG\""
 wait id="sharedComposeExportPrimary"
-press label="关闭工作表"
+press label="Close sheet"
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
 wait absent id="aboutBack" 5000
 wait absent id="openSourceBack" 5000

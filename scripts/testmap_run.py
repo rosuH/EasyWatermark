@@ -286,7 +286,6 @@ TASK_SPECS: dict[str, dict] = {
 
 MANUAL_TASKS: list[dict] = []
 
-# DeviceProviderInstrumentTestTask accepts --serial, not Gradle Test's --tests.
 _CONNECTED_TASKS = frozenset(
     {
         ":app:connectedDebugAndroidTest",
@@ -312,21 +311,6 @@ def android_connected_cmd(task: str, classes: list[str] | None = None) -> list[s
     cmd.extend(["--max-workers=8", "--rerun-tasks"])
     assert_cmd_legal(cmd)
     return cmd
-
-
-def with_android_serial(cmd: list[str], serial: str) -> list[str]:
-    out: list[str] = []
-    i = 0
-    while i < len(cmd):
-        if cmd[i] == "--serial":
-            i += 2
-            continue
-        out.append(cmd[i])
-        i += 1
-    for idx, tok in enumerate(out):
-        if is_connected_android_task(tok):
-            return out[: idx + 1] + ["--serial", serial] + out[idx + 1 :]
-    return out
 
 
 def assert_cmd_legal(cmd: list[str]) -> None:
@@ -635,7 +619,7 @@ def apply_device(spec: dict, device: dict) -> dict:
     elif builder in {"instrumented", "journey"}:
         env["ANDROID_SERIAL"] = device["id"]
         spec["env"] = env
-        spec["cmd"] = with_android_serial(list(spec.get("cmd") or []), device["id"])
+        spec["cmd"] = list(spec.get("cmd") or [])
         assert_cmd_legal(spec["cmd"])
     elif builder == "e2e-runner":
         if list(spec.get("cmd") or []) != ["npm", "run", "android:journey", "--", "--no-cache"]:
@@ -4218,18 +4202,22 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         date_sets = [{int(r[k]) // divisor for k, divisor in (("datetaken", 1000), ("date_added", 1), ("date_modified", 1))
                       if r[k] not in ("NULL", "null", "0")} for r in owned]
         visible = {clamp_photo_second(n["label"], zone) for n in data["nodes"] if str(n.get("label", "")).startswith("Photo taken on ")}
-        seconds = set.intersection(*date_sets) & visible
-        if len(seconds) != 1:
+        seconds = sorted(set.union(*date_sets) & visible)
+        if not seconds or len(seconds) > 2 or seconds[-1] - seconds[0] > 1:
             raise ValueError("CLAMP picker date fallback absent or ambiguous")
-        second = seconds.pop()
-        where = f"(datetaken>={second * 1000} AND datetaken<{(second + 1) * 1000}) OR date_added={second} OR date_modified={second}"
-        proof.update(time_second=second, date_mapping="Three-column collection-wide union; no inferred fallback precedence")
+        where = " OR ".join(
+            f"(datetaken>={second * 1000} AND datetaken<{(second + 1) * 1000}) OR date_added={second} OR date_modified={second}"
+            for second in seconds
+        )
+        proof.update(time_seconds=seconds, date_mapping="Three-column collection-wide union; no inferred fallback precedence")
+        if len(seconds) == 1:
+            proof["time_second"] = seconds[0]
         def union():
             query("date-union-" + str(len(proof["date_queries"])), where, set(ids.values()))
 
         def picker(data, pixels, selected):
             cards = [n for n in data["nodes"] if n.get("hittable") is True and str(n.get("label", "")).startswith("Photo taken on ")
-                     and clamp_photo_second(n["label"], zone) == second]
+                     and clamp_photo_second(n["label"], zone) in seconds]
             if len(cards) != 4:
                 raise ValueError("CLAMP picker time group is not four cards")
             bound = {}

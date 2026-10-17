@@ -7,6 +7,6 @@ wait absent id="openSourceBack" 5000
 press id="editorTab-1"
 press id="editorOption-TextTypeFace"
 wait id="editorControl-TextTypeFace"
-press label="粗体"
-wait label="粗体"
+press label="Bold"
+wait label="Bold"
 close

@@ -6,8 +6,8 @@ wait absent id="aboutBack" 5000
 wait absent id="openSourceBack" 5000
 press id="editorTab-1"
 wait id="editorControl-TileMode"
-press label="单个"
-wait label="单个"
+press label="Single"
+wait label="Single"
 press 603 900
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible"
 wait absent id="aboutBack" 5000

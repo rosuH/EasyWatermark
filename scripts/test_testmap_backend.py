@@ -24,6 +24,20 @@ import testmap_setup as setup
 
 
 class BackendChecks(unittest.TestCase):
+    def test_connected_android_tasks_bind_only_selected_serial_in_env(self):
+        device = {'id': 'emulator-5554', 'name': 'Selected', 'kind': 'emulator'}
+        for task_id, gradle_task in (
+            ('l2-android-instrumented', ':app:connectedDebugAndroidTest'),
+            ('l2-android-journeys', ':macrobenchmark:connectedBenchmarkAndroidTest'),
+        ):
+            with self.subTest(task=task_id):
+                spec = dict(runner.TASK_SPECS[task_id])
+                spec['env'] = {'ANDROID_SERIAL': 'emulator-5556'}
+                bound = runner.apply_device(spec, device)
+                self.assertIn(gradle_task, bound['cmd'])
+                self.assertNotIn('--serial', bound['cmd'])
+                self.assertEqual('emulator-5554', bound['env']['ANDROID_SERIAL'])
+
     def test_manual_run_watch_uses_recorded_qa_device_without_default_probe(self):
         run_id = '20261003T071642-4107cdfe'
         task = {'id': 'edge:launch-to-gallery@android#agent', 'platform': 'android',
@@ -2240,9 +2254,15 @@ class AndroidClampChecks(unittest.TestCase):
         if args[0] == 'pidof':
             return '99' if self.fault == 'new-process' and self.pan_done else '42'
         self.assertEqual(('content', 'query'), args[:2])
-        # Actual device evidence: A/B added a second earlier, all four modified together.
-        raw = '\n'.join(f'Row: {i} _id={media_id}, datetaken=NULL, date_added={1791589607 if i < 2 else 1791589608}, date_modified=1791589608'
-                        for i, media_id in enumerate(self.ids.values()))
+        # The split case mirrors a real picker run: all four added at :07, but B/C/icon
+        # modified at :08 and shown by Photo Picker under the later second.
+        split = self.fault == 'split-time-group'
+        raw = '\n'.join(
+            f'Row: {i} _id={media_id}, datetaken=NULL, '
+            f'date_added={1791589607 if split or i < 2 else 1791589608}, '
+            f'date_modified={1791589607 if split and i == 0 else 1791589608}'
+            for i, media_id in enumerate(self.ids.values())
+        )
         if args[-1].startswith("_display_name="):
             key = next(k for k,v in self.state['fixtures'].items() if Path(v).name in args[-1])
             raw = raw.splitlines()[list(self.ids).index(key)]
@@ -2259,7 +2279,9 @@ class AndroidClampChecks(unittest.TestCase):
         if self.in_picker:
             from datetime import datetime, timezone
             label = 'Photo taken on ' + datetime.fromtimestamp(1791589608, timezone.utc).strftime('%b %d, %Y, %I:%M:%S %p')
-            nodes += [node(i + 2, label=label, type='android.widget.FrameLayout', hittable=True, selected=k in self.selected,
+            earlier = 'Photo taken on ' + datetime.fromtimestamp(1791589607, timezone.utc).strftime('%b %d, %Y, %I:%M:%S %p')
+            nodes += [node(i + 2, label=earlier if self.fault == 'split-time-group' and i == 0 else label,
+                           type='android.widget.FrameLayout', hittable=True, selected=k in self.selected,
                            rect={'x': 20 + i * 250, 'y': 100, 'width': 200, 'height': 200}) for i,k in enumerate(self.ids)]
             if self.selected == {'A', 'B'}:
                 nodes.append(node(6, label='Add (2)', hittable=True))
@@ -2547,6 +2569,19 @@ class AndroidClampChecks(unittest.TestCase):
         self.assertFalse(any(c in ('gesture','fill') for c,i in self.calls))
         self.assertEqual(1,sum(c=='open' for c,i in self.calls));self.assertEqual(1,sum(c=='press' and i.get('target',{}).get('selector')=='label="Add more images"' for c,i in self.calls))
         self.setup.assert_called_once();self.restore.assert_called_once();self.release.assert_called_once()
+
+    def test_filmstrip_owned_cards_split_across_adjacent_picker_seconds(self):
+        self.use_filmstrip()
+        self.fault = 'split-time-group'
+        code, _, extra = self.run_case()
+        self.assertEqual(0, code, extra)
+        proof = extra['filmstrip_switch']
+        self.assertEqual('evidence_complete', proof['status'])
+        self.assertEqual([1791589607, 1791589608], proof['time_seconds'])
+        self.assertEqual(set(self.ids.values()), set(proof['fixture_ids'].values()))
+        self.assertEqual(8, len(proof['date_queries']))
+        self.assertTrue(proof['private_restored'])
+
     def test_filmstrip_single_photo_stuck_B_fresh_AX_dates_and_stop_fail_closed(self):
         self.use_filmstrip()
         for fault in ('filmstrip-single-photo','filmstrip-B-stuck','filmstrip-AX-drift','date-collision','filmstrip-provider-mismatch','filmstrip-stop'):
