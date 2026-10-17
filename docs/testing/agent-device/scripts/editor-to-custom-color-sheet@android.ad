@@ -1,0 +1,9 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+press label="Style"
+wait label="Color"
+press label="Color"
+wait "label=\"color picker\""
+press "label=\"color picker\""
+wait "label=\"color picker\""
+close

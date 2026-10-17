@@ -1,0 +1,2 @@
+# Required pixel evidence for Android CLAMP drag, filmstrip switch, and export-save-success.
+Pillow==12.3.0

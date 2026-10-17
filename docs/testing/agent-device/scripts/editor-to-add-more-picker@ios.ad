@@ -1,0 +1,12 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+press id="store-seed-editor"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+wait id="sharedComposeAddMoreButton"
+press "label=\"Add more images\""
+wait id="iosLibraryReadUpsellContinue"
+press id="iosLibraryReadUpsellContinue"
+wait text "Select up to 50 photos."
+close

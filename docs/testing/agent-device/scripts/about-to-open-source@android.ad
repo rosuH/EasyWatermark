@@ -1,0 +1,18 @@
+context platform=android
+open me.rosuh.easywatermark.debug --relaunch
+wait "label=\"Choose Images\""
+wait absent label="Save" 5000
+wait absent label="Version" 5000
+press label="About"
+wait label="Version"
+wait absent "text=\"Coil\"" 5000
+press "label=\"Open source licenses\""
+wait text "Coil"
+press label="Back"
+wait label="Version"
+wait absent "text=\"Coil\"" 5000
+press label="Back"
+wait "label=\"Choose Images\""
+wait absent label="Save" 5000
+wait absent label="Version" 5000
+close

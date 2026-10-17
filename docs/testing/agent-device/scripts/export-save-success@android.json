@@ -1,0 +1,136 @@
+[
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.debug",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Content\""
+      }
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextContent\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextEditField\" visible",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "fill",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextEditField\""
+      },
+      "text": "__EXPORT_NONCE__"
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextConfirm\""
+      }
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"sharedComposeSaveButton\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "label=\"Output format\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" value=\"PNG\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "role=\"textview\" label=\"Export to the album\"",
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "role=\"textview\" label=\"Export to the album\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "label=\"Processed 1 \u00b7 Succeeded 1 \u00b7 Failed 0\"",
+      "timeoutMs": 18000
+    }
+  },
+  {
+    "command": "snapshot",
+    "input": {
+      "raw": true,
+      "forceFull": true,
+      "timeoutMs": 10000
+    }
+  },
+  {
+    "command": "close",
+    "input": {}
+  }
+]

@@ -68,6 +68,14 @@ Domain vocabulary and invariants. Agents and humans: use these words with these 
 - Output controls update only the edited field through `UserConfigRepository.updateFormat` or `updateCompressLevel`. Callers do not read and resubmit the other field; the former `OutputPrefsEditor` pair-write wrapper is removed. Android retains export-result invalidation on either edit.
 - Editor preview publication uses `OverlayPreviewPolicy` (ADR-0033). The unused `PreviewPaintPolicy` and iOS baked-preview cache-hit stub are removed; tests must not require their names to remain in production source.
 
+## Verification
+
+After a product change: [`eval/README.md`](../eval/README.md) (select → scripts → heuristic → optional L3 → local report). Expected effect = the change’s description plus [`docs/testmap/copy.yaml`](testmap/copy.yaml) edge titles — not method names, and not an `expected:` field on `map.yaml`.
+
+Pre-merge / pre-ship: skill `e2e-testmap` Mode B. Fill `docs/testmap/runs/<ts>-<sha>-verify.md` (gitignored) covering **stability** (script red/green + Agent Device N-repeat), **UI** (frames vs expected + human Confirm), and **performance** only when select suggested L3 (numbers do not own pass/fail). This is not a GitHub required check. Agents must not mint Confirm and must not recommend merge without that report.
+
+The local testmap console keeps project data in `docs/testmap/` and the self-contained web client in `tools/testmap/web/`. The existing Python CLI owns execution and run records; the UI reads the catalog and runtime APIs. Run completion, script checks, independent review, and human confirmation are separate claims. Historical evidence stays attached to its run and package identity. The canonical operating skill is `skills/e2e-testmap/SKILL.md`, with linked discovery entries for agents. Continuous routes (ADR-0038) join only validated compatible device steps in one setup/session/restoration; route execution does not replace independent-case or Human Confirm evidence. The proposed Android model-directed journey (ADR-0039) adds one evidence-gated E2E runner beside the scripted cases and does not grant Human Confirm.
+
 ## User flows
 
 pick image(s) (photo picker / share-in via ACTION_SEND) → edit in Editor (panels: content text/templates, style color+alpha+size, layout gap+rotation+tile mode, icon watermark) → save (format+quality) → share/open.

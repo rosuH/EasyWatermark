@@ -1,0 +1,15 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+press id="store-seed-editor"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+press label="About"
+wait label="Version"
+wait absent id="openSourceBack" 5000
+press id="aboutBack"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+wait "label=\"Watermark preview\""
+close

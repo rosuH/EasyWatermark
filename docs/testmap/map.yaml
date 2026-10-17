@@ -1,0 +1,1187 @@
+# EasyWatermark e2e map — single source of truth (historical ADR-0032 test-map contract;
+# current docs/adr/0032 is splash fade — see historical-adr-0032-e2e-test-map-and-harness.md).
+# Artemis Android agent payloads live in docs/testing/artemis-cases.json, bound 1:1 by edge id.
+# That file is execution material, not a second topology. Drive labels below are unchanged:
+# an Artemis run that used the system picker does not rewrite pick-to-editor android.drive.
+# Nodes are screens / overlays / sheets / dialogs. Editor tabs (Content / Style / Layout)
+# and layout class (compact / medium / expanded / wide) are states of `editor`, not nodes.
+# Drive labels: real | seam | none. System picker cells, FileDialog, share sheets, and
+# permission prompts are never claimed as real.
+# screens_ref is a one-way back-link to docs/parity/v2.10.0/inventory/screens.md (frozen).
+
+nodes:
+  - id: system
+    source: app/src/main/java/me/rosuh/easywatermark/ui/MainActivity.kt
+    states: []
+  - id: launch
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/LaunchScreen.kt
+    states:
+      - idle
+    screens_ref:
+      - launch-idle
+      - launch-about-entry
+      - launch-gallery-entry
+  - id: editor
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/EditorScreen.kt
+    states:
+      - content
+      - style
+      - layout
+      - compact
+      - medium
+      - expanded
+      - wide
+    screens_ref:
+      - editor-text-mode
+      - editor-image-mode
+      - editor-option-text
+      - editor-option-degree
+      - editor-option-tile-repeat
+      - editor-option-tile-single
+      - editor-option-alpha
+      - editor-option-color
+      - editor-option-size
+      - editor-option-gaps
+      - editor-option-typeface
+      - editor-option-style
+      - editor-photo-strip
+      - editor-preview-pinch-or-scroll
+  - id: about
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/about/AboutScreenShell.kt
+    states:
+      - root
+    screens_ref:
+      - about-root
+      - about-dynamic-color
+      - about-bounds
+  - id: open_source
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/about/OpenSourceScreen.kt
+    states:
+      - open
+    screens_ref:
+      - about-open-source
+  - id: gallery
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/GalleryDialogShell.kt
+    states:
+      - empty
+      - populated
+      - selected
+      - dismiss
+      - confirm
+    screens_ref:
+      - gallery-empty
+      - gallery-populated
+      - gallery-selected-n
+      - gallery-dismiss
+      - gallery-confirm
+  - id: template_sheet
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/compose/TemplateListSheet.kt
+    states:
+      - list
+      - edit
+      - confirm-use
+      - confirm-delete
+    screens_ref:
+      - editor-templates
+  - id: text_edit_sheet
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/compose/TextContentOption.kt
+    states:
+      - open
+    screens_ref:
+      - editor-option-text
+  - id: custom_color_sheet
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/compose/CustomColorPicker.kt
+    states:
+      - open
+    screens_ref:
+      - editor-option-color
+  - id: save_export_sheet
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/save/SaveExportSheetShell.kt
+    states:
+      - open
+      - exporting
+      - done
+      - failed
+    screens_ref:
+      - export-sheet-open
+      - export-format-jpeg
+      - export-format-png
+      - export-quality
+      - export-progress-k-of-n
+      - export-done
+      - export-failure
+  - id: icon_picker
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/compose/IconWatermarkOption.kt
+    states:
+      - system-ui
+  - id: add_more_picker
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/EditorTopBar.kt
+    states:
+      - system-ui
+  - id: share_sheet
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/save/SaveExportSheetShell.kt
+    states: []
+    screens_ref:
+      - export-share
+  - id: crash_recovery
+    source: shared/src/commonMain/kotlin/me/rosuh/easywatermark/ui/RecoveryScreen.kt
+    states:
+      - open
+  - id: library_read_upsell
+    source: shared/src/iosMain/kotlin/me/rosuh/easywatermark/ui/IosProductRootHost.kt
+    states:
+      - denied
+      - limited
+      - restricted
+
+edges:
+  # --- Shell (5) ---
+  - id: pick-to-editor
+    from: launch
+    to: editor
+    trigger:
+      kind: tag
+      value: launchPickImageButton
+    platforms:
+      android:
+        drive: seam
+        via: share-in ACTION_SEND (picker cells not automatable)
+      ios:
+        drive: seam
+        via: "-uiTestFixtureImage"
+      desktop:
+        drive: seam
+        via: "-PewmAutoOpen / ewm.desktop.autoOpen"
+    owners:
+      - shared/ui
+      - shared/session
+      - app/session
+      - iosApp
+      - desktopApp
+    priority: core
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.seamFeedShowsEditor
+      - layer: L1
+        ref: L1ProductUiTest.editorTabAndTileModeUpdatesConfig
+      - layer: L2
+        ref: PickerFlowUITests.testPhotosPickerOpens
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testFixtureRenderPreviewAndExport
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testEditorBottomTabsDoNotCrash
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTileModeChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeStyleCatalogNavigation
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTextTypefaceChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTextSizeChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeWatermarkDegreeChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeWatermarkAlphaChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeWatermarkHorizontalGapChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeWatermarkVerticalGapChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTextColorChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeWitnessesHiddenByDefault
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeLaunchWitnessVisible
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeGalleryWitnessVisible
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeEditorWitnessVisible
+        platform: ios
+      - layer: L2
+        ref: ProductJourneys.focusPickControl
+        platform: android
+      - layer: L2
+        ref: ProductBaselineProfileGenerator.startupAndEditorAdjacentJourneys
+        platform: android
+      - layer: L0
+        ref: ProductShellNavTest.mergePickedSelection_replaceVsAppend
+      - layer: L0
+        ref: ProductShellNavTest.focusAfterPick_fresh_replaces_focus_with_first_new
+      - layer: L0
+        ref: SessionReducerTest.r3_enterEditor_thenNavigateBack_toLaunch
+      - layer: L0
+        ref: SessionReducerTest.navigateBack_fromEditor_toLaunch
+      - layer: L0
+        ref: SessionRouteOwnerTest.routeFromLaunchUi_mapsAllSessionStates
+      - layer: L0
+        ref: WatermarkSessionViewModelTest.enterEditor_requiresNonEmptySelection
+      - layer: L0
+        ref: PickerBatchGenerationContractTest.g2_finishes_before_g1_only_g2_stages
+      - layer: L0
+        ref: PickerBatchGenerationContractTest.empty_or_failed_g2_does_not_resurrect_g1
+      - layer: L0
+        ref: PickerBatchGenerationContractTest.single_batch_stages_once_in_order_identity_preserved
+      - layer: L0
+        ref: PickerBatchGenerationContractTest.g1_check_then_g2_commit_then_g1_commit_only_g2_applied
+      - layer: L0
+        ref: PickerBatchGenerationContractTest.serial_commits_g1_then_g2_both_apply_in_order
+      - layer: L0
+        ref: PickerBatchGenerationContractTest.selection_event_order_freezes_generation_independent_of_task_start
+      - layer: L0
+        ref: EditorOptionCatalogTest.content_order_is_text_then_icon
+      - layer: L0
+        ref: EditorOptionCatalogTest.style_order_matches_android_production
+      - layer: L0
+        ref: EditorOptionCatalogTest.fill_stroke_lives_in_style_typeface_option_not_own_catalog_chip
+      - layer: L0
+        ref: EditorOptionCatalogTest.layout_order_is_horizon_then_vertical
+      - layer: L0
+        ref: EditorOptionCatalogTest.slider_ranges_match_config_rules
+      - layer: L3
+        ref: SampleStartupBenchmark.startupNoCompilation
+        platform: android
+        dimension: perf
+      - layer: L3
+        ref: SampleStartupBenchmark.startupBaselineProfileDisabled
+        platform: android
+        dimension: perf
+      - layer: L3
+        ref: SampleStartupBenchmark.startupBaselineProfile
+        platform: android
+        dimension: perf
+      - layer: L3
+        ref: SampleStartupBenchmark.startupFullCompilation
+        platform: android
+        dimension: perf
+      - layer: L3
+        ref: DesktopPreviewReuseTimedBenchTest.timedReuse_secondPaintIsComposeOnly
+        platform: desktop
+        dimension: perf
+      - layer: L3
+        ref: FiftyImageFilmstripSwitchDiagnosisTest.previewCrossfade_isHardCut_zeroMs
+        platform: desktop
+        dimension: perf
+      - layer: L3
+        ref: FiftyImageFilmstripSwitchDiagnosisTest.watermarkedCache_cannotHoldFiftyPreviews_butNeighborWindowFitsAtCurrentLongEdge
+        platform: desktop
+        dimension: perf
+      - layer: L3
+        ref: FiftyImageFilmstripSwitchDiagnosisTest.iosHost_filmstripUiUsesCoil_andNoFilmstripRepoWarmPath
+        platform: desktop
+        dimension: perf
+      - layer: L3
+        ref: FiftyImageFilmstripSwitchDiagnosisTest.iosHost_switchPath_awaitsSelectAndRastersOnMiss_withNeighborOnlyPrefetch
+        platform: desktop
+        dimension: perf
+      - layer: L3
+        ref: FiftyImageFilmstripSwitchDiagnosisTest.filmstripScaffold_settlePublishesSelection_withSnapFling
+        platform: desktop
+        dimension: perf
+      - layer: L3
+        ref: IosFiftyImageSessionLatencyTest.fiftyImages_importSwitch_coilOnlyFilmstrip_andWmNeighborHits
+        platform: ios
+        dimension: perf
+      - layer: L3
+        ref: IosCgImageTransferAbBenchTest.png_composeSurface_abAcrossPreviewBuckets
+        platform: ios
+        dimension: perf
+      - layer: L3
+        ref: IosCgImageTransferAbBenchTest.heic_composeSurface_abAcrossPreviewBuckets
+        platform: ios
+        dimension: perf
+
+  - id: share-in-to-editor
+    from: system
+    to: editor
+    trigger:
+      kind: system
+      value: ACTION_SEND
+    platforms:
+      android:
+        drive: real
+        via: Intent.ACTION_SEND / ACTION_SEND_MULTIPLE
+      ios:
+        drive: none
+      desktop:
+        drive: none
+    owners:
+      - app/session
+      - shared/session
+    priority: core
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.shareInSelectionOpensEditor
+      - layer: L2
+        ref: ProductJourneys.tryEnterEditorViaShare
+        platform: android
+      - layer: L2
+        ref: ProductJourneys.tryEnterEditorMultiShare
+        platform: android
+      - layer: L2
+        ref: ProductBaselineProfileGenerator.startupAndEditorAdjacentJourneys
+        platform: android
+      - layer: L0
+        ref: AndroidShareInDirectUriBehaviorTest.enterEditorFromShareUris_keepsOriginalContentUris_noShareSourcesDir_andReadable
+        platform: android
+      - layer: L0
+        ref: AndroidShareInDirectUriTest.productionSources_doNotReferenceShareStagingOrRestoreStore
+        platform: android
+      - layer: L3
+        ref: EditorJourneyBenchmark.editorOpenViaShare_partialBaselineProfile
+        platform: android
+        dimension: perf
+      - layer: L3
+        ref: EditorJourneyBenchmark.editorOpenViaShare_noCompilation
+        platform: android
+        dimension: perf
+      - layer: L3
+        ref: HundredImageSeedTest.seedEditorWithHundredImages
+        platform: android
+        dimension: perf
+
+  - id: launch-to-about
+    from: launch
+    to: about
+    trigger:
+      kind: tag
+      value: launchAboutButton
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.aboutOverlayRoundTrip
+      - layer: L2
+        ref: PickerFlowUITests.testAboutFromLaunchBacksToLaunch
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeAboutWitnessVisible
+        platform: ios
+      - layer: L2
+        ref: ProductJourneys.openAboutFromLaunch
+        platform: android
+      - layer: L2
+        ref: ProductBaselineProfileGenerator.startupAndEditorAdjacentJourneys
+        platform: android
+      - layer: L0
+        ref: ProductShellNavTest.aboutBack_fromLaunch_returnsLaunch
+      - layer: L0
+        ref: ProductShellNavTest.openAbout_remembersReturnRoute
+      - layer: L0
+        ref: ProductShellNavTest.overlayBase_about_keepsLaunchOrEditor
+      - layer: L0
+        ref: ProductShellNavTest.overlayBase_notAbout_isIdentity
+      - layer: L0
+        ref: ProductShellNavTest.productShellTransitions_aboutKinds
+      - layer: L0
+        ref: ProductShellNavTest.productVersion_isNotPlatformLabel
+      - layer: L0
+        ref: SessionReducerTest.r1_openAboutFromLaunch_thenBack_toLaunch
+      - layer: L0
+        ref: SessionRouteOwnerTest.aboutReturnUi_normalizesNonLaunchEditor
+
+  - id: editor-to-about
+    from: editor
+    to: about
+    trigger:
+      kind: system
+      value: EditorTopBar.onGoAboutScreen
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.editorAboutOverlayRoundTrip
+      - layer: L0
+        ref: ProductShellNavTest.aboutBack_fromEditor_returnsEditor_notLaunch
+      - layer: L0
+        ref: SessionReducerTest.r2_openAboutFromEditor_thenBack_toEditor_selectionPreserved
+
+  - id: launch-to-gallery
+    from: launch
+    to: gallery
+    trigger:
+      kind: tag
+      value: launchPickImageButton
+    platforms:
+      android:
+        drive: real
+        via: preferInAppGallery (default false; system picker otherwise)
+      ios:
+        drive: none
+      desktop:
+        drive: none
+    owners:
+      - shared/ui
+      - app/session
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.inAppGalleryPickEntersEditor
+      - layer: L0
+        ref: SessionReducerTest.galleryLoaded_opensDialog
+      - layer: L0
+        ref: SessionReducerTest.toggleGalleryItem_updatesCheck
+      - layer: L0
+        ref: SessionReducerTest.dismissGallery_selected_commitsAndEntersEditor
+      - layer: L0
+        ref: SessionReducerTest.dismissGallery_cancel_returnsLaunch
+      - layer: L0
+        ref: SessionReducerTest.navigateBack_fromGallery_clearsPicks
+      - layer: L0
+        ref: GalleryDragAutoScrollTest.pointerInMiddle_doesNotScroll
+      - layer: L0
+        ref: GalleryDragAutoScrollTest.pointerInBottomBand_scrollsDownFasterNearerTheEdge
+      - layer: L0
+        ref: GalleryDragAutoScrollTest.pointerInTopBand_scrollsUp
+      - layer: L0
+        ref: GalleryDragAutoScrollTest.pointerDraggedOutsideViewport_clampsToFullSpeed
+      - layer: L0
+        ref: GalleryDragAutoScrollTest.degenerateViewport_neverScrolls
+      - layer: L0
+        ref: GalleryDragAutoScrollTest.speedFractionIsSymmetricAroundTheViewport
+      - layer: L0
+        ref: EditorLayoutClassTest.galleryMinCell_yieldsFourColumnsOnPhoneWidth
+
+  # --- Editor sheets (6) ---
+  - id: editor-to-template-sheet
+    from: editor
+    to: template_sheet
+    trigger:
+      kind: tag
+      value: watermarkTextTemplateIcon
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/domain
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.templateSaveApplyDelete
+      - layer: L2
+        ref: PickerFlowUITests.testTemplatesSaveApplyDelete
+        platform: ios
+      - layer: L0
+        ref: SessionReducerTest.templateDialogs_updateUiState
+      - layer: L0
+        ref: TemplateEditorTest.isDaoNull_true_when_dao_absent
+      - layer: L0
+        ref: TemplateEditorTest.isDaoNull_false_when_dao_present
+
+  - id: editor-to-text-edit-sheet
+    from: editor
+    to: text_edit_sheet
+    trigger:
+      kind: tag
+      value: watermarkTextContent
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.textEditSheetUpdatesWatermark
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTextContentChanges
+        platform: ios
+
+  - id: editor-to-custom-color-sheet
+    from: editor
+    to: custom_color_sheet
+    trigger:
+      kind: tag
+      value: colorSwatch-custom
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.customColorSheetUpdatesWatermark
+      - layer: L0
+        ref: TextColorOptionTest.parse_argb_hex_accepts_hash_and_plain_forms
+      - layer: L0
+        ref: TextColorOptionTest.parse_rgb_hex_adds_opaque_alpha
+      - layer: L0
+        ref: TextColorOptionTest.parse_rejects_malformed_values
+      - layer: L0
+        ref: TextColorOptionTest.format_argb_hex_is_stable_uppercase
+      - layer: L0
+        ref: TextColorOptionTest.normalize_paste_strips_hash_0x_and_spaces
+      - layer: L0
+        ref: TextColorOptionTest.parse_accepts_signed_prefix_after_normalize
+      - layer: L0
+        ref: TextColorOptionTest.parse_accepts_short_rgb
+      - layer: L0
+        ref: TextColorOptionTest.parse_rejects_after_normalize_empty
+
+  - id: editor-to-save-export-sheet
+    from: editor
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: sharedComposeSaveButton
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/session
+    priority: core
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.exportViaFakePortShowsSuccess
+      - layer: L2
+        ref: PickerFlowUITests.testFixtureRenderPreviewAndExport
+        platform: ios
+      - layer: L2
+        ref: ProductJourneys.tryOpenExportEntry
+        platform: android
+      - layer: L2
+        ref: ProductBaselineProfileGenerator.startupAndEditorAdjacentJourneys
+        platform: android
+      - layer: L0
+        ref: ExportRecoveryUiTest.u1_showCancel_onlyWhileExporting
+      - layer: L3
+        ref: EditorJourneyBenchmark.editorOpenViaShare_partialBaselineProfile
+        platform: android
+        dimension: perf
+      - layer: L3
+        ref: EditorJourneyBenchmark.editorOpenViaShare_noCompilation
+        platform: android
+        dimension: perf
+
+  - id: editor-to-icon-picker
+    from: editor
+    to: icon_picker
+    trigger:
+      kind: tag
+      value: sharedComposeIconWatermarkOption
+    platforms:
+      android:
+        drive: none
+        via: PickVisualMedia cells not automatable
+      ios:
+        drive: seam
+        via: PhotosPicker opens; grid cells not addressable
+      desktop:
+        drive: none
+        via: AWT FileDialog
+    owners:
+      - shared/ui
+      - app/session
+      - iosApp
+      - desktopApp
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.iconOptionPickUpdatesWatermark
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeIconPickerOpens
+        platform: ios
+
+  - id: editor-to-add-more-picker
+    from: editor
+    to: add_more_picker
+    trigger:
+      kind: tag
+      value: sharedComposeAddMoreButton
+    platforms:
+      android:
+        drive: none
+        via: same picker / gallery as launch pick
+      ios:
+        drive: none
+        via: PHPicker cells not addressable
+      desktop:
+        drive: none
+        via: AWT FileDialog
+    owners:
+      - shared/ui
+      - shared/session
+      - app/session
+      - iosApp
+      - desktopApp
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.addMoreAppendsSecondImage
+      - layer: L0
+        ref: ProductShellNavTest.mergePickedSelection_replaceVsAppend
+      - layer: L0
+        ref: ProductShellNavTest.focusAfterPick_append_keeps_previous_when_still_present
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.editor_add_more_uses_same_dialog
+        platform: ios
+
+  # --- Export chain (3) ---
+  - id: export-save-success
+    from: save_export_sheet
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: sharedComposeExportPrimary
+    platforms:
+      android:
+        drive: none
+        via: no scripted save-completion journey
+      ios:
+        drive: seam
+        via: Photos permission dialog labels
+      desktop:
+        drive: seam
+        via: DesktopWatermarkFlow --headless
+    owners:
+      - shared/ui
+      - shared/session
+      - app/session
+      - iosApp
+      - desktopApp
+    priority: core
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.exportViaFakePortShowsSuccess
+      - layer: L2
+        ref: PickerFlowUITests.testFixtureRenderPreviewAndExport
+        platform: ios
+      - layer: L2
+        ref: DesktopWatermarkFlow --headless
+        platform: desktop
+      - layer: L0
+        ref: ExportOrchestrationTest.successResult_countsTowardCompleted
+      - layer: L0
+        ref: ExportRecoveryUiTest.i0_successWhereLine_includesCountAndDestination
+      - layer: L0
+        ref: TypedExportOutcomeTest.exportedMedia_holdsCompleteSuccessFacts
+      - layer: L0
+        ref: DesktopExportPipelinePortTest.exportOne_happyPath_uniqueDestination_preservesOffset_andMatchesPreviewPixels
+        platform: desktop
+
+  - id: export-system-share
+    from: save_export_sheet
+    to: share_sheet
+    trigger:
+      kind: tag
+      value: sharedComposeExportPrimary
+    platforms:
+      android:
+        drive: none
+        via: system share sheet
+      ios:
+        drive: seam
+        via: ActivityListView asserted; sheet not operated
+      desktop:
+        drive: none
+        via: reveal-folder share substitute
+    owners:
+      - shared/ui
+      - app/session
+      - iosApp
+      - desktopApp
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.exportOpenGalleryAfterSuccess
+      - layer: L2
+        ref: PickerFlowUITests.testFixtureRenderPreviewAndExport
+        platform: ios
+      - layer: L0
+        ref: ExportShareUriMappingTest.mediaRefExportData_mapsToNonEmptyUri
+        platform: android
+      - layer: L0
+        ref: ExportShareUriMappingTest.emptyMediaRef_mapsToNullForShareList
+        platform: android
+      - layer: L0
+        ref: ExportShareUriMappingTest.multiImageList_preservesOrderAndDropsEmpty
+        platform: android
+      - layer: L0
+        ref: ExportShareUriMappingTest.wrongPayloadType_mapsToNull
+        platform: android
+
+  - id: export-failure-recovery
+    from: save_export_sheet
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: sharedComposeExportRetryFailed
+    platforms:
+      android:
+        drive: real
+        via: retry control is real; failed state needs induced export failure (no scripted fault injection)
+      ios:
+        drive: real
+        via: retry control is real; failed state needs induced export failure (no scripted fault injection)
+      desktop:
+        drive: real
+        via: retry control is real; failed state needs induced export failure (no scripted fault injection)
+    owners:
+      - shared/ui
+      - shared/session
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.exportFailureRecovery
+      - layer: L0
+        ref: ExportRecoveryUiTest.u2_showRetryFailed_whenFinishedWithFailures_includingAllFailed
+      - layer: L0
+        ref: ExportRecoveryUiTest.u3_contentDescription_exposesProcessedSucceededFailed
+      - layer: L0
+        ref: ExportRecoveryUiTest.i0_distinctCountsLine_alwaysHasThreeNumbers
+      - layer: L0
+        ref: ExportRecoveryUiTest.i0_allFailedSummary_includesFailedCount
+      - layer: L0
+        ref: ExportRecoveryUiTest.i0_userFacingFailure_neverUsesRawExceptionMessage
+      - layer: L0
+        ref: ExportOrchestrationTest.failureResult_doesNotCountAsSuccess
+      - layer: L0
+        ref: TypedExportOutcomeTest.exportFailure_taxonomy_isDistinguishableByType
+      - layer: L0
+        ref: SaveExportRecoveryContractTest.u2_hostsWireRetryFailed
+        platform: desktop
+      - layer: L0
+        ref: ExportCancellationSessionTest.c4_retryAfterCancel_skipsPriorSuccess_runsRemaining
+        platform: desktop
+
+  # --- Platform-specific (3) ---
+  - id: android-crash-recovery
+    from: system
+    to: crash_recovery
+    trigger:
+      kind: system
+      value: MyApp.recoveryMode
+    platforms:
+      android:
+        drive: none
+        via: CRASH_COUNT gate in MyApp.onCreate; no fixture
+      ios:
+        drive: none
+      desktop:
+        drive: none
+    owners:
+      - app
+      - shared/ui
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.recoveryScreenCloseReturns
+
+  - id: ios-library-read-upsell
+    from: launch
+    to: library_read_upsell
+    trigger:
+      kind: tag
+      value: launchPickImageButton
+    platforms:
+      android:
+        drive: none
+      ios:
+        drive: real
+        via: iosLibraryReadUpsellConfirm / iosLibraryReadUpsellContinue
+      desktop:
+        drive: none
+    owners:
+      - iosApp
+      - shared/ui
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.libraryReadUpsellContinueSeamsPick
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.launch_idle_has_no_strip
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.launch_pick_when_denied_shows_dialog_not_picker
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.continue_opens_picker_and_skips_until_next_launch_visit
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.limited_dialog_cta_opens_settings_not_limited_picker
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.authorized_pick_opens_picker_immediately
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.not_determined_does_not_show_dialog_before_prompt
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.editor_add_more_uses_same_dialog
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.allow_all_after_settings_closes_dialog
+        platform: ios
+      - layer: L0
+        ref: IosLibraryReadUpsellTest.restricted_uses_settings_kind
+        platform: ios
+
+  - id: editor-dual-pane-morph
+    from: editor
+    to: editor
+    trigger:
+      kind: tag
+      value: editorLayoutExpanded
+    platforms:
+      android:
+        drive: real
+        via: window width >= 800dp
+      ios:
+        drive: real
+        via: iPad window width >= 800pt
+      desktop:
+        drive: real
+        via: "-PewmW / ewm.desktop.widthDp"
+    owners:
+      - shared/ui
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.editorDualPaneMorph
+      - layer: L0
+        ref: EditorLayoutClassTest.fixtures_requiredBreakpoints
+      - layer: L0
+        ref: EditorLayoutClassTest.thresholds_widthPrimary_adr0026
+      - layer: L0
+        ref: EditorLayoutClassTest.ipadPortraitWidths_reachDualPane
+      - layer: L0
+        ref: EditorLayoutClassTest.expandedFloor_leavesUsablePreviewPane
+      - layer: L0
+        ref: EditorLayoutClassTest.invalidWidth_isCompact
+      - layer: L0
+        ref: EditorLayoutClassTest.expandedAndWide_useSupportingPaneTokens
+      - layer: L0
+        ref: EditorLayoutClassTest.wideBand_stillClassifiedAt1440_dualPaneChrome
+      - layer: L0
+        ref: LargeScreenPresentationTest.dual_pane_uses_large_dialog
+      - layer: L0
+        ref: LargeScreenPresentationTest.form_inspector_matches_dual_pane
+      - layer: L0
+        ref: EditorInspectorFormFieldsTest.content_text_mode_only_text_field
+      - layer: L0
+        ref: EditorInspectorFormFieldsTest.content_image_mode_only_icon_field
+
+  # --- In-editor / About / export format (self-loops; not extra nodes) ---
+  - id: editor-tile-mode-clamp
+    from: editor
+    to: editor
+    trigger:
+      kind: tag
+      value: editorControl-TileMode
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.editorTabAndTileModeUpdatesConfig
+
+  - id: editor-typeface-style
+    from: editor
+    to: editor
+    trigger:
+      kind: tag
+      value: editorControl-TextTypeFace
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.editorTypefaceBoldUpdatesConfig
+
+  - id: editor-filmstrip-switch
+    from: editor
+    to: editor
+    trigger:
+      kind: tag
+      value: editorPhotoStrip
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/session
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.editorFilmstripSwitchChangesFocus
+
+  - id: about-follow-photo
+    from: about
+    to: about
+    trigger:
+      kind: tag
+      value: aboutSwitchRow
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.aboutFollowPhotoToggle
+
+  - id: about-in-app-gallery
+    from: about
+    to: about
+    trigger:
+      kind: tag
+      value: aboutSwitchRow
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: none
+        via: Android-only preference
+      desktop:
+        drive: none
+        via: Android-only preference
+    owners:
+      - shared/ui
+      - app
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.aboutInAppGalleryToggle
+
+  - id: export-format-jpeg-png
+    from: save_export_sheet
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: sharedComposeExportSheet
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/session
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.exportFormatJpegPngSwitchesPrefs
+
+  - id: about-to-open-source
+    from: about
+    to: open_source
+    trigger:
+      kind: tag
+      value: aboutOpenSourceRow
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.aboutOpenSourceRoundTrip
+
+  - id: about-wallpaper
+    from: about
+    to: about
+    trigger:
+      kind: tag
+      value: aboutSwitchRow
+    platforms:
+      android:
+        drive: real
+        via: Follow wallpaper colors (Android Material You only)
+      ios:
+        drive: none
+        via: no public wallpaper seed
+      desktop:
+        drive: none
+        via: no wallpaper Material You
+    owners:
+      - shared/ui
+      - app
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.aboutWallpaperToggle
+
+  - id: about-bounds
+    from: about
+    to: about
+    trigger:
+      kind: tag
+      value: aboutSwitchRow
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+    priority: edge
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.aboutBoundsToggle
+
+  - id: editor-clamp-drag
+    from: editor
+    to: editor
+    trigger:
+      kind: tag
+      value: sharedComposeWatermarkPreview
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/session
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.editorClampDragUpdatesOffset
+
+  - id: export-cancel
+    from: save_export_sheet
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: sharedComposeExportCancel
+    platforms:
+      android:
+        drive: real
+        via: Cancel is composed only while exporting
+      ios:
+        drive: real
+        via: Cancel is composed only while exporting
+      desktop:
+        drive: real
+        via: Cancel is composed only while exporting
+    owners:
+      - shared/ui
+      - shared/session
+    priority: normal
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.exportCancelStopsHeldJob
+      - layer: L0
+        ref: ExportRecoveryUiTest.u1_showCancel_onlyWhileExporting
+      - layer: L0
+        ref: ExportCancellationSessionTest.c1_cancelBeforeFirstItem_zeroSuccess_notSaving_notFileNotFound
+        platform: desktop
+
+  - id: editor-style-then-export
+    from: editor
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: watermarkTextContent
+    platforms:
+      android:
+        drive: real
+      ios:
+        drive: real
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/session
+    priority: core
+    cases:
+      - layer: L1
+        ref: L1ProductUiTest.editorStyleThenExport
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTextContentChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTextSizeChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeTextColorChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testSharedComposeWatermarkAlphaChanges
+        platform: ios
+      - layer: L2
+        ref: PickerFlowUITests.testFixtureRenderPreviewAndExport
+        platform: ios

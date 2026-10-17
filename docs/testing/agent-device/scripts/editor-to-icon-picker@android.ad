@@ -1,0 +1,9 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+press label="Content"
+wait label="Icon"
+press label="Icon"
+wait "label=\"Choose Images\""
+wait absent label="Save" 5000
+wait absent label="Version" 5000
+close

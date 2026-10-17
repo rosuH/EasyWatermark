@@ -1,0 +1,5 @@
+[
+  {"command": "open", "input": {"app": "me.rosuh.easywatermark.debug"}},
+  {"command": "wait", "input": {"selector": "id=\"sharedComposeSaveButton\" visible", "timeoutMs": 15000}},
+  {"command": "close", "input": {}}
+]

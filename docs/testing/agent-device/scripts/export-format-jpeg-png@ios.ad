@@ -1,0 +1,16 @@
+context platform=ios
+open me.rosuh.easywatermark.ios
+press id="store-seed-editor"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+press id="sharedComposeSaveButton"
+wait text "Output format"
+press "label=\"JPEG, JPEG\""
+wait text "Quality"
+press "label=\"PNG, PNG\""
+press label="Close sheet"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+close

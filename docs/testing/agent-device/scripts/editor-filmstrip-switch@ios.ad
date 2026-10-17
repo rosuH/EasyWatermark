@@ -1,0 +1,15 @@
+context platform=ios
+# ponytail: coordinates target the 402x874 QA simulator; use AX geometry for other layouts.
+open me.rosuh.easywatermark.ios
+press id="store-seed-editor"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+press 257 635
+wait 500
+press 144 635
+wait 500
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible"
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+close

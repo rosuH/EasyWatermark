@@ -43,11 +43,15 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.ui.ABOUT_CONTENT_MAX_WIDTH_DP
+import me.rosuh.easywatermark.ui.LocalAboutBackArmed
 import me.rosuh.easywatermark.ui.theme.DesignBrand
 import me.rosuh.easywatermark.ui.theme.DesignEditorBg
 import me.rosuh.easywatermark.ui.theme.DesignSliderTrack
@@ -133,6 +137,7 @@ fun AboutScreen(
     contentPadding: PaddingValues = PaddingValues(),
     logo: @Composable (modifier: Modifier) -> Unit,
 ) {
+    val aboutBackArmed = LocalAboutBackArmed.current
     val infoTitle = stringResource(Res.string.about_title_info)
     val versionTitle = stringResource(Res.string.about_title_version)
     val ratingTitle = stringResource(Res.string.about_title_rating)
@@ -173,8 +178,8 @@ fun AboutScreen(
                 )
             },
     ) {
-        // Back at top-start (production About / Material convention). Launch keeps its
-        // info entry at BottomCenter; About does not mirror that thumb target.
+        // Back at top-start (production About / Material convention). The whole
+        // page — background, halo, glyph — slides via the shell overlay offset.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -223,7 +228,12 @@ fun AboutScreen(
 
                     SectionHeader(aboutTitle)
                     AboutRow(icons.updateLog, updateLogTitle, onClick = onUpdateLog)
-                    AboutRow(icons.openSource, openSourceTitle, onClick = onOpenSource)
+                    AboutRow(
+                        icons.openSource,
+                        openSourceTitle,
+                        onClick = onOpenSource,
+                        rowTestTag = "aboutOpenSourceRow",
+                    )
                     AboutRow(icons.privacyZh, privacyZhTitle, onClick = onPrivacyZh)
                     AboutRow(icons.privacyEn, privacyEnTitle, onClick = onPrivacyEn)
 
@@ -255,14 +265,22 @@ fun AboutScreen(
             }
 
             IconButton(
-                onClick = onBack,
+                onClick = { if (aboutBackArmed) onBack() },
+                enabled = aboutBackArmed,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .testTag("aboutBack"),
+                    .testTag("aboutBack")
+                    .semantics {
+                        if (aboutBackArmed) {
+                            contentDescription = backCd
+                        } else {
+                            hideFromAccessibility()
+                        }
+                    },
             ) {
                 Icon(
                     painter = icons.back,
-                    contentDescription = backCd,
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -286,10 +304,12 @@ private fun AboutRow(
     title: String,
     trailing: String? = null,
     onClick: () -> Unit,
+    rowTestTag: String? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (rowTestTag != null) Modifier.testTag(rowTestTag) else Modifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically

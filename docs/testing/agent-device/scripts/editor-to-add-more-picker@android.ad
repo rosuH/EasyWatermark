@@ -1,0 +1,6 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+wait "label=\"Add more images\""
+press "label=\"Add more images\""
+wait label="Photos"
+close

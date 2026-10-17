@@ -1,0 +1,10 @@
+context platform=android
+open me.rosuh.easywatermark.debug
+press label="Save"
+wait "label=\"Output format\""
+wait text "JPEG"
+press value="JPEG"
+wait label="Quality"
+press value="PNG"
+wait text "PNG"
+close
