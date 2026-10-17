@@ -429,7 +429,12 @@ ${System.currentTimeMillis().formatDate("yyy-MM-dd")}
             if (previous.uiState != before.uiState ||
                 previous.selectedImageList.map { it.uri } != before.selectedImageList.map { it.uri }
             ) return@withContext
-            val waterMark = if (append) previous.waterMark else persistedWaterMark()
+            val waterMark: WaterMark
+            if (append) {
+                waterMark = previous.waterMark
+            } else {
+                waterMark = persistedWaterMark()
+            }
             val selected = ProductShellNav.mergePickedSelection(
                 previous.selectedImageList, newly, append,
             ).distinctBy { it.uri }
