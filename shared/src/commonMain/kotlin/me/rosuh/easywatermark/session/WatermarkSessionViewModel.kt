@@ -183,6 +183,7 @@ open class WatermarkSessionViewModel(
             is WatermarkConfigChange.MarkMode -> configEditor.updateMarkMode(change.mode)
             is WatermarkConfigChange.Color -> configEditor.updateTextColor(change.color)
             is WatermarkConfigChange.AlphaPercent -> configEditor.updateAlpha(change.percent)
+            is WatermarkConfigChange.Transform -> configEditor.updateTransform(change.size, change.degree, change.repeatOffsetX, change.repeatOffsetY)
             is WatermarkConfigChange.Degree -> configEditor.updateDegree(change.degree)
             is WatermarkConfigChange.TextSize -> configEditor.updateTextSize(change.size)
             is WatermarkConfigChange.Typeface -> configEditor.updateTextTypeface(change.typeface)

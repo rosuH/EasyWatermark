@@ -31,6 +31,7 @@ data class OverlayCell(
     val offsetY: Float,
     val alpha: Float,
     val builtForWidth: Int,
+    val renderedConfig: WaterMark? = null,
 )
 
 fun OverlayCell.withOffset(offsetX: Float, offsetY: Float): OverlayCell =
@@ -48,10 +49,11 @@ fun overlayCellFrom(
         WatermarkTileMode.CLAMP -> WatermarkTileMode.CLAMP
         else -> WatermarkTileMode.REPEAT
     },
-    offsetX = offsetX,
-    offsetY = offsetY,
+    offsetX = if (config.tileMode == WatermarkTileMode.REPEAT) config.repeatOffsetX else offsetX,
+    offsetY = if (config.tileMode == WatermarkTileMode.REPEAT) config.repeatOffsetY else offsetY,
     alpha = (config.alpha.coerceIn(0, 255)) / 255f,
     builtForWidth = builtForWidth,
+    renderedConfig = config,
 )
 
 /**
@@ -144,6 +146,8 @@ fun LiveOverlayPreview(
     waitThumb: (@Composable (Modifier) -> Unit)?,
     modifier: Modifier = Modifier,
     contentDescription: String? = "Watermark preview",
+    onOffsetCommit: ((Float, Float) -> Unit)? = null,
+    renderGestureCell: (suspend (WaterMark) -> ImageBitmap)? = null,
 ) {
     when (chrome) {
         OverlayPreviewChrome.EditorEmpty,
@@ -157,6 +161,13 @@ fun LiveOverlayPreview(
         OverlayPreviewChrome.LiveLayers -> {
             if (photo == null || overlay == null) {
                 Box(modifier)
+                return
+            }
+            val interaction = LocalPreviewInteraction.current
+            if (interaction != null && onOffsetCommit != null && renderGestureCell != null) {
+                Box(modifier) {
+                    InteractiveOverlayPreview(photo, overlay, interaction, onOffsetCommit, renderGestureCell, contentDescription)
+                }
                 return
             }
             Box(modifier) {

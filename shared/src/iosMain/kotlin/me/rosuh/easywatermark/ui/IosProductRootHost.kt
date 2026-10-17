@@ -332,29 +332,6 @@ class IosProductRootHost(
     /** Once-per-generation timeline marks for first visible pixels / completed preview. */
     private var markedFirstFilmstripPixels = false
     private var markedFirstWatermarkedPreview = false
-    /**
-     * H0.1-fix: UI-only CLAMP draft offset for live preview paint.
-     * Never written to Session / export / DataStore. Cleared on gesture end/cancel.
-     */
-    private var clampDraftOffset by mutableStateOf<Pair<Float, Float>?>(null)
-    private var clampDraftSelectionId by mutableStateOf<String?>(null)
-
-    /** One draft render in flight, newest offset wins. See [IosDraftRenderConflator]. */
-    private data class ClampDraftRequest(
-        val path: String,
-        val offsetX: Float,
-        val offsetY: Float,
-    )
-
-    private val clampDraftRenders = IosDraftRenderConflator<ClampDraftRequest>(
-        scope = hostScope,
-    ) { request ->
-        if (disposed) return@IosDraftRenderConflator
-        if (previewSourcePath == request.path && overlayCell != null) {
-            overlayCell = overlayCell?.withOffset(request.offsetX, request.offsetY)
-        }
-    }
-
     private val configChangeRenders = IosDraftRenderConflator<WatermarkConfigChange>(
         scope = hostScope,
     ) { change ->
@@ -364,8 +341,10 @@ class IosProductRootHost(
         previewGen += 1
         val gen = previewGen
         runCatching {
-            services.session.dispatchAndAwait(AppIntent.ApplyConfig(change))
-            renderPreviewForCurrentSelection(gen = gen)
+            val committed = services.session.applyConfigIf({ !disposed }, change)
+            if (committed != null && gen == previewGen) {
+                renderPreviewForCurrentSelection(gen = gen, forceWaterMark = committed)
+            }
         }.onFailure { t ->
             statusLine = "Failed: ${t.message}"
         }
@@ -844,7 +823,6 @@ class IosProductRootHost(
             // Tear down NC observers first so process-wide NotificationCenter cannot deliver into
             // a dead host (suite isolation + single-scene rebuild safety).
             progressiveImport.close()
-            clampDraftRenders.close()
             configChangeRenders.close()
             services.session.cancelExport()
             previewGen += 1
@@ -871,8 +849,6 @@ class IosProductRootHost(
             sheetExportCancelRequested = false
             sheetPhotosResult = null
             showOpenSource = false
-            clampDraftOffset = null
-            clampDraftSelectionId = null
             watermarkedPreviewSourcePath = null
             // Process-wide Session may still reference these ewm_src paths after Host rebuild.
             // Only delete host-tracked temps that Session no longer holds.
@@ -1245,8 +1221,6 @@ class IosProductRootHost(
                         preview = { previewModifier ->
                             val dragItem = launchUi.curImageInfo ?: sessionImages.firstOrNull()
                             val dragPath = dragItem?.uri?.value.orEmpty()
-                            val draftActiveForSelection =
-                                clampDraftSelectionId == dragPath && clampDraftOffset != null
                             val isTextMode = waterMark.markMode == WatermarkMode.Text
                             val chrome = OverlayPreviewPolicy.decide(
                                 selectedPath = dragPath.takeIf { it.isNotBlank() },
@@ -1264,87 +1238,21 @@ class IosProductRootHost(
                                 previewSourcePath == dragPath &&
                                 livePhoto != null &&
                                 liveOverlay != null
-                            val dragModifier = if (
-                                !isBusy &&
-                                dragItem != null &&
-                                identityLive &&
-                                livePhoto != null &&
-                                liveOverlay != null
-                            ) {
-                                Modifier.clampPreviewOffsetDrag(
-                                    enabled = true,
-                                    selectionId = dragPath,
-                                    isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
-                                    imageWidth = livePhoto.width.toFloat(),
-                                    imageHeight = livePhoto.height.toFloat(),
-                                    offsetX = dragItem.offsetX,
-                                    offsetY = dragItem.offsetY,
-                                    onOffsetDraft = { x, y ->
-                                        if (dragPath.isEmpty()) {
-                                            return@clampPreviewOffsetDrag
-                                        }
-                                        clampDraftOffset = x to y
-                                        clampDraftSelectionId = dragPath
-                                        overlayCell = overlayCell?.withOffset(x, y)
-                                        clampDraftRenders.submit(
-                                            ClampDraftRequest(dragPath, x, y),
-                                        )
-                                    },
-                                    onOffsetDraftClear = {
-                                        clampDraftOffset = null
-                                        clampDraftSelectionId = null
-                                    },
-                                    onOffsetCommit = { x, y ->
-                                        if (dragPath.isEmpty()) {
-                                            return@clampPreviewOffsetDrag
-                                        }
-                                        if (previewSourcePath != dragPath) {
-                                            return@clampPreviewOffsetDrag
-                                        }
-                                        if (
-                                            watermarkedPreviewSourcePath != dragPath &&
-                                            !draftActiveForSelection
-                                        ) {
-                                            return@clampPreviewOffsetDrag
-                                        }
-                                        val live = services.session
-                                            .launchScreenUiStateFlow
-                                            .value
-                                            .curImageInfo
-                                            ?.takeIf { it.uri.value == dragPath }
-                                            ?: return@clampPreviewOffsetDrag
-                                        val commitBench = ClampDragBench
-                                            .previewScope("ios_offset_commit")
-                                        services.session.applyOffset(
-                                            live.copy(offsetX = x, offsetY = y),
-                                        )
-                                        commitBench.mark("applyOffset")
-                                        clampDraftOffset = null
-                                        clampDraftSelectionId = null
+                            LiveOverlayPreview(
+                                onOffsetCommit = { x, y ->
+                                    val live = services.session.launchScreenUiStateFlow.value.curImageInfo
+                                        ?.takeIf { it.uri.value == dragPath }
+                                    if (live != null && previewSourcePath == dragPath) {
+                                        services.session.applyOffset(live.copy(offsetX = x, offsetY = y))
                                         overlayCell = overlayCell?.withOffset(x, y)
                                         previewGen++
-                                        val commitGen = previewGen
-                                        hostScope.launch {
-                                            renderPreviewForCurrentSelection(gen = commitGen)
-                                        }
-                                        commitBench.mark("previewGenBump")
-                                        val draftCounts = clampDraftRenders.countsForTests()
-                                        commitBench.finish(
-                                            mapOf(
-                                                "offsetX" to x,
-                                                "offsetY" to y,
-                                                "path" to dragPath.substringAfterLast('/'),
-                                                "draftSamples" to draftCounts.submitted,
-                                                "draftRenders" to draftCounts.rendered,
-                                            ),
-                                        )
-                                        clampDraftRenders.resetCountsForTests()
-                                    },
-                                )
-                            } else {
-                                Modifier
-                            }
-                            LiveOverlayPreview(
+                                        val gen = previewGen
+                                        hostScope.launch { renderPreviewForCurrentSelection(gen = gen) }
+                                    }
+                                },
+                                renderGestureCell = { config ->
+                                    composeIosOverlayCell(config, livePhoto!!.width, 0f, 0f).cell
+                                },
                                 chrome = chrome,
                                 photo = livePhoto,
                                 overlay = liveOverlay,
@@ -1368,7 +1276,7 @@ class IosProductRootHost(
                                 modifier = previewModifier
                                     .fillMaxSize()
                                     .testTag("sharedComposeWatermarkPreview")
-                                    .then(dragModifier),
+                                    ,
                             )
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->
@@ -1506,10 +1414,12 @@ class IosProductRootHost(
                                 try {
                                     previewGen += 1
                                     val gen = previewGen
-                                    services.session.dispatchAndAwait(
-                                        AppIntent.ApplyConfig(WatermarkConfigChange.Text(content)),
+                                    val committed = services.session.applyConfigIf(
+                                        { !disposed }, WatermarkConfigChange.Text(content),
                                     )
-                                    renderPreviewForCurrentSelection(gen = gen)
+                                    if (committed != null && gen == previewGen) {
+                                        renderPreviewForCurrentSelection(gen = gen, forceWaterMark = committed)
+                                    }
                                 } catch (t: Throwable) {
                                     statusLine = "Failed: ${t.message}"
                                 }
@@ -2430,7 +2340,7 @@ class IosProductRootHost(
         } else {
             null
         }
-        val cell = IosPreviewRaster.composeCell(wm, imageWidth, family)
+        val cell = withContext(Dispatchers.Default) { IosPreviewRaster.composeCell(wm, imageWidth, family) }
         return overlayCellFrom(
             cell = cell,
             config = wm,

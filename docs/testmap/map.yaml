@@ -1211,3 +1211,31 @@ edges:
       - layer: L2
         ref: PickerFlowUITests.testFixtureRenderPreviewAndExport
         platform: ios
+
+  - id: editor-preview-gestures
+    from: editor
+    to: save_export_sheet
+    trigger:
+      kind: tag
+      value: previewWatermarkTarget
+    platforms:
+      android:
+        drive: seam
+        via: Setup shares the owned fixture into the real editor
+      ios:
+        drive: seam
+        via: Simulator seed editor imports host sample photos
+      desktop:
+        drive: real
+    owners:
+      - shared/ui
+      - shared/session
+      - app
+      - iosApp
+      - desktopApp
+    priority: core
+    cases:
+      - layer: L1
+        ref: PreviewGestureUiTest.doubleTapWatermarkOpensEditor_butBlankDoubleTapDoesNot
+      - layer: L1
+        ref: PreviewGestureUiTest.secondFingerDoesNotRetargetWatermark_andCommitsOneSizeRotationPair

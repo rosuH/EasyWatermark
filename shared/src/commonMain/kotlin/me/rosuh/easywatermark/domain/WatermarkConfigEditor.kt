@@ -54,6 +54,9 @@ class WatermarkConfigEditor(private val repo: WaterMarkRepository) {
         repo.updateVertical(gap)
     }
 
+    suspend fun updateTransform(size: Float, degree: Float, repeatX: Float? = null, repeatY: Float? = null) =
+        repo.updateTransform(size, degree, repeatX, repeatY)
+
     suspend fun updateDegree(degree: Float) {
         repo.updateDegree(degree)
     }

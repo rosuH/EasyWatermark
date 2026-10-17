@@ -32,6 +32,17 @@ class DesktopWaterMarkStoreRoundtripTest {
             assertEquals("EasyWatermark 水印", initial.text)
             assertEquals(WatermarkTileMode.REPEAT, initial.tileMode)
 
+            assertEquals(0f, initial.repeatOffsetX)
+            assertEquals(0f, initial.repeatOffsetY)
+            editor.updateTransform(22f, -15f, .12f, -.08f)
+            val transform = repo.currentConfig()
+            assertEquals(22f, transform.textSize)
+            assertEquals(345f, transform.degree)
+            assertEquals(.12f, transform.repeatOffsetX)
+            assertEquals(-.08f, transform.repeatOffsetY)
+            editor.updateTransform(21f, 360f)
+            assertEquals(.12f, repo.currentConfig().repeatOffsetX, "CLAMP edit must preserve repeated pattern config")
+
             // Edits round-trip through the shared editor + the desktop store.
             editor.updateText("请勿转载")
             editor.updateDegree(330f)

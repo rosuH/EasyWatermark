@@ -196,15 +196,12 @@ class AndroidPreviewSourceReuseTest {
             "commit paint must bump paintToken",
             "paintToken += 1" in canvas,
         )
-        val persist = canvas.substring(canvas.indexOf("onDragEnd"))
+        val persist = canvas.substringAfter("onOffsetCommit = {").substringBefore("renderGestureCell =")
         assertTrue(
-            "rubber-band persist must enqueue committed paint",
-            persist.contains("submitCommittedOverlayPaint(centerX, centerY)"),
+            "shared gesture commit must enqueue exactly one committed paint",
+            Regex("""submitCommittedOverlayPaint\s*\(""").findAll(persist).count() == 1,
         )
-        assertTrue(
-            "in-bounds persist must enqueue committed paint",
-            persist.contains("submitCommittedOverlayPaint(offsetX, offsetY)"),
-        )
+        assertTrue("offset must be persisted first", persist.indexOf("onOffsetChanged") < persist.indexOf("submitCommittedOverlayPaint"))
         assertTrue(
             "commit must not drop live layers",
             "livePhoto = null" !in persist.substring(0, 2500.coerceAtMost(persist.length)),

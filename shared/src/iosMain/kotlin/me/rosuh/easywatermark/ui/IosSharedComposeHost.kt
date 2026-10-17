@@ -692,6 +692,14 @@ internal class IosEditorScreenHost(
                                             state = state.copy(text = change.text)
                                             onTextChange(change.text)
                                         }
+                                        is WatermarkConfigChange.Transform -> {
+                                            textSize = change.size
+                                            degree = change.degree
+                                            pendingTextSize = change.size
+                                            pendingDegree = change.degree
+                                            onTextSizeFinished(change.size)
+                                            onDegreeFinished(change.degree)
+                                        }
                                         is WatermarkConfigChange.Degree -> {
                                             degree = change.degree
                                             pendingDegree = change.degree

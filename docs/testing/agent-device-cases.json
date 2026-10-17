@@ -708,6 +708,28 @@
         "ios": "docs/testing/agent-device/scripts/editor-style-then-export@ios.ad"
       },
       "honesty": "One editor session: text fill, Style size/color/alpha, then PNG export. Slider taps hit sliderTrack center. Queuing separate map edges is not this journey — each edge re-applies setup. Replay pass is not a product pass."
+    },
+    {
+      "id": "editor-preview-gestures",
+      "title": "缩放查看、双击编辑、变换水印并导出",
+      "edges": [
+        "editor-preview-gestures"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": {
+        "android": true,
+        "ios": true
+      },
+      "script": {
+        "android": "docs/testing/agent-device/scripts/editor-preview-gestures@android.json",
+        "ios": "docs/testing/agent-device/scripts/editor-preview-gestures@ios.json"
+      },
+      "honesty": "Pinned Android 35 1080px and iPhone 17 Pro 402pt coordinates were inspected on native screenshots. First transform pointer, not the gesture centroid, hits the single watermark. Android timed repeated taps and iOS native doubleTap use OS-valid timing. Setup is seam; native gestures, existing text sheet and pipeline export are real. Actual PNG bytes are archived before precise cleanup. Execution is not visual acceptance or Human Confirm."
     }
   ]
 }

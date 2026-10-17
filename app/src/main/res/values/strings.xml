@@ -196,4 +196,5 @@
     <string name="ios_import_retry">Retry</string>
     <string name="ios_import_remove">Remove</string>
     <string name="tips_low_resolution_source">Low-resolution photo · %1$d × %2$d</string>
+    <string name="preview_reset_view">Reset view</string>
 </resources>

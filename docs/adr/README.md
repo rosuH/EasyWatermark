@@ -40,3 +40,5 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0037](0037-agent-device-testmap-adapter.md) | testmap agent 层改为 Agent Device；L0–L3/地图保留；Artemis 历史 / P4 deprecated | **Accepted** (owner 2026-09-14: default runner Agent Device, P0–P4, no PR split) |
 | [0038](0038-testmap-continuous-routes.md) | Testmap continuous routes beside independent cases; one setup/session/restore and attributable steps | **Proposed** |
 | [0039](0039-testmap-android-model-directed-journey.md) | Testmap Android model-directed journey as an evidence-gated runner adapter | **Proposed** |
+
+- [ADR-0040: Preview gesture targets and watermark editing](0040-preview-gesture-targets.md) — Proposed; demo interaction approved, implementation acceptance pending.

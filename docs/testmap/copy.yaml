@@ -142,6 +142,10 @@ edges:
     en: Edit text, size, color, opacity, then export
     zh: 改文字、大小、颜色、透明度后导出
 
+  editor-preview-gestures:
+    en: Inspect the photo, double-tap text, transform the watermark, then export
+    zh: 缩放查看、双击编辑、变换水印并导出
+
 cases:
   L1ProductUiTest.addMoreAppendsSecondImage:
     en: Add-more chrome appends a second photo
@@ -641,3 +645,10 @@ cases:
   DesktopWatermarkFlow --headless:
     en: Desktop headless open → render → save
     zh: 桌面无头：打开 → 渲染 → 保存
+
+  PreviewGestureUiTest.doubleTapWatermarkOpensEditor_butBlankDoubleTapDoesNot:
+    en: Double-tap text opens the existing editor
+    zh: 双击文字水印打开现有编辑弹窗
+  PreviewGestureUiTest.secondFingerDoesNotRetargetWatermark_andCommitsOneSizeRotationPair:
+    en: The first pointer locks the watermark target
+    zh: 第一指锁定水印目标并一次提交变换

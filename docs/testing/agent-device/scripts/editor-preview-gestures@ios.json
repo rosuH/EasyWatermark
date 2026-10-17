@@ -1,0 +1,277 @@
+[
+  {
+    "command": "open",
+    "input": {
+      "app": "me.rosuh.easywatermark.ios"
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"store-seed-editor\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\" visible",
+      "timeoutMs": 90000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextContent\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextEditField\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "fill",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextEditField\""
+      },
+      "text": "EWM GESTURE"
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextConfirm\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\" visible",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"editorTab-1\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"choice-1\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"choice-1\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "gesture",
+    "input": {
+      "kind": "pinch",
+      "origin": {
+        "x": 100,
+        "y": 315
+      },
+      "scale": 1.5
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewResetView\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"previewResetView\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "absent": "id=\"previewResetView\"",
+      "timeoutMs": 5000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "point",
+        "x": 215,
+        "y": 370
+      },
+      "doubleTap": true
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextEditField\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextTemplateIcon\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextConfirm\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeSaveButton\" visible",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "gesture",
+    "input": {
+      "kind": "transform",
+      "origin": {
+        "x": 215,
+        "y": 406
+      },
+      "delta": {
+        "x": 18,
+        "y": 12
+      },
+      "scale": 1.4,
+      "degrees": 20,
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewWatermarkTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"sharedComposeSaveButton\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeExportSheet\" visible",
+      "timeoutMs": 20000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "label=\"PNG, PNG\""
+      }
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"sharedComposeExportPrimary\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"sharedComposeExportCounts\" label=\"Processed 3 \u00b7 Succeeded 3 \u00b7 Failed 0\" visible",
+      "timeoutMs": 90000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 650
+    }
+  },
+  {
+    "command": "close",
+    "input": {}
+  }
+]

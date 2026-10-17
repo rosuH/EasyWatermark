@@ -1,7 +1,6 @@
 package me.rosuh.easywatermark.ui
 
 import android.graphics.Bitmap
-import android.graphics.Shader
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,7 +8,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -61,7 +58,6 @@ import me.rosuh.easywatermark.render.neighborIndices
 import me.rosuh.easywatermark.ui.DraftRenderConflator
 import me.rosuh.easywatermark.ui.LiveOverlayPreview
 import me.rosuh.easywatermark.ui.OverlayCell
-import me.rosuh.easywatermark.ui.overlayCellDisplaySize
 import me.rosuh.easywatermark.ui.overlayCellFrom
 import me.rosuh.easywatermark.ui.withOffset
 import me.rosuh.easywatermark.ui.compose.ColorOption
@@ -325,6 +321,7 @@ private fun WaterMark.previewFingerprint(): String = buildString {
     append('|').append(tileMode)
     append('|').append(iconUri.value)
     append('|').append(fontRef.fingerprint())
+    append('|').append(repeatOffsetX).append('|').append(repeatOffsetY)
 }
 
 /**
@@ -351,8 +348,6 @@ private fun WaterMarkCanvas(
         val cw = constraints.maxWidth
         val ch = constraints.maxHeight
         val selectedUri = selectedImage.uri.value
-        val tileMode = waterMark.obtainTileMode()
-        val isClamp = tileMode == Shader.TileMode.CLAMP
         val isTextMode = waterMark.markMode == WatermarkMode.Text
         val wmFp = remember(waterMark) { waterMark.previewFingerprint() }
         val bucket = PreviewResolutionPolicy.committedMaxEdgePx(cw, ch)
@@ -605,104 +600,6 @@ private fun WaterMarkCanvas(
         val photo = if (chrome == OverlayPreviewChrome.LiveLayers) livePhoto else null
         val liveOverlay = if (chrome == OverlayPreviewChrome.LiveLayers) overlay else null
 
-        val dest = if (photo != null && cw > 0 && ch > 0) {
-            val scale = min(cw.toFloat() / photo.width, ch.toFloat() / photo.height)
-            val drawW = photo.width * scale
-            val drawH = photo.height * scale
-            ContentRect(
-                left = (cw - drawW) / 2f,
-                top = (ch - drawH) / 2f,
-                width = drawW,
-                height = drawH,
-            )
-        } else {
-            null
-        }
-        val cellDisplay = if (photo != null && liveOverlay != null && dest != null) {
-            overlayCellDisplaySize(photo, liveOverlay, cw.toFloat(), ch.toFloat())
-        } else {
-            null
-        }
-        val hitDrawW = dest?.width ?: 0f
-        val hitDrawH = dest?.height ?: 0f
-        val hitLeft = dest?.left ?: 0f
-        val hitTop = dest?.top ?: 0f
-        val cellW = cellDisplay?.first ?: 0f
-        val cellH = cellDisplay?.second ?: 0f
-        val identityLive = chrome == OverlayPreviewChrome.LiveLayers &&
-            livePhotoPath == selectedUri
-        val hitReady = !isClamp || (cellW > 0f && cellH > 0f)
-
-        val canvasModifier = if (isClamp && identityLive && hitReady) {
-            Modifier
-                .fillMaxSize()
-                .pointerInput(hitDrawW, hitDrawH, hitLeft, hitTop, cellW, cellH, selectedUri) {
-                    var draggingWatermark = false
-                    detectDragGestures(
-                        onDragStart = { start ->
-                            draggingWatermark = isTouchingClampWatermark(
-                                pointer = start,
-                                left = hitLeft,
-                                top = hitTop,
-                                regionWidth = hitDrawW,
-                                regionHeight = hitDrawH,
-                                offsetX = offsetX,
-                                offsetY = offsetY,
-                                cellWidth = cellW,
-                                cellHeight = cellH,
-                            )
-                        },
-                        onDragEnd = {
-                            if (draggingWatermark) {
-                                if (isClampWatermarkOutOfDrawable(
-                                        offsetX, offsetY, hitDrawW, hitDrawH, cellW, cellH,
-                                    )
-                                ) {
-                                    val startX = offsetX
-                                    val startY = offsetY
-                                    val centerX = ((hitDrawW - cellW) / 2f) / hitDrawW
-                                    val centerY = ((hitDrawH - cellH) / 2f) / hitDrawH
-                                    onOffsetChanged(
-                                        selectedImage
-                                            .copy(offsetX = centerX, offsetY = centerY)
-                                            .toImageInfo(),
-                                    )
-                                    submitCommittedOverlayPaint(centerX, centerY)
-                                    scope.launch {
-                                        Animatable(0f).animateTo(
-                                            1f,
-                                            animationSpec = tween(durationMillis = 300),
-                                        ) {
-                                            offsetX = startX + (centerX - startX) * value
-                                            offsetY = startY + (centerY - startY) * value
-                                            overlay = overlay?.withOffset(offsetX, offsetY)
-                                        }
-                                    }
-                                } else {
-                                    onOffsetChanged(
-                                        selectedImage
-                                            .copy(offsetX = offsetX, offsetY = offsetY)
-                                            .toImageInfo(),
-                                    )
-                                    submitCommittedOverlayPaint(offsetX, offsetY)
-                                }
-                            }
-                            draggingWatermark = false
-                        },
-                        onDragCancel = { draggingWatermark = false },
-                    ) { change, drag ->
-                        if (draggingWatermark) {
-                            change.consume()
-                            offsetX += drag.x / hitDrawW
-                            offsetY += drag.y / hitDrawH
-                            overlay = overlay?.withOffset(offsetX, offsetY)
-                        }
-                    }
-                }
-        } else {
-            Modifier.fillMaxSize()
-        }
-
         val reveal = if (chrome == OverlayPreviewChrome.LiveLayers) {
             firstReveal.coerceIn(0f, 1f)
         } else {
@@ -727,18 +624,27 @@ private fun WaterMarkCanvas(
             } else {
                 null
             },
-            modifier = canvasModifier.graphicsLayer { alpha = reveal },
+            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = reveal },
+            onOffsetCommit = { x, y ->
+                offsetX = x; offsetY = y
+                onOffsetChanged(selectedImage.copy(offsetX = x, offsetY = y).toImageInfo())
+                overlay = overlay?.withOffset(x, y)
+                submitCommittedOverlayPaint(x, y)
+            },
+            renderGestureCell = { config ->
+                withContext(Dispatchers.Default) {
+                    val family = if (config.markMode == WatermarkMode.Text) {
+                        when (val resolved = fontAccess.resolve(config.fontRef)) {
+                            is FontResolution.Success -> resolved.family
+                            is FontResolution.Failure -> error(resolved.reason)
+                        }
+                    } else null
+                    AndroidCommonRaster.composeCell(context, config, photo!!.width, decodeAndroidIcon(config), family)
+                }
+            },
         )
     }
 }
-
-/** Content rect for FIT_CENTER of a photo inside canvas [cw]×[ch]. */
-private data class ContentRect(
-    val left: Float,
-    val top: Float,
-    val width: Float,
-    val height: Float,
-)
 
 private suspend fun prefetchAndroidNeighbors(
     focusUri: String,
@@ -781,39 +687,4 @@ private suspend fun prefetchAndroidNeighbors(
             }
         }
     }
-}
-
-private fun isTouchingClampWatermark(
-    pointer: Offset,
-    left: Float,
-    top: Float,
-    regionWidth: Float,
-    regionHeight: Float,
-    offsetX: Float,
-    offsetY: Float,
-    cellWidth: Float,
-    cellHeight: Float,
-): Boolean {
-    val waterMarkX = left + offsetX * regionWidth
-    val waterMarkY = top + offsetY * regionHeight
-    return pointer.x > waterMarkX &&
-        pointer.x < waterMarkX + cellWidth &&
-        pointer.y > waterMarkY &&
-        pointer.y < waterMarkY + cellHeight
-}
-
-private fun isClampWatermarkOutOfDrawable(
-    offsetX: Float,
-    offsetY: Float,
-    regionWidth: Float,
-    regionHeight: Float,
-    cellWidth: Float,
-    cellHeight: Float,
-): Boolean {
-    val waterMarkX = offsetX * regionWidth
-    val waterMarkY = offsetY * regionHeight
-    return waterMarkX + cellWidth < 0f ||
-        waterMarkX > regionWidth ||
-        waterMarkY > regionHeight ||
-        waterMarkY + cellHeight < 0f
 }

@@ -69,6 +69,7 @@ flowchart TB
   save_export_sheet -->|export-cancel<br/>a:real i:real d:real| save_export_sheet
   editor -->|editor-font-system-select-export<br/>a:real i:real d:real| save_export_sheet
   editor -->|editor-style-then-export<br/>a:real i:real d:real| save_export_sheet
+  editor -->|editor-preview-gestures<br/>a:seam i:seam d:real| save_export_sheet
 
   linkStyle 0 stroke:#bf9000,stroke-width:2px,stroke-dasharray:6 4
   linkStyle 1 stroke:#38761d,stroke-width:2px
@@ -100,6 +101,7 @@ flowchart TB
   linkStyle 27 stroke:#38761d,stroke-width:2px
   linkStyle 28 stroke:#38761d,stroke-width:2px
   linkStyle 29 stroke:#38761d,stroke-width:2px
+  linkStyle 30 stroke:#38761d,stroke-width:2px
 
   classDef real fill:#d9ead3,stroke:#38761d,color:#1d1d1d
   classDef seam fill:#fff2cc,stroke:#bf9000,color:#1d1d1d
@@ -146,6 +148,7 @@ Empty `cases: []` rows are honest gaps.
 | `export-cancel` | normal | real (2) | real (2) | real (3) | 3 |
 | `editor-font-system-select-export` | core | real (2) | real (2) | real (2) | 2 |
 | `editor-style-then-export` | core | real (1) | real (6) | real (1) | 6 |
+| `editor-preview-gestures` | core | seam (2) | seam (2) | real (2) | 2 |
 
 ## Gaps
 
@@ -162,7 +165,7 @@ Browsable view: [`map.html`](map.html).
 
 ### L0
 
-Covered: 16 / 30.
+Covered: 16 / 31.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -185,7 +188,7 @@ Covered: 16 / 30.
 
 ### L1
 
-Covered: 29 / 30.
+Covered: 30 / 31.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -218,6 +221,7 @@ Covered: 29 / 30.
 | `editor-clamp-drag` | all | 1 |
 | `export-cancel` | all | 1 |
 | `editor-style-then-export` | all | 1 |
+| `editor-preview-gestures` | all | 2 |
 
 Lacking L1 (shared-UI `tag` trigger, no L1 case):
 
@@ -225,7 +229,7 @@ Lacking L1 (shared-UI `tag` trigger, no L1 case):
 
 ### L2
 
-Covered: 10 / 30.
+Covered: 10 / 31.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -260,10 +264,11 @@ Lacking L2 (any `real`/`seam` drive, no L2 case):
 - `editor-clamp-drag`
 - `export-cancel`
 - `editor-font-system-select-export`
+- `editor-preview-gestures`
 
 ### L3
 
-Covered: 3 / 30.
+Covered: 3 / 31.
 
 | Edge | Platforms | Refs |
 |---|---|---|
@@ -725,6 +730,16 @@ Covered: 3 / 30.
   - Text color can be changed on device (`PickerFlowUITests.testSharedComposeTextColorChanges`) (ios)
   - Opacity can be changed on device (`PickerFlowUITests.testSharedComposeWatermarkAlphaChanges`) (ios)
   - Fixture image renders in preview and can export (`PickerFlowUITests.testFixtureRenderPreviewAndExport`) (ios)
+
+### Inspect the photo, double-tap text, transform the watermark, then export (`editor-preview-gestures`)
+
+- Path: `editor` → `save_export_sheet`
+- Trigger: `tag` `previewWatermarkTarget`
+- Drive: android `seam` via Setup shares the owned fixture into the real editor; ios `seam` via Simulator seed editor imports host sample photos; desktop `real`
+- Owners: `shared/ui`, `shared/session`, `app`, `iosApp`, `desktopApp`
+- L1:
+  - Double-tap text opens the existing editor (`PreviewGestureUiTest.doubleTapWatermarkOpensEditor_butBlankDoubleTapDoesNot`)
+  - The first pointer locks the watermark target (`PreviewGestureUiTest.secondFingerDoesNotRetargetWatermark_andCommitsOneSizeRotationPair`)
 
 ## Nodes
 

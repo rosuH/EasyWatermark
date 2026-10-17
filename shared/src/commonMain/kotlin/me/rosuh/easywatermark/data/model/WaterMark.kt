@@ -21,6 +21,9 @@ data class WaterMark(
     val enableBounds: Boolean,
     val tileMode: WatermarkTileMode,
     val fontRef: WatermarkFontRef = WatermarkFontRef.Default,
+    /** REPEAT pattern origin, normalized to photo dimensions; CLAMP stays Session-owned. */
+    val repeatOffsetX: Float = 0f,
+    val repeatOffsetY: Float = 0f,
 ) {
     companion object {
         val default = WaterMark(
