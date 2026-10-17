@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0032 testmap run engine (optional Pillow Android pixels). Never a CI gate.
+"""ADR-0032 testmap run engine (Pillow required for Android pixel checks). Never a CI gate.
 
 Importable by the local console, and runnable as a foreground CLI:
 

@@ -1284,6 +1284,21 @@ class SetupSafetyChecks(unittest.TestCase):
             claim.assert_not_called()
         self.assertEqual(calls, (self.root / 'calls.jsonl').read_text())
 
+    def test_ios_export_success_scripts_wait_for_terminal_three_item_result(self):
+        for edge in ("editor-style-then-export", "export-save-success", "export-system-share"):
+            with self.subTest(edge=edge):
+                rows = runner.parse_script(setup.REPO_ROOT / f"docs/testing/agent-device/scripts/{edge}@ios.ad", "ios")
+                counts = next(row for row in rows if row["command"] == "wait" and "sharedComposeExportCounts" in row["args"])
+                self.assertIn("Processed 3 · Succeeded 3 · Failed 0", counts["args"])
+                if edge == "export-system-share":
+                    share = [row for row in rows if row["command"] == "press" and "sharedComposeExportPrimary" in row["args"]]
+                    self.assertEqual(2, len(share))
+                    self.assertLess(share[0]["n"], counts["n"])
+                    self.assertLess(counts["n"], share[1]["n"])
+                    self.assertLess(share[1]["n"], next(row["n"] for row in rows if row["command"] == "wait" and "ActivityListView" in row["args"]))
+                else:
+                    self.assertLess(counts["n"], next(row["n"] for row in rows if row["command"] == "close"))
+
     def test_ios_library_upsell_script_requires_visible_prompt_before_continue(self):
         import shlex
         case = agent.agent_device_cases_by_id()['ios-library-read-upsell']
