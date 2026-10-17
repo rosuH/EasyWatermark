@@ -19,6 +19,7 @@ sealed class Action {
 
     data class SystemPickerImageSelected(
         val uriList: List<Uri>,
+        val append: Boolean = false,
     ) : Action()
 
     data class LoadImages(val resolver: ContentResolver) : Action()

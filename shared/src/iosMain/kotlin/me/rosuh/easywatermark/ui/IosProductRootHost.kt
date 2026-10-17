@@ -78,6 +78,7 @@ import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_progress
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cancelled
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_failed
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_partial
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_done_success
@@ -377,6 +378,8 @@ class IosProductRootHost(
     private var outputQuality by mutableStateOf(80)
     /** After a successful sheet export, primary CTA flips to Share (Android parity). */
     private var sheetExportFinished by mutableStateOf(false)
+    private var sheetExportCancelRequested by mutableStateOf(false)
+    private var sheetPhotosResult by mutableStateOf<PhotosPersistBatchResult?>(null)
     /** Open-source licenses overlay (Android showOpenSource parity). */
     private var showOpenSource by mutableStateOf(false)
     /**
@@ -457,6 +460,8 @@ class IosProductRootHost(
                 if (progressiveImport.importInProgress) return
                 services.session.resetJobStatus()
                 sheetExportFinished = false
+                sheetExportCancelRequested = false
+                sheetPhotosResult = null
                 showSaveSheet = true
             }
         }
@@ -843,6 +848,8 @@ class IosProductRootHost(
             hideLibraryReadUpsell()
             showSaveSheet = false
             sheetExportFinished = false
+            sheetExportCancelRequested = false
+            sheetPhotosResult = null
             showOpenSource = false
             clampDraftOffset = null
             clampDraftSelectionId = null
@@ -1406,6 +1413,8 @@ class IosProductRootHost(
                             // C2: open shared Android Compose export panel (not immediate Photos write).
                             services.session.resetJobStatus()
                             sheetExportFinished = false
+                            sheetExportCancelRequested = false
+                            sheetPhotosResult = null
                             showSaveSheet = true
                         },
                         onGoAboutScreen = { openAboutFromEditor() },
@@ -1562,23 +1571,30 @@ class IosProductRootHost(
                 )
                 // Re-read job ticks so thumbnails recompose during batch export (jobState is mutated
                 // on ImageInfo; ExportJobState Flow is the recomposition signal).
-                val finished = sheetExportFinished || exportJob.isFinished
+                val finished = sheetExportFinished || (exportJob.isFinished && !isSaving)
                 val exporting = isSaving || exportJob.isSaving
                 val recovery = me.rosuh.easywatermark.ui.save.ExportRecoveryUi.fromJob(
                     isSaving = exporting,
                     isFinished = finished,
-                    successCount = exportJob.successCount.coerceAtLeast(exportJob.completedCount),
-                    failureCount = exportJob.failureCount,
+                    successCount = sheetPhotosResult?.persistedCount
+                        ?: exportJob.successCount.coerceAtLeast(exportJob.completedCount),
+                    failureCount = exportJob.failureCount +
+                        (sheetPhotosResult?.photosFailureMessages?.size ?: 0),
                     processedCount = exportJob.processedCount
                         .coerceAtLeast(exportJob.successCount + exportJob.failureCount),
                     totalCount = exportJob.totalCount.takeIf { it > 0 } ?: exportTotal,
                 )
                 val primaryLabel = when {
-                    finished -> stringResource(Res.string.share)
+                    finished && !sheetExportCancelRequested -> stringResource(Res.string.share)
                     exporting -> stringResource(Res.string.dialog_save_exporting)
                     else -> stringResource(Res.string.dialog_export_to_gallery)
                 }
                 val resultSummaryText = when {
+                    recovery.isFinished && sheetExportCancelRequested -> stringResource(
+                        Res.string.dialog_save_export_cancelled,
+                        recovery.successCount,
+                        recovery.totalCount.coerceAtLeast(1),
+                    )
                     recovery.isExporting -> stringResource(
                         Res.string.dialog_save_export_progress,
                         recovery.processedCount,
@@ -1655,10 +1671,17 @@ class IosProductRootHost(
                 }
                 val exportErrorGeneric = stringResource(Res.string.dialog_save_error_generic)
                 val exportingLabel = stringResource(Res.string.dialog_save_exporting)
-                val runIosExportBatch: () -> Unit = {
+                val runIosExportBatch: (Boolean) -> Unit = { retryFailedOnly ->
                     scope.launch {
+                        val alreadyPersistedPaths = if (retryFailedOnly) {
+                            sheetPhotosResult?.persistedPaths.orEmpty()
+                        } else {
+                            emptySet()
+                        }
                         isSaving = true
                         sheetExportFinished = false
+                        sheetExportCancelRequested = false
+                        sheetPhotosResult = null
                         statusLine = exportingLabel
                         try {
                             val images = exportItems.ifEmpty {
@@ -1683,7 +1706,10 @@ class IosProductRootHost(
                                         ?.let { IosByteArrayInterop.fromNSData(it) }
                                 },
                                 photosSave = photosSaveEdge,
+                                shouldStop = { sheetExportCancelRequested },
+                                alreadyPersistedPaths = alreadyPersistedPaths,
                             )
+                            sheetPhotosResult = photosResult
                             outputPath = lastPath
                             sheetExportFinished = true
                             isSaving = false
@@ -1718,9 +1744,12 @@ class IosProductRootHost(
                     imageCount = exportTotal,
                     isExporting = recovery.isExporting,
                     showCancelButton = recovery.showCancel,
-                    onCancelClick = { services.session.cancelExport() },
+                    onCancelClick = {
+                        sheetExportCancelRequested = true
+                        services.session.cancelExport()
+                    },
                     showRetryFailedButton = recovery.showRetryFailed,
-                    onRetryFailedClick = { runIosExportBatch() },
+                    onRetryFailedClick = { runIosExportBatch(true) },
                     statusContentDescription = statusCd,
                     destinationLine = destinationLine,
                     filenamePolicyLine = filenamePolicyLine,
@@ -1751,14 +1780,14 @@ class IosProductRootHost(
                         }
                     },
                     onExportClick = {
-                        if (finished) {
+                        if (finished && !sheetExportCancelRequested) {
                             val path = outputPath
                                 ?: exportItems.firstNotNullOfOrNull { info ->
                                     (info.result?.data as? MediaRef)?.value
                                 }
                             if (path != null) onShare(path)
                         } else {
-                            runIosExportBatch()
+                            runIosExportBatch(false)
                         }
                     },
                     onOpenGalleryClick = {},

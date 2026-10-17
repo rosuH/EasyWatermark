@@ -18,9 +18,6 @@ plugins {
     // the production templates path in :app stays on classic Android Room/KSP, untouched.
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
-    // S4d-247: explicit Kotlin serialization compiler plugin so :shared owns generation for
-    // @Serializable route objects in commonMain. App-side plugin remains intact.
-    alias(libs.plugins.kotlin.serialization)
 }
 
 /**
@@ -89,8 +86,6 @@ kotlin {
             implementation(libs.datastore.preference)
             // S4d-92: production templates Room path in commonMain.
             implementation(libs.room.runtime)
-            // S4d-247: kotlinx-serialization-json for @Serializable routes.
-            implementation(libs.kotlinx.serialization.json)
             // ADR-0017 Phase 0: multiplatform ViewModel for shared product session.
             // `api` so CMP hosts / (optional) Swift can see ViewModel types if needed; product UI is CMP-first.
             api(libs.lifecycle.viewmodel)

@@ -127,6 +127,18 @@ final class PickerFlowUITests: XCTestCase {
                       "System share sheet did not appear after tapping Share (no ActivityListView / Copy action).")
     }
 
+    func testStoreCaptureHooksRequireOptIn() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-storeCaptureHooks"]
+        app.launch()
+        XCTAssertTrue(app.buttons["store-seed-editor"].waitForExistence(timeout: 15))
+        app.terminate()
+        app.launchArguments = []
+        app.launch()
+        XCTAssertTrue(app.buttons["launchPickImageButton"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["store-seed-editor"].exists)
+    }
+
     /// About from Launch: back must return to Launch (not Editor). Version must not be literal "iOS".
     func testAboutFromLaunchBacksToLaunch() {
         let app = XCUIApplication()
@@ -138,6 +150,8 @@ final class PickerFlowUITests: XCTestCase {
 
         let launch = app.descendants(matching: .any)["sharedComposeLaunchScreen"].firstMatch
         XCTAssertTrue(launch.waitForExistence(timeout: 20), "Launch screen never appeared.")
+        XCTAssertFalse(app.buttons["store-seed-editor"].exists,
+                       "Store capture hooks must not intercept normal simulator touches.")
         let aboutBtn = app.descendants(matching: .any)["launchAboutButton"].firstMatch
         XCTAssertTrue(aboutBtn.waitForExistence(timeout: 10), "Launch About control missing.")
         aboutBtn.tap()

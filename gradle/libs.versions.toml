@@ -9,9 +9,6 @@ ksp = "2.3.11"
 koin-bom = "4.2.2"
 androidxActivity = "1.13.0"
 androidxConstraintLayoutCompose = "1.1.2"
-# Keep Navigation on 2.10.0-beta01: 2.10.0-rc01 declares minSdk 24; product minSdk stays 23.
-androidxNavigationCompose = "2.10.0-beta01"
-kotlinxSerialization = "1.11.0"
 coroutines = "1.11.0"
 lifecycle = "2.11.0"
 lifecycleViewModel = "2.11.0"
@@ -24,7 +21,6 @@ room = "2.8.4"
 sqlite = "2.7.0"
 datastorePreference = "1.3.0-alpha10"
 exifInterface = "1.4.2"
-compressor = "3.0.1"
 # Android-only custom color dialog (production parity; Compose ColorOption edge).
 colorpicker = "2.4.0"
 benchmark = "1.5.0-alpha07"
@@ -64,16 +60,10 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 android-test = { id = "com.android.test", version.ref = "agp" }
 # S4d-360: official Android-KMP library plugin (replaces com.android.library on :shared).
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
-#hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-#hilt-plugin = { id = "dagger.hilt.android.plugin", version.ref = "hilt" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 # C4.3: Compose Multiplatform plugin — applied to :shared only (delivers multiplatform Compose incl. iOS).
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 # S4d-91: Room Gradle plugin (KMP schema/codegen) — applied to :shared only for the Room KMP
@@ -89,7 +79,6 @@ stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", ve
 [libraries]
 agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
-ksp = { module = "com.google.devtools.ksp:symbol-processing", version.ref = "ksp" }
 # Compose Aug '26: stable compose-bom (1.12.0). Material3 pre-release stays an explicit catalog pin.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
@@ -100,12 +89,9 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigationCompose" }
-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidxActivity" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-constraintlayout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }
-#androidx-motionlayoout-compose = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "androidxConstraintLayoutCompose" }
 
 
 
@@ -138,15 +124,9 @@ datastore = { group = "androidx.datastore", name = "datastore", version.ref = "d
 datastore-preference = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreference" }
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifInterface" }
 
-#hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
-#hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
-#hilt-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
-#hilt-plugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
-
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { module = "io.insert-koin:koin-android" }
-compressor = { group = "id.zelory", name = "compressor", version.ref = "compressor" }
 colorpicker = { group = "com.github.skydoves", name = "colorpickerview", version.ref = "colorpicker" }
 benchmark = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
 profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
