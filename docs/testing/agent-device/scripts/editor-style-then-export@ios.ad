@@ -28,4 +28,5 @@ wait "id=\"sharedComposeExportSheet\" visible" 20000
 press "label=\"PNG, PNG\""
 press id="sharedComposeExportPrimary"
 wait "id=\"sharedComposeExportCounts\" label=\"Processed 3 · Succeeded 3 · Failed 0\" visible" 90000
+wait "id=\"sharedComposeExportPrimary\" label=\"Share, Share\" visible" 15000
 close
