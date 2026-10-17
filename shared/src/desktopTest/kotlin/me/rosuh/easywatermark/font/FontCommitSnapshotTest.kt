@@ -38,7 +38,6 @@ class FontCommitSnapshotTest {
                 dataStore = createWaterMarkDataStore(dir),
                 defaultTextProvider = { "EasyWatermark" },
                 tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-                logError = {},
             )
             val session = WatermarkSessionViewModel(
                 waterMarkRepo = waterRepo,
@@ -109,7 +108,6 @@ class FontCommitSnapshotTest {
                 dataStore = createWaterMarkDataStore(dir),
                 defaultTextProvider = { "EasyWatermark" },
                 tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-                logError = {},
             )
             val session = WatermarkSessionViewModel(
                 waterMarkRepo = waterRepo,
@@ -148,7 +146,6 @@ class FontCommitSnapshotTest {
                 dataStore = createWaterMarkDataStore(dir),
                 defaultTextProvider = { "EasyWatermark" },
                 tileModeFromStorageId = { WatermarkTileMode.fromStorageId(it) },
-                logError = {},
             )
             val session = WatermarkSessionViewModel(
                 waterMarkRepo = waterRepo,

@@ -6,6 +6,9 @@ import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.font.DesktopWatermarkFontAccess
+import me.rosuh.easywatermark.font.FontResolution
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.render.DesktopRenderRequest
@@ -90,6 +93,7 @@ object DesktopWatermarkFlow {
         outputFile: File? = null,
         offsetX: Float,
         offsetY: Float,
+        fontAccess: DesktopWatermarkFontAccess = DesktopWatermarkFontAccess(),
     ): SaveOutcome {
         val bytes = if (DesktopSaveDecision.usesCallerInput(inputBytes)) {
             inputBytes!!
@@ -106,10 +110,19 @@ object DesktopWatermarkFlow {
             offsetX = offsetX,
             offsetY = offsetY,
         )
+        val fontFamily = if (wm.markMode == WatermarkMode.Text) {
+            when (val resolution = fontAccess.resolve(wm.fontRef)) {
+                is FontResolution.Success -> resolution.family
+                is FontResolution.Failure -> throw IllegalArgumentException(resolution.reason)
+            }
+        } else {
+            null
+        }
         val saved = DesktopRenderSaveSpine.renderAndSave(
             imageBytes = bytes,
             request = request,
             target = target,
+            fontFamily = fontFamily,
         )
         return SaveOutcome(
             configInitial = describe(initial),

@@ -764,6 +764,14 @@ fun launchDesktopWindow() = application {
         )
     }
 
+    // Both font selection entry points commit through the repository. Repaint only after its
+    // fontRef emission so the existing conflator composes the committed font, not a stale snapshot.
+    LaunchedEffect(waterMark.fontRef) {
+        if (freezeCurrentItemInput().sourcePath != null) {
+            submitPreviewPaint(isDraft = false)
+        }
+    }
+
     fun prefetchNeighborWatermarked(focusPath: String, gen: Int) {
         scope.launch(Dispatchers.Default) {
             val list = session.launchScreenUiStateFlow.value.selectedImageList
@@ -1033,6 +1041,7 @@ fun launchDesktopWindow() = application {
                         imageBytes = imageBytes,
                         request = request,
                         userChosen = userChosen,
+                        fontAccess = fontAccess,
                     )
                     File(saved.output.value)
                 }
@@ -1762,6 +1771,7 @@ fun launchDesktopWindow() = application {
                                     val o = DesktopWatermarkFlow.runSaveFlow(
                                         repo, userConfigRepo, outputFile = target,
                                         offsetX = 0.5f, offsetY = 0.5f,
+                                        fontAccess = fontAccess,
                                     )
                                     File(o.outputPath)
                                 }

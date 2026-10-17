@@ -13,6 +13,7 @@ plugins {
     // (BOM-aligned via :app's dependency substitution + enforcedPlatform).
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
     // S4d-91: Room KMP toolchain proof — KSP (multiplatform) + Room Gradle plugin, applied to
     // :shared only. Proves Room codegen co-exists with compose.multiplatform + Android-KMP here;
     // the production templates path in :app stays on classic Android Room/KSP, untouched.
@@ -91,6 +92,8 @@ kotlin {
             api(libs.lifecycle.viewmodel)
             // viewModelScope needs Main; coroutines-core already transitively available via DataStore/Room.
             implementation(libs.kotlin.coroutine.core)
+            // Font references persist as versioned JSON in common DataStore state.
+            implementation(libs.kotlinx.serialization.json)
         }
         // Pure / platform-neutral tests. Gate: :shared:commonPureTest → testAndroidHostTest.
         commonTest.dependencies {
