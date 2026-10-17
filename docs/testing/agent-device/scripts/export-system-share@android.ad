@@ -6,4 +6,5 @@ press value="PNG"
 press value="Export to the album"
 wait label="Share" 30000
 press "role=\"textview\" label=\"Share\""
+wait 500
 close

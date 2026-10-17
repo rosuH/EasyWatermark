@@ -9,7 +9,7 @@
   {
     "command": "wait",
     "input": {
-      "selector": "id=\"sharedComposeSaveButton\"",
+      "selector": "label=\"Choose Images\"",
       "timeoutMs": 10000
     }
   },
@@ -18,7 +18,7 @@
     "input": {
       "target": {
         "kind": "selector",
-        "selector": "label=\"Add more images\""
+        "selector": "label=\"Choose Images\""
       }
     }
   },

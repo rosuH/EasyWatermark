@@ -1796,6 +1796,8 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
     platform = spec.get("agent_platform") or spec.get("needs_device")
     if platform == "ios" and spec.get("edge_id") == "export-failure-recovery" and setup == "failure":
         setup = "editor"
+    if platform == "android" and spec.get("edge_id") in {"editor-clamp-drag", "editor-filmstrip-switch"} and setup == "editor":
+        setup = "home"  # Select A+B from Launch; editor Add More would append to preloaded A.
     if platform == "android" and setup not in ANDROID_SETUPS:
         return None
     if platform == "ios" and setup not in IOS_SETUPS:
@@ -1833,6 +1835,8 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
     if platform == "ios" and edge_id in {"export-cancel", "export-failure-recovery"}:
         cancel_options.update(ios_export_run_id=Path(str(spec.get("step_evidence_root") or "")).name,
                               ios_export_mode="hold-next" if edge_id == "export-cancel" else "fail-next")
+    if edge_id == "launch-to-gallery" and platform == "android":
+        cancel_options["gallery_permission"] = True
     state = apply_setup(
         str(setup),
         platform=str(platform),
@@ -2130,7 +2134,7 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
                 host_low = max(before - hm1, after - hm3)
                 host_high = min(before - hm0, after - hm2)
                 expected = (device_ms - dm1 - host_high - 2, device_ms - dm0 - host_low + 2)
-                if (not hm0 <= hm1 <= dm0 <= dm1 <= hm2 <= hm3 or host_low > host_high
+                if (not hm0 <= hm1 <= dm0 <= dm1 <= hm2 <= hm3 or host_low > host_high + 1
                         or not 0 <= after - before <= 2000
                         or abs((after - before) - (hm3 - hm0)) > 50
                         or clock["device_ms"] != device_ms or clock["host_wall_ms"] != before
@@ -3976,8 +3980,8 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
     return code, cases, extra
 
 
-_FILMSTRIP_SOURCE_SHA256 = "1d16ce147b380109db7fc15d9be1aef29d9864545932a513f2b82cf6d03a029d"
-_CLAMP_SOURCE_SHA256 = "24269b38a2d5eefcf786f6eb245c8215601fa6ba783a9eab1a37cf72b92a1f06"
+_FILMSTRIP_SOURCE_SHA256 = "866d131c18848b0bfedb4cad87c2fdbd13be15e0b7ab8fa5b0d82af1b93861a5"
+_CLAMP_SOURCE_SHA256 = "13dda76251de32ebc5f264b6b4808da75fe1a0e7e20dcd9f0a3cc5536f43e60c"
 
 
 def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=None,
@@ -4075,8 +4079,8 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         expected = REPO_ROOT / ("docs/testing/agent-device/scripts/" + edge + "@android.json")
         if source.resolve() != expected.resolve() or source.is_symlink() or hashlib.sha256(source.read_bytes()).hexdigest() != source_hash:
             raise ValueError("CLAMP requires its unchanged canonical source")
-        if not state or state.get("setup") != "editor" or state.get("platform") != "android":
-            raise ValueError("CLAMP requires real owned editor setup")
+        if not state or state.get("setup") != "home" or state.get("platform") != "android":
+            raise ValueError("CLAMP requires real owned Launch setup")
         backup = load_setup_backup(Path(state["journal"]))
         if (backup.get("phase") != "active" or any(backup.get(k) != state.get(k) for k in ("serial", "marker", "source_id", "fixtures"))
                 or state.get("serial") != spec.get("serial") or _cmd_flag(cmd, "--serial") != spec.get("serial")

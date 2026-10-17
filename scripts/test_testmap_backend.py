@@ -798,6 +798,24 @@ class SetupSafetyChecks(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(self.stack.close)
 
+    def test_home_fixture_records_owned_source_without_entering_editor(self):
+        state = self.apply()
+        self.assertEqual("home", state["setup"])
+        self.assertEqual("1", state["source_id"])
+        calls = [json.loads(line) for line in (self.root / "calls.jsonl").read_text().splitlines()]
+        starts = [call[3] for call in calls if call[2] == "shell" and "am start" in call[3]]
+        self.assertTrue(any("android.intent.action.MAIN" in command for command in starts))
+        self.assertFalse(any("android.intent.action.SEND" in command for command in starts))
+        setup.restore_setup(state)
+
+    def test_clamp_and_filmstrip_use_home_only_on_android(self):
+        for edge in ("editor-clamp-drag", "editor-filmstrip-switch"):
+            for platform in ("android", "ios"):
+                with self.subTest(edge=edge, platform=platform), patch.object(runner, "apply_setup", return_value={"journal": "owned"}) as call:
+                    runner._apply_agent_setup({"setup": "editor", "edge_id": edge, "agent_platform": platform,
+                                               "device": {"id": "fake-serial"}, "agent_device_output": str(self.root)}, io.StringIO())
+                    self.assertEqual("home" if platform == "android" else "editor", call.call_args.args[0])
+
     def mixed_private_backup(self):
         names = setup.ANDROID_CONFIG + setup.EXPORT_CONTROL_PATHS
         backup = {name: (b'original\x00user preferences\xff' if index == 1 else None)
@@ -1135,6 +1153,129 @@ class SetupSafetyChecks(unittest.TestCase):
         return setup.apply_setup(kind, platform=platform, folder=self.root / 'evidence', marker='edge',
                                  serial='fake-serial' if platform == 'android' else None,
                                  udid='AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE' if platform == 'ios' else None)
+
+    def _gallery_permission_harness(self, *, granted=False, partial=False, fail_revoke=False):
+        main = "android.permission.READ_MEDIA_IMAGES"
+        partial_name = "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+        baseline = {"sdk": 35, "grants": {
+            main: {"granted": granted, "flags": " USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED"},
+            partial_name: {"granted": partial, "flags": " USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED"},
+        }}
+        current = json.loads(json.dumps(baseline))
+        calls = []
+        original_shell = setup.adb_shell
+
+        def shell(serial, *parts, **kwargs):
+            if parts[:2] == ("pm", "grant"):
+                calls.append("grant")
+                current["grants"][main]["granted"] = True
+                return ""
+            if parts[:2] == ("pm", "revoke"):
+                calls.append("revoke")
+                if fail_revoke:
+                    raise ValueError("injected revoke failure")
+                current["grants"][main]["granted"] = False
+                return ""
+            return original_shell(serial, *parts, **kwargs)
+
+        def read(_serial):
+            return json.loads(json.dumps(current))
+
+        return baseline, current, calls, shell, read
+
+    def test_gallery_permission_parser_uses_api_specific_runtime_grant(self):
+        for sdk, name, partial in ((32, "READ_EXTERNAL_STORAGE", False), (35, "READ_MEDIA_IMAGES", True)):
+            with self.subTest(sdk=sdk):
+                raw = f"android.permission.{name}: granted=false, flags=[ USER_SENSITIVE_WHEN_DENIED]"
+                if partial:
+                    raw += "\nandroid.permission.READ_MEDIA_VISUAL_USER_SELECTED: granted=false, flags=[ USER_SENSITIVE_WHEN_DENIED]"
+                def shell(_serial, *parts, **_kwargs):
+                    return str(sdk) if parts[0] == "getprop" else raw
+                with patch.object(setup, "adb_shell", side_effect=shell):
+                    observed = setup.read_gallery_permission("fake-serial")
+                self.assertEqual(sdk, observed["sdk"])
+                self.assertEqual(2 if partial else 1, len(observed["grants"]))
+                self.assertFalse(observed["grants"][f"android.permission.{name}"]["granted"])
+
+    def test_gallery_permission_dispatch_is_only_android_launch_to_gallery(self):
+        spec = {"setup": "home", "agent_platform": "android", "device": {"id": "fake-serial"},
+                "agent_device_output": str(self.root / "evidence"), "edge_id": "launch-to-gallery"}
+        with patch.object(runner, "apply_setup", return_value={"journal": "fake.json"}) as apply:
+            runner._apply_agent_setup(spec, io.StringIO())
+            self.assertTrue(apply.call_args.kwargs["gallery_permission"])
+            spec["edge_id"] = "about-in-app-gallery"
+            runner._apply_agent_setup(spec, io.StringIO())
+            self.assertNotIn("gallery_permission", apply.call_args.kwargs)
+            spec["edge_id"] = "launch-to-gallery"
+            spec["agent_platform"] = "ios"
+            spec["device"] = {"id": "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"}
+            runner._apply_agent_setup(spec, io.StringIO())
+            self.assertNotIn("gallery_permission", apply.call_args.kwargs)
+
+    def test_gallery_temporary_grant_restores_exact_baseline(self):
+        baseline, current, calls, shell, read = self._gallery_permission_harness()
+        with patch.object(setup, "adb_shell", side_effect=shell), patch.object(setup, "read_gallery_permission", side_effect=read):
+            state = setup.apply_setup("home", platform="android", folder=self.root / "evidence",
+                                      marker="launchtogallery", serial="fake-serial", gallery_permission=True)
+            self.assertEqual(["grant"], calls)
+            self.assertTrue(current["grants"]["android.permission.READ_MEDIA_IMAGES"]["granted"])
+            self.assertEqual(baseline, setup.load_setup_backup(Path(state["journal"]))["gallery_permission"]["baseline"])
+            setup.restore_setup(state)
+            self.assertEqual(["grant", "revoke"], calls)
+            self.assertEqual(baseline, current)
+            self.assertEqual("restored", state["phase"])
+
+    def test_gallery_setup_failure_after_grant_restores_permission(self):
+        baseline, current, calls, shell, read = self._gallery_permission_harness()
+        with patch.object(setup, "adb_shell", side_effect=shell), patch.object(setup, "read_gallery_permission", side_effect=read), patch.object(setup, "push_android_fixtures", side_effect=ValueError("injected fixture failure")):
+            with self.assertRaisesRegex(ValueError, "injected fixture failure"):
+                setup.apply_setup("home", platform="android", folder=self.root / "evidence",
+                                  marker="launchtogallery", serial="fake-serial", gallery_permission=True)
+        self.assertEqual(["grant", "revoke"], calls)
+        self.assertEqual(baseline, current)
+        self.assertFalse(list((self.root / "locks").glob("*.json")))
+
+    def test_gallery_existing_full_grant_and_partial_state_are_untouched(self):
+        baseline, current, calls, shell, read = self._gallery_permission_harness(granted=True, partial=True)
+        with patch.object(setup, "adb_shell", side_effect=shell), patch.object(setup, "read_gallery_permission", side_effect=read):
+            state = setup.apply_setup("home", platform="android", folder=self.root / "evidence",
+                                      marker="launchtogallery", serial="fake-serial", gallery_permission=True)
+            setup.restore_setup(state)
+        self.assertEqual([], calls)
+        self.assertEqual(baseline, current)
+
+    def test_gallery_denied_partial_or_user_fixed_is_not_overridden(self):
+        for partial, user_fixed in ((True, False), (False, True)):
+            with self.subTest(partial=partial, user_fixed=user_fixed):
+                baseline, current, calls, shell, read = self._gallery_permission_harness(partial=partial)
+                if user_fixed:
+                    current["grants"]["android.permission.READ_MEDIA_IMAGES"]["flags"] += "|USER_FIXED"
+                with patch.object(setup, "adb_shell", side_effect=shell), patch.object(setup, "read_gallery_permission", side_effect=read):
+                    with self.assertRaisesRegex(ValueError, "refusing to override"):
+                        setup.apply_setup("home", platform="android", folder=self.root / "evidence",
+                                          marker="launchtogallery", serial="fake-serial", gallery_permission=True)
+                self.assertEqual([], calls)
+                self.assertFalse(list((self.root / "locks").glob("*.json")))
+
+    def test_gallery_revoke_failure_retains_lock_for_reviewed_recovery(self):
+        baseline, current, calls, shell, read = self._gallery_permission_harness(fail_revoke=True)
+        with patch.object(setup, "adb_shell", side_effect=shell), patch.object(setup, "read_gallery_permission", side_effect=read):
+            state = setup.apply_setup("home", platform="android", folder=self.root / "evidence",
+                                      marker="launchtogallery", serial="fake-serial", gallery_permission=True)
+            with self.assertRaises(setup.SetupRestoreError):
+                setup.restore_setup(state)
+            self.assertTrue(Path(state["lock"]).is_file())
+            self.assertEqual("restoring", setup.load_setup_backup(Path(state["journal"]))["phase"])
+        original_shell = setup.adb_shell
+        def recover(serial, *parts, **kwargs):
+            if parts[:2] == ("pm", "revoke"):
+                current["grants"]["android.permission.READ_MEDIA_IMAGES"]["granted"] = False
+                return ""
+            return original_shell(serial, *parts, **kwargs)
+        with patch.object(setup, "adb_shell", side_effect=recover), patch.object(setup, "read_gallery_permission", side_effect=read):
+            setup.restore_setup(setup.load_setup_backup(Path(state["journal"])))
+        self.assertEqual(baseline, current)
+        self.assertFalse(Path(state["lock"]).exists())
 
     def test_private_write_failure_after_cat_cleans_temp_when_original_absent(self):
         name = setup.ANDROID_CONFIG[0]
@@ -1723,6 +1864,26 @@ class CancelGateEvidenceChecks(unittest.TestCase):
             first=self.evidence/"steps/step-1.png"
             first.write_bytes(first.read_bytes()[:8])
             self.assertEqual("incomplete",runner._cancel_gate_evidence(self.spec,0)["status"])
+
+    def test_ios_clock_one_ms_floor_gap_is_accepted_but_two_ms_is_rejected(self):
+        self.make_evidence("ios", "export-cancel")
+        clock = self.control["clock"]
+        # Translated from final run 20261017T093314 r1: wall elapsed 879 ms
+        # while shared POSIX monotonic elapsed 878 ms, yielding a 1 ms gap.
+        clock["host_pair_before"] = [100000, self.base, 100000]
+        clock["device_pair"] = [100005, self.base + 2005, 100005]
+        clock["host_pair_after"] = [100010, self.base + 11, 100010]
+        clock["offset_min_ms"], clock["offset_max_ms"] = 1998, 2001
+        self.write_evidence()
+        self.assertEqual("evidence_complete", runner._cancel_gate_evidence(self.spec, 0)["status"])
+        # A 2 ms gap remains invalid, even when its declared offset matches
+        # the bounds calculated from the raw pairs.
+        clock["host_pair_after"][1] = self.base + 12
+        clock["offset_max_ms"] = 2000
+        self.write_evidence()
+        verdict = runner._cancel_gate_evidence(self.spec, 0)
+        self.assertEqual("incomplete", verdict["status"])
+        self.assertEqual("iOS clock bounds do not match their raw pairs", verdict["reason"])
 
     def write_evidence(self):
         (self.output / "export-control-events.json").write_text(json.dumps(self.control))
@@ -2394,7 +2555,7 @@ class AndroidClampChecks(unittest.TestCase):
         self.root = Path(self.temp.name)
         marker = 'editorclampdrag-' + 'b' * 32
         fixtures = setup.make_fixtures(self.root, marker)
-        self.state = {'setup': 'editor', 'platform': 'android', 'serial': 'owned', 'marker': marker,
+        self.state = {'setup': 'home', 'platform': 'android', 'serial': 'owned', 'marker': marker,
                       'source_id': '321', 'phase': 'active', 'fixtures': {k: str(v) for k, v in fixtures.items()},
                       'journal': str(self.root / 'journal.json'), 'lock': str(self.root / 'lock.json')}
         Path(self.state['lock']).write_text(json.dumps({'journal': self.state['journal']}))
@@ -2518,7 +2679,7 @@ class AndroidClampChecks(unittest.TestCase):
             if command == 'press':
                 target = inp['target']
                 selector = target.get('selector', '')
-                if selector == 'label="Add more images"':
+                if selector == 'label="Choose Images"':
                     self.in_picker = True
                 elif selector in ('role="textview" label="Style"', 'role="textview" label="Content"'):
                     self.tab = 'Style' if 'Style' in selector else 'Content'
@@ -2590,7 +2751,8 @@ class AndroidClampChecks(unittest.TestCase):
         pan = next(phase for phase in proof['phases'] if phase['phase'] == 'pan')
         gesture = runner.parse_script(Path(pan['source']))[0]
         self.assertEqual(proof['gesture']['origin'], gesture['point'])
-        self.assertEqual(1, sum(c == 'press' and i.get('target', {}).get('selector') == 'label="Add more images"' for c,i in self.calls))
+        self.assertEqual('label="Choose Images"', next(i['selector'] for c, i in self.calls if c == 'wait' and 'selector' in i))
+        self.assertEqual(1, sum(c == 'press' and i.get('target', {}).get('selector') == 'label="Choose Images"' for c,i in self.calls))
         self.restore.assert_called_once()
         self.release.assert_called_once()
 
@@ -2739,7 +2901,7 @@ class AndroidClampChecks(unittest.TestCase):
             self.assertEqual(phase['source_sha256'],hashlib.sha256(Path(phase['source']).read_bytes()).hexdigest())
             self.assertEqual(phase['script_sha256'],hashlib.sha256(Path(phase['script']).read_bytes()).hexdigest())
         self.assertFalse(any(c in ('gesture','fill') for c,i in self.calls))
-        self.assertEqual(1,sum(c=='open' for c,i in self.calls));self.assertEqual(1,sum(c=='press' and i.get('target',{}).get('selector')=='label="Add more images"' for c,i in self.calls))
+        self.assertEqual(1,sum(c=='open' for c,i in self.calls));self.assertEqual('label="Choose Images"',next(i['selector'] for c, i in self.calls if c == 'wait' and 'selector' in i));self.assertEqual(1,sum(c=='press' and i.get('target',{}).get('selector')=='label="Choose Images"' for c,i in self.calls))
         self.setup.assert_called_once();self.restore.assert_called_once();self.release.assert_called_once()
 
     def test_filmstrip_owned_cards_split_across_adjacent_picker_seconds(self):

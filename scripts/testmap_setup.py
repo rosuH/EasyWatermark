@@ -1069,6 +1069,41 @@ def _restore_export_output(state: dict) -> None:
     _save_setup(state)
 
 
+def read_gallery_permission(serial: str) -> dict:
+    """Snapshot only the debug package's runtime media-read grants and flags."""
+    sdk = int(adb_shell(serial, "getprop", "ro.build.version.sdk", timeout=10))
+    if sdk < 23:
+        raise ValueError("Unsupported Android API for gallery permission backup")
+    permission = ("android.permission.READ_MEDIA_IMAGES" if sdk >= 33
+                  else "android.permission.READ_EXTERNAL_STORAGE")
+    raw = adb_shell(serial, "dumpsys", "package", ANDROID_PACKAGE, timeout=15)
+    names = [permission]
+    if sdk >= 34:
+        names.append("android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
+    grants = {}
+    for name in names:
+        matches = re.findall(re.escape(name) + r": granted=(true|false), flags=\[([^\]]*)\]", raw)
+        if len(matches) != 1:
+            raise ValueError(f"Missing or ambiguous {name} runtime grant for {ANDROID_PACKAGE}")
+        grants[name] = {"granted": matches[0][0] == "true", "flags": matches[0][1]}
+    return {"sdk": sdk, "grants": grants}
+
+
+def _restore_gallery_permission(state: dict) -> None:
+    saved = state.get("gallery_permission")
+    if saved is None:
+        return
+    serial = state["serial"]
+    baseline = saved["baseline"]
+    permission = next(name for name in baseline["grants"] if name != "android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
+    current = read_gallery_permission(serial)
+    if saved["granted_here"] and current["grants"][permission]["granted"]:
+        adb_shell(serial, "pm", "revoke", ANDROID_PACKAGE, permission, timeout=15)
+        current = read_gallery_permission(serial)
+    if current != baseline:
+        raise ValueError("Gallery runtime permission did not restore exactly; retained recovery backup")
+
+
 def _validate_setup(state: dict) -> None:
     platform = state.get("platform")
     identity = state.get("serial") if platform == "android" else state.get("udid")
@@ -1100,6 +1135,27 @@ def _validate_setup(state: dict) -> None:
     if (journey_run_id is not None and state.get("phase") == "active"
             and state.get("journey_control_files_cleared") is not True):
         raise ValueError("Android AI journey control files were not verified clear")
+    gallery = state.get("gallery_permission")
+    if gallery is not None:
+        valid_scope = (platform == "android" and state.get("setup") == "home"
+                       and isinstance(marker_value, str)
+                       and re.fullmatch(r"launchtogallery-[a-f0-9]{32}", marker_value))
+        baseline = gallery.get("baseline") if isinstance(gallery, dict) else None
+        sdk = baseline.get("sdk") if isinstance(baseline, dict) else None
+        grants = baseline.get("grants") if isinstance(baseline, dict) else None
+        main = ("android.permission.READ_MEDIA_IMAGES" if isinstance(sdk, int) and sdk >= 33
+                else "android.permission.READ_EXTERNAL_STORAGE")
+        expected_grants = {main} | ({"android.permission.READ_MEDIA_VISUAL_USER_SELECTED"} if isinstance(sdk, int) and sdk >= 34 else set())
+        if (not valid_scope or not isinstance(gallery, dict)
+                or set(gallery) != {"baseline", "granted_here"}
+                or type(gallery["granted_here"]) is not bool or type(sdk) is not int
+                or sdk < 23 or not isinstance(grants, dict)
+                or set(grants) != expected_grants
+                or any(not isinstance(value, dict) or set(value) != {"granted", "flags"}
+                       or type(value["granted"]) is not bool or not isinstance(value["flags"], str)
+                       for value in grants.values())
+                or (gallery["granted_here"] and grants[main]["granted"])):
+            raise ValueError("Invalid gallery permission recovery scope")
     control = state.get("export_control")
     if control is not None and (
             state["setup"] != "editor"
@@ -1189,7 +1245,7 @@ def apply_setup(setup: str, *, platform: str, folder: Path, marker: str,
                 ios_export_mode: str | None = None, failure_run_id: str | None = None,
                 export_success_run_id: str | None = None,
                 android_ai_journey_run_id: str | None = None,
-                android_ai_scenario: str | None = None) -> dict:
+                android_ai_scenario: str | None = None, gallery_permission: bool = False) -> dict:
     token = _SETUP_STOP.set(should_stop)
     try:
         return _apply_setup(setup, platform=platform, folder=folder, marker=marker, serial=serial, udid=udid,
@@ -1197,7 +1253,7 @@ def apply_setup(setup: str, *, platform: str, folder: Path, marker: str,
                             ios_export_mode=ios_export_mode, failure_run_id=failure_run_id,
                             export_success_run_id=export_success_run_id,
                             android_ai_journey_run_id=android_ai_journey_run_id,
-                            android_ai_scenario=android_ai_scenario)
+                            android_ai_scenario=android_ai_scenario, gallery_permission=gallery_permission)
     finally:
         _SETUP_STOP.reset(token)
 
@@ -1216,6 +1272,7 @@ def _apply_setup(
     export_success_run_id: str | None = None,
     android_ai_journey_run_id: str | None = None,
     android_ai_scenario: str | None = None,
+    gallery_permission: bool = False,
 ) -> dict:
     """Back up before mutation; restore even when preparation itself fails."""
     platform = platform.lower()
@@ -1224,6 +1281,9 @@ def _apply_setup(
         raise ValueError(f"Unsupported setup {setup!r} for {platform}")
     if not (serial if platform == "android" else udid):
         raise ValueError(f"{platform} setup requires an explicit device")
+    if type(gallery_permission) is not bool or (gallery_permission and
+            (platform, setup, marker) != ("android", "home", "launchtogallery")):
+        raise ValueError("Gallery permission is restricted to Android launch-to-gallery home setup")
     if failure_run_id is not None and (platform != "android" or setup != "failure"
             or marker != "exportfailurerec" or not re.fullmatch(EXPORT_RUN_ID, failure_run_id)):
         raise ValueError("Source repair is restricted to the Android failure case")
@@ -1289,6 +1349,25 @@ def _apply_setup(
             if state.get("export_control") or journey_setup:
                 paths += EXPORT_CONTROL_PATHS
             state["private_backup"] = {path: read_private(serial, path) for path in paths}
+            if gallery_permission:
+                baseline = read_gallery_permission(serial)
+                main = ("android.permission.READ_MEDIA_IMAGES" if baseline["sdk"] >= 33
+                        else "android.permission.READ_EXTERNAL_STORAGE")
+                current = baseline["grants"][main]
+                partial = baseline["grants"].get("android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
+                if not current["granted"] and ((partial and partial["granted"])
+                        or "USER_SET" in current["flags"] or "USER_FIXED" in current["flags"]):
+                    raise ValueError("Gallery permission has a user denial or partial grant; refusing to override")
+                state["gallery_permission"] = {"baseline": baseline, "granted_here": not current["granted"]}
+                state["mutated"] = True
+                _save_setup(state)  # Durable before pm grant, including interrupted grant recovery.
+                if not current["granted"]:
+                    adb_shell(serial, "pm", "grant", ANDROID_PACKAGE, main, timeout=15)
+                    observed = read_gallery_permission(serial)
+                    if (observed["sdk"] != baseline["sdk"]
+                            or not observed["grants"][main]["granted"]
+                            or any(observed["grants"][name] != value for name, value in baseline["grants"].items() if name != main)):
+                        raise ValueError("Temporary gallery permission grant changed an unrelated media grant")
             if setup == "wide":
                 state["display_backup"] = record_display(serial)
             journey_setup = android_ai_journey_run_id is not None
@@ -1321,7 +1400,7 @@ def _apply_setup(
             push_android_fixtures(serial, fixtures)
             android_leave_system_picker(serial)
             android_reset_saved_config(serial)
-            if setup == "home" and (export_success_run_id is not None or android_ai_journey_run_id is not None):
+            if setup == "home":
                 state["source_id"] = wait_media_id(serial, fixtures["A"].name)
                 _save_setup(state)
             if setup == "wide":
@@ -1425,6 +1504,10 @@ def _restore_setup(state: dict) -> None:
                 _CLEANUP_DEADLINE.reset(capture_deadline)
             try:
                 _restore_export_output(state)
+            except Exception as exc:
+                errors.append(str(exc))
+            try:
+                _restore_gallery_permission(state)
             except Exception as exc:
                 errors.append(str(exc))
             try:

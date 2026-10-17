@@ -30,6 +30,8 @@ Preparation backs up the preference files it changes before resetting them. The 
 
 If recovery is required, inspect the recorded backup and account for any settings changed since the interruption, then run `python3 scripts/testmap_setup.py --restore-reviewed-backup /absolute/path/to/setup-backup.json`. Recovery is explicit so an old backup cannot silently overwrite newer work. Keep recovery journals local; they contain app settings. Coordinate device ownership across checkouts.
 
+Android CLAMP and filmstrip walks start at Launch and select A+B once; Add More would append to a preloaded selection. The Android in-app-gallery walk journals its media-read permission baseline, temporarily grants access only when needed, and restores the original grant and flags. Existing grants are preserved; a denied user choice or partial grant is not overridden.
+
 This protects the harness's preference, crash-state, display, and synthetic-fixture changes. It is not a full app snapshot: exports, templates, other script actions, and the previous in-memory navigation session are outside that transaction. iOS preparation preserves temporary files, saved application state, and Photos permissions. The Library Read upsell case reports an unmet precondition instead of changing authorization it cannot safely restore.
 
 ## Use the console
@@ -53,7 +55,7 @@ Each edge declares per-platform drive coverage:
 | `seam` | The check bypasses a system boundary, for example fixture input or an injected path. |
 | `none` | No script reaches this platform path. |
 
-Walking a system photo picker, native file dialog, share sheet, or permission prompt does not turn a seam into real coverage. Unsupported paths stay visible as gaps. Failed, timed-out, interrupted, stopped, or unknown results cannot be made successful by filtering or missing evidence. Diagnose replay/setup failures before deciding whether their cause is the environment, the script, or the product.
+Walking a system photo picker, native file dialog, share sheet, or permission prompt does not turn a seam into real coverage. The Android share walk delays capture by 500 ms after Share so the native panel can be reviewed; that delay does not assert chooser success or identify the shared file. Unsupported paths stay visible as gaps. Failed, timed-out, interrupted, stopped, or unknown results cannot be made successful by filtering or missing evidence. Diagnose replay/setup failures before deciding whether their cause is the environment, the script, or the product.
 
 Artemis is deprecated historical provenance; [bindings](artemis-binding.md) and historical evidence remain readable. Do not introduce another execution engine.
 
