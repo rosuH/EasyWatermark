@@ -116,11 +116,61 @@ class AndroidPreviewSourceReuseTest {
         repo.putForTests(PreviewKey("focus", 720, PreviewPurpose.Watermarked), wm)
         AndroidPreviewWorkingSet.attach(repo)
         AndroidPreviewWorkingSet.focusPath = "focus"
-        AndroidPreviewWorkingSet.onTrimMemory()
+        val action = AndroidPreviewWorkingSet.onTrimMemory(
+            android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN,
+        )
+        assertEquals("soft_keep_focus", action)
         kotlinx.coroutines.delay(50)
         assertNotNull(repo.cached(PreviewKey("focus", 720, PreviewPurpose.SourcePlaceholder)))
         assertNull(repo.cached(PreviewKey("neighbor", 720, PreviewPurpose.SourcePlaceholder)))
         assertNull(repo.cached(PreviewKey("focus", 720, PreviewPurpose.Watermarked)))
+        AndroidPreviewWorkingSet.detach(repo)
+        repo.close()
+    }
+
+    @Test
+    fun trimMemory_background_evictsFocusSourceToo() = runBlocking {
+        val repo = PreviewImageRepository<Bitmap>(
+            ownerScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+            approxBytes = { it.allocationByteCount.toLong() },
+        )
+        val focus = Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888)
+        val neighbor = Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888)
+        val wm = Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888)
+        repo.putForTests(PreviewKey("focus", 720, PreviewPurpose.SourcePlaceholder), focus)
+        repo.putForTests(PreviewKey("neighbor", 720, PreviewPurpose.SourcePlaceholder), neighbor)
+        repo.putForTests(PreviewKey("focus", 720, PreviewPurpose.Watermarked), wm)
+        AndroidPreviewWorkingSet.attach(repo)
+        AndroidPreviewWorkingSet.focusPath = "focus"
+        val action = AndroidPreviewWorkingSet.onTrimMemory(
+            android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+        )
+        assertEquals("evict_all", action)
+        kotlinx.coroutines.delay(50)
+        assertNull(repo.cached(PreviewKey("focus", 720, PreviewPurpose.SourcePlaceholder)))
+        assertNull(repo.cached(PreviewKey("neighbor", 720, PreviewPurpose.SourcePlaceholder)))
+        assertNull(repo.cached(PreviewKey("focus", 720, PreviewPurpose.Watermarked)))
+        assertTrue("trim must not recycle", !focus.isRecycled)
+        AndroidPreviewWorkingSet.detach(repo)
+        repo.close()
+    }
+
+    @Test
+    fun trimMemory_runningModerate_isNoop() = runBlocking {
+        val repo = PreviewImageRepository<Bitmap>(
+            ownerScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+            approxBytes = { it.allocationByteCount.toLong() },
+        )
+        val focus = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+        repo.putForTests(PreviewKey("focus", 720, PreviewPurpose.SourcePlaceholder), focus)
+        AndroidPreviewWorkingSet.attach(repo)
+        AndroidPreviewWorkingSet.focusPath = "focus"
+        @Suppress("DEPRECATION")
+        val action = AndroidPreviewWorkingSet.onTrimMemory(
+            android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE,
+        )
+        assertEquals("none", action)
+        assertNotNull(repo.cached(PreviewKey("focus", 720, PreviewPurpose.SourcePlaceholder)))
         AndroidPreviewWorkingSet.detach(repo)
         repo.close()
     }
