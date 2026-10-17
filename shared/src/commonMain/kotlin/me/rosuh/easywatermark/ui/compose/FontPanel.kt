@@ -47,6 +47,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -58,7 +62,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -318,9 +324,16 @@ private fun FontSearchField(
     onEvent: (FontPanelEvent) -> Unit,
 ) {
     val clearCd = stringResource(Res.string.cd_font_search_clear)
+    var input by remember {
+        mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
+    }
     OutlinedTextField(
-        value = query,
-        onValueChange = { onEvent(FontPanelEvent.SearchQuery(it)) },
+        value = input,
+        onValueChange = { updated ->
+            val previousText = input.text
+            input = updated
+            if (updated.text != previousText) onEvent(FontPanelEvent.SearchQuery(updated.text))
+        },
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
@@ -339,10 +352,13 @@ private fun FontSearchField(
                 modifier = Modifier.size(FontPanelSearchIconSize),
             )
         },
-        trailingIcon = if (query.isNotEmpty()) {
+        trailingIcon = if (input.text.isNotEmpty()) {
             {
                 IconButton(
-                    onClick = { onEvent(FontPanelEvent.ClearSearch) },
+                    onClick = {
+                        input = TextFieldValue("")
+                        onEvent(FontPanelEvent.ClearSearch)
+                    },
                     modifier = Modifier
                         .testTag(FONT_SEARCH_CLEAR_TAG)
                         .semantics { contentDescription = clearCd },
