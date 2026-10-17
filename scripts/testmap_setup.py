@@ -841,7 +841,9 @@ def _ios_device_clock(udid: str) -> dict:
         raise ValueError("Cannot establish paired iOS Simulator clock")
     dm0, device_ms, dm1 = map(int, raw.split())
     host_low, host_high = max(before - hm1, after - hm3), min(before - hm0, after - hm2)
-    if (not hm0 <= hm1 <= dm0 <= dm1 <= hm2 <= hm3 or host_low > host_high
+    # Each independently floored wall/monotonic pair can differ by one ms
+    # across the call; the returned offset already includes a two-ms bound.
+    if (not hm0 <= hm1 <= dm0 <= dm1 <= hm2 <= hm3 or host_low > host_high + 1
             or not 0 <= after - before <= 2000 or mono_after < mono_before
             or abs((after - before) - (mono_after - mono_before)) > 50):
         raise ValueError("Unbounded or discontinuous iOS Simulator clock")

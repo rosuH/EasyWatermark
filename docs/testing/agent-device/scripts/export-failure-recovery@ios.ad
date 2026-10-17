@@ -11,5 +11,5 @@ wait "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 0 · Fai
 wait id="sharedComposeExportRetryFailed"
 press id="sharedComposeExportRetryFailed"
 wait "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 1 · Failed 0\" visible" 90000
-wait "id=\"sharedComposeExportPrimary\" label=\"Share\" visible" 15000
+wait "id=\"sharedComposeExportPrimary\" label=\"Share, Share\" visible" 15000
 close

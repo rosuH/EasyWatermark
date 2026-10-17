@@ -989,7 +989,15 @@ class SetupSafetyChecks(unittest.TestCase):
                  patch.object(setup.time, "monotonic_ns", side_effect=[n*1000000 for n in mono]):
                 return setup._ios_device_clock("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
         self.assertEqual((-2,2), tuple(sample()[key] for key in ("offset_min_ms","offset_max_ms")))
-        for kwargs in ({"pair":"180 1700000000180 180"}, {"wall":(base,base+201)}, {"mono":(500,900)}, {"pair":"bad"}):
+        # Separate floor-to-ms conversions can make a constant offset's host
+        # intervals miss by one ms in either direction. Two ms is disjoint.
+        for wall, mono in (((base,base+199),(500,699)), ((base,base+201),(500,701))):
+            clock = sample(wall=wall, mono=mono)
+            self.assertLessEqual(clock["offset_min_ms"], 0)
+            self.assertGreaterEqual(clock["offset_max_ms"], 0)
+        for kwargs in ({"pair":"180 1700000000180 180"}, {"wall":(base,base+198)},
+                       {"wall":(base,base+202)}, {"wall":(base+200,base)},
+                       {"mono":(500,900)}, {"pair":"bad"}):
             with self.assertRaises(ValueError): sample(**kwargs)
 
     def fixtures(self, folder, marker, *, keys=None):
