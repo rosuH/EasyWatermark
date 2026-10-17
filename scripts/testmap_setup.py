@@ -1367,6 +1367,10 @@ def _apply_setup(
                 _ios_private_path(root, name).unlink(missing_ok=True)
             if state.get("export_control"):
                 _arm_ios_export_control(state, root)
+            if setup == "editor":
+                # The .ad replay grammar cannot forward launch arguments. Launch
+                # after the private fixture is armed; replay attaches without relaunch.
+                simctl(udid, "launch", udid, IOS_BUNDLE, "-storeCaptureHooks")
         state["phase"] = "active"
         _save_setup(state)
         return state

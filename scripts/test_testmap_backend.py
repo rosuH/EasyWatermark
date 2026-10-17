@@ -603,6 +603,7 @@ with (root / 'calls.jsonl').open('a') as stream:
 if args[:1] == ['simctl']:
     if args[1] == 'get_app_container': print(root / 'ios')
     elif args[1] == 'terminate': pass
+    elif args[1] == 'launch': pass
     else: sys.exit('unexpected simctl operation: ' + repr(args))
     sys.exit(0)
 args = args[2:]  # adb -s SERIAL
@@ -866,6 +867,26 @@ class SetupSafetyChecks(unittest.TestCase):
                                      marker="exportcancel" if mode == "hold-next" else "exportfailurerec",
                                      udid="AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE", ios_export_run_id=run_id,
                                      ios_export_mode=mode)
+
+    def test_ios_capture_hooks_launch_only_after_export_fixture_is_armed(self):
+        actual_simctl = setup.simctl
+        observed = []
+        def inspect_launch(udid, *args, **kwargs):
+            if args[0] == "launch":
+                marker = json.loads((self.root / "ios" / setup.IOS_EXPORT_CONTROL).read_text())
+                observed.append((args, marker["mode"], (self.root / "ios" / setup.IOS_EXPORT_FIXTURE).is_file()))
+            return actual_simctl(udid, *args, **kwargs)
+        with patch.object(setup, "simctl", side_effect=inspect_launch):
+            state = self.apply_ios_control()
+        self.assertEqual([(("launch", "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
+                            setup.IOS_BUNDLE, "-storeCaptureHooks"), "hold-next", True)], observed)
+        setup.restore_setup(state)
+
+    def test_ios_home_setup_does_not_launch_capture_hooks(self):
+        state = self.apply("ios", "home")
+        calls = [json.loads(row) for row in (self.root / "calls.jsonl").read_text().splitlines()]
+        self.assertFalse(any(row[:2] == ["simctl", "launch"] for row in calls))
+        setup.restore_setup(state)
 
     def test_ios_export_both_modes_restore_five_original_files_and_unique_fixture(self):
         import hashlib
@@ -1313,9 +1334,13 @@ class SetupSafetyChecks(unittest.TestCase):
         self.assertTrue(seed_scripts)
         for path in seed_scripts:
             with self.subTest(seed_script=path.name):
+                case = agent.agent_device_cases_by_id()[path.name.removesuffix("@ios.ad")]
+                self.assertIn(case["setup"], {"editor", "failure"})
+                if case["setup"] == "failure":
+                    self.assertEqual("export-failure-recovery", path.name.removesuffix("@ios.ad"))
                 rows = runner.parse_script(path, "ios")
                 launch = next(row for row in rows if row["command"] == "open")
-                self.assertIn("--launch-args=-storeCaptureHooks", shlex.split(launch["args"]))
+                self.assertEqual(["me.rosuh.easywatermark.ios"], shlex.split(launch["args"]))
                 self.assertLess(launch["n"], next(row["n"] for row in rows if row["command"] == "press" and
                                                      row["args"] == 'id="store-seed-editor"'))
         for edge in ("editor-style-then-export", "export-save-success", "export-system-share"):

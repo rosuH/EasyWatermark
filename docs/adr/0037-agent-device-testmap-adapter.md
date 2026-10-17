@@ -38,7 +38,7 @@ Agent Device 的智力在 CLI 调用方，不在工具内。无人值守路径�
 
 - iOS in-app `real` 边（如 `launch-to-about`）第一次有 agent 执行器。
 - 套件从「NL goal + 模型」变成「录制脚本 + 选择器」；UI 文案/无障碍标签变化会以 `REPLAY_DIVERGENCE` 失败，需修 `.ad` 而不是调 prompt。
-- iOS 树含隐藏 `store-seed-*` 与叠层 Launch 按钮；脚本必须用可见 `label`/`role`/`id`。
+- iOS 的 `store-seed-*` 入口需显式启用。editor fixture setup 在文件准备完成后以 `-storeCaptureHooks` 启动应用；`.ad` 用不带 `--relaunch` 的 `open` 连接已有进程。0.21.2 的 `.ad open` 不支持 CLI 的 `--launch-args`。普通启动不显示这些入口。
 - 设备上会留下 `com.callstack.agentdevice.snapshothelper` 与 `imehelper`；与已有 `com.artemis.helper` 并存直到 P4 清理说明。
 - ColorOS 等会拦 `android:testOnly` helper（Agent Device `#2364`）；本仓库默认目标仍是专用模拟器。
 - P4 停用的是 **默认入口**，不是删除历史 Artemis 证据或 `artemis-cases.json`。本切片不改 `testmap_run.py`；旧 `#artemis` 记录继续解析。
