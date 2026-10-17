@@ -118,6 +118,39 @@ class PreviewGestureUiTest {
     }
 
     @Test
+    fun simultaneousPointersPreferWatermark_beforeTargetLock() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        var config by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP))
+        var offset by mutableStateOf(Offset(.4f, .4f))
+        val changes = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {
+                    val value = it as WatermarkConfigChange.Transform
+                    changes += value
+                    config = config.copy(textSize = value.size, degree = value.degree)
+                }, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, offset.x, offset.y, 300), null,
+                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        onOffsetCommit = { x, y -> offset = Offset(x, y) }, renderGestureCell = { cell })
+                }
+            }
+        }
+        onNodeWithTag("gesturePane").performTouchInput {
+            down(0, Offset(width * .8f, height * .8f))
+            down(1, Offset(width * .45f, height * .45f))
+            moveTo(0, Offset(width * .9f, height * .9f))
+            moveTo(1, Offset(width * .35f, height * .35f))
+            up(0); up(1)
+        }
+        waitUntil { changes.size == 1 }
+        runOnIdle { assertTrue(changes.single().size > 14f) }
+        onNodeWithTag("previewResetView").assertDoesNotExist()
+    }
+
+    @Test
     fun blankFirstFingerKeepsViewTarget_whenSecondFingerTouchesWatermark() = runComposeUiTest {
         val photo = bitmap(300, 300, Color.White)
         val cell = bitmap(60, 30, Color.Red)
@@ -134,6 +167,7 @@ class PreviewGestureUiTest {
         }
         onNodeWithTag("gesturePane").performTouchInput {
             down(0, Offset(width * .1f, height * .1f))
+            advanceEventTime(16)
             down(1, Offset(width * .5f, height * .45f))
             moveTo(0, Offset(width * .05f, height * .05f))
             moveTo(1, Offset(width * .8f, height * .8f))

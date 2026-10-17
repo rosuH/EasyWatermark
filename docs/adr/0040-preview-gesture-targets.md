@@ -10,7 +10,7 @@ Research: [official product interaction evidence](https://github.com/rosuH/EasyW
 
 ## Decision
 
-- The first pointer chooses the target. It stays fixed until all pointers lift; adding a second finger or crossing the selection does not retarget. When multiple pointers arrive in the same initial native event, prefer a watermark hit because those touches have no temporal first pointer.
+- The first pointer chooses the target. It stays fixed until all pointers lift; adding a second finger or crossing the selection does not retarget. When multiple pointers share the initial native timestamp (including UIKit delivering them in separate events), prefer a watermark hit because those touches have no temporal first pointer.
 - Tap watermark pixels to select. One-finger drag moves the selected watermark; two fingers resize and rotate it. REPEAT changes the whole pattern, never an individual copy. CLAMP changes the single cell.
 - Blank photo gestures pan/zoom only the viewing surface (1–4×); Reset view restores Fit. View transform and selection chrome do not enter Session, caches, export, or preferences. Photo change resets the view and selection.
 - Double tap a text watermark opens the existing WatermarkTextEditSheet. Its Confirm/Cancel/template behavior is shared with the Content editor. Image watermarks retain their image-content controls.

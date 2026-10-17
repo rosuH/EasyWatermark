@@ -172,6 +172,23 @@
     }
   },
   {
+    "command": "fill",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"watermarkTextEditField\""
+      },
+      "text": "EWM GESTURE EDIT"
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"watermarkTextEditField\" value=\"EWM GESTURE EDIT\" visible",
+      "timeoutMs": 15000
+    }
+  },
+  {
     "command": "press",
     "input": {
       "target": {
@@ -198,8 +215,8 @@
     "input": {
       "kind": "transform",
       "origin": {
-        "x": 215,
-        "y": 406
+        "x": 223,
+        "y": 412
       },
       "delta": {
         "x": 18,

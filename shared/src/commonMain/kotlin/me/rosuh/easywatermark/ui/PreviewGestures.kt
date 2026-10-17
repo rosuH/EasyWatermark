@@ -227,7 +227,7 @@ internal fun InteractiveOverlayPreview(
                         val down = currentEvent.changes.firstOrNull {
                             it.pressed && !it.previousPressed && hitAt(it.position) != null
                         } ?: firstDown
-                        val hit = hitAt(down.position)
+                        var hit = hitAt(down.position)
                         selected = hit
                         renderFailed = false
                         down.consume()
@@ -239,11 +239,21 @@ internal fun InteractiveOverlayPreview(
                         var multi = false
                         var cancelled = false
                         var lastPosition = down.position
+                        val initialPointerCount = currentEvent.changes.count { it.pressed }
+                        val gestureBench = ClampDragBench.previewScope("preview_gesture")
+                        var addedPointerDelayMs: Long? = null
                         dragging = true
                         try {
                             do {
                                 val event = awaitPointerEvent()
                                 if (event.changes.any { it.isConsumed }) { cancelled = true; break }
+                                val added = event.changes.firstOrNull { it.pressed && !it.previousPressed }
+                                if (added != null) addedPointerDelayMs = added.uptimeMillis - firstDown.uptimeMillis
+                                // UIKit may deliver simultaneous starts in separate pointer events.
+                                if (!moved && hit == null && added?.uptimeMillis == firstDown.uptimeMillis) {
+                                    hit = hitAt(added.position)
+                                    selected = hit
+                                }
                                 val pressed = event.changes.count { it.pressed }
                                 if (pressed > 1) { multi = true; previousTap = null }
                                 val deltaPan = event.calculatePan()
@@ -254,14 +264,15 @@ internal fun InteractiveOverlayPreview(
                                     moved = moved || (lastPosition - down.position).getDistance() > viewConfiguration.touchSlop || multi
                                     if (moved) {
                                         previousTap = null
-                                        if (hit != null) {
+                                        val target = hit
+                                        if (target != null) {
                                             scale = (scale * deltaZoom).coerceIn(WatermarkConfigRules.MIN_TEXT_SIZE / config.textSize, WatermarkConfigRules.MAX_TEXT_SIZE / config.textSize)
                                             rotation += deltaRotation
                                             translation += deltaPan / zoom
-                                            val center = hit.origin + Offset(cellSize.width / 2, cellSize.height / 2) +
+                                            val center = target.origin + Offset(cellSize.width / 2, cellSize.height / 2) +
                                                 Offset(translation.x * photo.width / fit.width, translation.y * photo.height / fit.height)
                                             val next = config.copy(textSize = config.textSize * scale, degree = ((config.degree + rotation) % 360 + 360) % 360)
-                                            draft = PreviewDraft(config, next, center, hit, repeat)
+                                            draft = PreviewDraft(config, next, center, target, repeat)
                                         } else {
                                             val centroid = event.calculateCentroid(useCurrent = false)
                                             val oldZoom = zoom
@@ -286,6 +297,8 @@ internal fun InteractiveOverlayPreview(
                             } else { draft = null; raster = null; previousTap = null }
                         } finally {
                             dragging = false
+                            gestureBench.finish(mapOf("target" to if (hit == null) "view" else "watermark",
+                                "initialPointers" to initialPointerCount, "addedDelayMs" to addedPointerDelayMs))
                             if (current.identity != startId || cancelled || draft?.stage == 0) { draft = null; raster = null; previousTap = null }
                         }
                     }
