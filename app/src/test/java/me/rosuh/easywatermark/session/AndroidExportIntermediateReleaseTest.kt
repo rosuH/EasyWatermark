@@ -10,6 +10,7 @@ import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import org.junit.Assert.assertTrue
@@ -34,6 +35,25 @@ import java.io.File
 class AndroidExportIntermediateReleaseTest {
 
     private val app: Application = RuntimeEnvironment.getApplication()
+
+    @Test
+    fun exportOne_missingSelectedFont_failsBeforeSourceDecode() = runBlocking {
+        val missingSource = File(app.cacheDir, "h2-missing-font-source-${System.nanoTime()}.png")
+        assertTrue("source fixture must not exist", !missingSource.exists())
+        val result = AndroidExportPipelinePort(appContext = app).exportOne(
+            imageInfo = ImageInfo(uri = MediaRef(Uri.fromFile(missingSource).toString())),
+            config = WaterMark.default.copy(
+                markMode = WatermarkMode.Text,
+                fontRef = WatermarkFontRef.Imported("0".repeat(64)),
+            ),
+            prefs = UserPreferences(ImageFormat.PNG, 100),
+        )
+
+        assertTrue("missing font must fail before unreadable source: $result", result is ExportOutcome.Failure)
+        val failure = (result as ExportOutcome.Failure).failure
+        assertTrue("expected missing-font render failure, got $failure", failure is ExportFailure.Render)
+        assertTrue(failure.message?.contains("Imported font is missing") == true)
+    }
 
     private fun solidPngFile(name: String, w: Int = 48, h: Int = 36): File {
         val f = File(app.cacheDir, name)

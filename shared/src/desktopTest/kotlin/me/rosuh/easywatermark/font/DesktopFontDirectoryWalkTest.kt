@@ -9,6 +9,11 @@ import kotlin.test.assertTrue
 
 class DesktopFontDirectoryWalkTest {
 
+    private fun validFontBytes(): ByteArray =
+        requireNotNull(javaClass.classLoader.getResourceAsStream("fonts/NotoSans-Regular.ttf")) {
+            "Bundled Desktop test font is missing"
+        }.use { it.readBytes() }
+
     @Test
     fun rejects_symlink_escape_and_imports_ordinary_file() = runBlocking {
         val base = File("build/tmp-font-walk-${System.nanoTime()}").apply { mkdirs() }
@@ -17,9 +22,7 @@ class DesktopFontDirectoryWalkTest {
             val sibling = File(base, "fonts-other").apply { mkdirs() }
             val outside = File(base, "outside.ttf").apply { writeBytes(byteArrayOf(9, 9, 9, 9)) }
             File(sibling, "evil.ttf").writeBytes(byteArrayOf(8, 8, 8, 8, 8))
-            val real = File("/System/Library/Fonts/Supplemental/Courier New.ttf")
-            require(real.isFile) { "Need a real TTF for import validation" }
-            real.copyTo(File(root, "ok.ttf"), overwrite = true)
+            File(root, "ok.ttf").writeBytes(validFontBytes())
             Files.createSymbolicLink(File(root, "escape.ttf").toPath(), File(sibling, "evil.ttf").toPath())
             Files.createSymbolicLink(File(root, "out.ttf").toPath(), outside.toPath())
             val loopDir = File(root, "loop")
@@ -89,10 +92,9 @@ class DesktopFontDirectoryWalkTest {
         val base = File("build/tmp-font-capwalk-${System.nanoTime()}").apply { mkdirs() }
         try {
             val root = File(base, "fonts").apply { mkdirs() }
-            val real = File("/System/Library/Fonts/Supplemental/Courier New.ttf")
-            require(real.isFile)
-            real.copyTo(File(root, "one.ttf"), overwrite = true)
-            real.copyTo(File(root, "two.ttf"), overwrite = true)
+            val fontBytes = validFontBytes()
+            File(root, "one.ttf").writeBytes(fontBytes)
+            File(root, "two.ttf").writeBytes(fontBytes)
             val access = DesktopWatermarkFontAccess(
                 root = File(base, "store").apply { mkdirs() },
                 limits = FontImportLimits(maxVisits = 1000, maxCandidates = 1),

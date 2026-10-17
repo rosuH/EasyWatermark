@@ -96,6 +96,18 @@ class AndroidExportPipelinePort(
         config: WaterMark,
         prefs: UserPreferences,
     ): ExportOutcome {
+        val fontFamily: FontFamily? = if (config.markMode == WatermarkMode.Text) {
+            when (val resolution = fontAccess.resolve(config.fontRef)) {
+                is FontResolution.Success -> resolution.family
+                is FontResolution.Failure -> {
+                    return ExportOutcome.failure(
+                        ExportFailure.Render(message = resolution.reason),
+                    )
+                }
+            }
+        } else {
+            null
+        }
         val rect = decodeBitmapFromUri(contentResolver, imageInfo.uri.toUri())
         if (rect.isFailure()) {
             return ExportOutcome.failure(
@@ -128,18 +140,6 @@ class AndroidExportPipelinePort(
                 iconBitmapRect.data!!.bitmap
             }
             WatermarkMode.Text -> null
-        }
-        val fontFamily: FontFamily? = if (config.markMode == WatermarkMode.Text) {
-            when (val resolution = fontAccess.resolve(config.fontRef)) {
-                is FontResolution.Success -> resolution.family
-                is FontResolution.Failure -> {
-                    return ExportOutcome.failure(
-                        ExportFailure.Render(message = resolution.reason),
-                    )
-                }
-            }
-        } else {
-            null
         }
         val mutableBitmap = try {
             AndroidCommonRaster.composeToBitmap(

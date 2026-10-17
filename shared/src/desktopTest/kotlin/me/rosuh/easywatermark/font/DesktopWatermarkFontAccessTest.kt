@@ -67,16 +67,14 @@ class DesktopWatermarkFontAccessTest {
     }
 
     @Test
-    fun import_macos_ttf_then_resolve_after_source_gone() = runBlocking {
-        val source = File("/System/Library/Fonts/Supplemental/Courier New.ttf")
-            .takeIf { it.isFile }
-            ?: File("/Library/Fonts/Arial.ttf").takeIf { it.isFile }
-            ?: return@runBlocking
+    fun import_ttf_then_resolve_after_source_gone(): Unit = runBlocking {
+        val fontBytes = requireNotNull(javaClass.classLoader.getResourceAsStream("fonts/NotoSans-Regular.ttf")) {
+            "Bundled Desktop test font is missing"
+        }.use { it.readBytes() }
         val root = File("build/tmp-desktop-import-${System.nanoTime()}").apply { mkdirs() }
         val access = DesktopWatermarkFontAccess(root = root)
         val copyDir = File(root, "src").apply { mkdirs() }
-        val copied = File(copyDir, source.name)
-        source.copyTo(copied, overwrite = true)
+        File(copyDir, "NotoSans-Regular.ttf").writeBytes(fontBytes)
         val result = access.importDirectory(copyDir)
         assertEquals(1, result.added, result.toString())
         copyDir.deleteRecursively()
