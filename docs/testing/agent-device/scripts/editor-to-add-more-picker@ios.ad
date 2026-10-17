@@ -6,5 +6,7 @@ wait absent id="aboutBack" 5000
 wait absent id="openSourceBack" 5000
 wait id="sharedComposeAddMoreButton"
 press "label=\"Add more images\""
-wait text "选择最多50张照片"
+wait id="iosLibraryReadUpsellContinue"
+press id="iosLibraryReadUpsellContinue"
+wait text "Select up to 50 photos."
 close
