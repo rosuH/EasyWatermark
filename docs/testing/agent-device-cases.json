@@ -729,7 +729,7 @@
         "android": "docs/testing/agent-device/scripts/editor-preview-gestures@android.json",
         "ios": "docs/testing/agent-device/scripts/editor-preview-gestures@ios.json"
       },
-      "honesty": "Pinned Android 35 1080px and iPhone 17 Pro 402pt coordinates were inspected on native screenshots. First transform pointer, not the gesture centroid, hits the single watermark. Android timed repeated taps and iOS native doubleTap use OS-valid timing. Setup is seam; native gestures, existing text sheet and pipeline export are real. Actual PNG bytes are archived before precise cleanup. Execution is not visual acceptance or Human Confirm."
+      "honesty": "Pinned Android 35 1080px and iPhone 17 Pro 402pt coordinates were inspected on native screenshots. The first transform pointer hits a repeated copy and changes the entire pattern; view pinch starts in letterbox space. Single-watermark movement is covered by editor-clamp-drag and the independent native recording. Android timed repeated taps and iOS native doubleTap use OS-valid timing. Setup is seam; native gestures, existing text sheet and pipeline export are real. Actual PNG bytes are archived before precise cleanup. Execution is not visual acceptance or Human Confirm."
     }
   ]
 }

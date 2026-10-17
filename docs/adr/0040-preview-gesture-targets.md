@@ -15,6 +15,7 @@ Research: [official product interaction evidence](https://github.com/rosuH/EasyW
 - Blank photo gestures pan/zoom only the viewing surface (1–4×); Reset view restores Fit. View transform and selection chrome do not enter Session, caches, export, or preferences. Photo change resets the view and selection.
 - Double tap a text watermark opens the existing WatermarkTextEditSheet. Its Confirm/Cancel/template behavior is shared with the Content editor. Image watermarks retain their image-content controls.
 - Gesture drafts render cells only, using the same font resolution and raster pipeline as committed preview/export. No photo re-decode or persistent edit during a gesture. A successful end submits one atomic config change for size/rotation/repeated origin; CLAMP offset uses the existing Session commit and one non-draft overlay paint.
+- A gesture draft owns its source pixel dimensions. Normalization uses that coordinate frame; pending rasters from an obsolete resolution cannot commit. The final normalized offset is retained until matching host layers arrive.
 - Repeat origin is global config, normalized to photo dimensions. New preference keys default to zero, preserving existing repeated output. CLAMP offsets remain per-photo Session state. The two are not interchangeable.
 - Fit + viewing transform is inverted before hit-testing. Transparent inter-cell gap belongs to the photo; small text gets a bounded touch margin. Selection chrome is not rastered into watermark cells.
 

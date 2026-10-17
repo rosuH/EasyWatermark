@@ -212,6 +212,48 @@ class PreviewGestureUiTest {
     }
 
     @Test
+    fun samePhotoResolutionUpgrade_keepsCommittedRepeatOffsetsInCurrentCoordinates() = runComposeUiTest {
+        var photo by mutableStateOf(bitmap(300, 300, Color.White))
+        var cell by mutableStateOf(bitmap(60, 30, Color.Red))
+        var config by mutableStateOf(WaterMark.default)
+        val changes = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("same-photo", config, {
+                    val change = it as WatermarkConfigChange.Transform
+                    changes += change
+                    config = config.copy(textSize = change.size, degree = change.degree,
+                        repeatOffsetX = change.repeatOffsetX!!, repeatOffsetY = change.repeatOffsetY!!)
+                }, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, 0f, 0f, photo.width), null,
+                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        onOffsetCommit = { _, _ -> error("repeat must not change per-photo offsets") },
+                        renderGestureCell = { cell })
+                }
+            }
+        }
+        runOnIdle { photo = bitmap(600, 600, Color.White); cell = bitmap(120, 60, Color.Red) }
+        onNodeWithTag("gesturePane").performTouchInput {
+            down(Offset(width * .5f, height * .45f))
+            moveTo(Offset(width * .6f, height * .55f))
+            up()
+        }
+        waitUntil { changes.size == 1 }
+        runOnIdle {
+            assertEquals(.1f, changes.single().repeatOffsetX!!, .001f)
+            assertEquals(.1f, changes.single().repeatOffsetY!!, .001f)
+        }
+        onNodeWithTag("gesturePane").performTouchInput {
+            down(Offset(width * .5f, height * .45f))
+            moveTo(Offset(width * .6f, height * .55f))
+            up()
+        }
+        waitUntil { changes.size == 2 }
+        runOnIdle { assertEquals(.2f, changes.last().repeatOffsetX!!, .001f) }
+    }
+
+    @Test
     fun inverseViewCoordinatesAndRepeatPhaseRemainConsistent() {
         val fit = computeFittedImageRect(400f, 600f, 800f, 400f)!!
         assertEquals(Offset(.5f, .5f), photoPoint(Offset(240f, 320f), Size(400f, 600f), fit, 2f, Offset(40f, 20f)))

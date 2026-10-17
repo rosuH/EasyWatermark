@@ -73,15 +73,18 @@ private data class PreviewDraft(
     val center: Offset,
     val hit: PreviewCellHit,
     val repeat: Boolean,
+    val photoSize: IntSize,
+    val committedOffset: Offset? = null,
     // 0: finger draft, 1: final raster requested, 2: submitted to the existing host.
     val stage: Int = 0,
 ) {
-    fun offset(cell: ImageBitmap, photo: ImageBitmap): Offset {
-        val x = (center.x - (hit.column + .5f) * cell.width) / photo.width
-        val y = (center.y - (hit.row + .5f) * cell.height) / photo.height
+    fun offset(cell: ImageBitmap): Offset {
+        committedOffset?.let { return it }
+        val x = (center.x - (hit.column + .5f) * cell.width) / photoSize.width
+        val y = (center.y - (hit.row + .5f) * cell.height) / photoSize.height
         return if (repeat) Offset(x, y) else Offset(
-            x.coerceIn(0f, (1f - cell.width.toFloat() / photo.width).coerceAtLeast(0f)),
-            y.coerceIn(0f, (1f - cell.height.toFloat() / photo.height).coerceAtLeast(0f)),
+            x.coerceIn(0f, (1f - cell.width.toFloat() / photoSize.width).coerceAtLeast(0f)),
+            y.coerceIn(0f, (1f - cell.height.toFloat() / photoSize.height).coerceAtLeast(0f)),
         )
     }
 }
@@ -105,6 +108,8 @@ internal fun InteractiveOverlayPreview(
         var raster by remember { mutableStateOf<Pair<WaterMark, ImageBitmap>?>(null) }
         var dragging by remember { mutableStateOf(false) }
         var renderFailed by remember { mutableStateOf(false) }
+        val photoSize = IntSize(photo.width, photo.height)
+        val currentPhotoSize by rememberUpdatedState(photoSize)
         val current by rememberUpdatedState(interaction)
         val currentOverlay by rememberUpdatedState(overlay)
         val currentCommit by rememberUpdatedState(onOffsetCommit)
@@ -122,18 +127,22 @@ internal fun InteractiveOverlayPreview(
                     return@collect
                 }
                 if (draft == null) return@collect
+                if (request.photoSize != currentPhotoSize) {
+                    if (draft == request) { draft = null; raster = null }
+                    return@collect
+                }
                 if (request.stage == 1 && current.config != request.baseConfig) {
                     if (draft == request) { draft = null; raster = null }
                     return@collect
                 }
                 raster = request.config to cell
                 if (request.stage == 1 && draft == request && current.config == request.baseConfig) {
-                    val offset = request.offset(cell, photo)
+                    val offset = request.offset(cell)
                     val config = request.config.copy(
                         repeatOffsetX = if (request.repeat) offset.x else request.config.repeatOffsetX,
                         repeatOffsetY = if (request.repeat) offset.y else request.config.repeatOffsetY,
                     )
-                    draft = request.copy(config = config, stage = 2)
+                    draft = request.copy(config = config, committedOffset = offset, stage = 2)
                     raster = config to cell
                     if (config != request.baseConfig) current.onConfig(WatermarkConfigChange.Transform(
                         config.textSize, config.degree,
@@ -147,13 +156,14 @@ internal fun InteractiveOverlayPreview(
             val pending = draft
             if (!dragging && pending?.stage == 2 && (
                 (overlay.renderedConfig == pending.config &&
-                    abs(overlay.offsetX - pending.offset(overlay.cell, photo).x) < .0001f &&
-                    abs(overlay.offsetY - pending.offset(overlay.cell, photo).y) < .0001f) ||
+                    abs(overlay.offsetX - pending.offset(overlay.cell).x) < .0001f &&
+                    abs(overlay.offsetY - pending.offset(overlay.cell).y) < .0001f) ||
                 (current.config != pending.baseConfig && current.config != pending.config)
             )) { draft = null; raster = null }
         }
-        val shownCell = raster?.takeIf { draft != null }?.second ?: overlay.cell
-        val shownOffset = draft?.offset(shownCell, photo) ?: Offset(overlay.offsetX, overlay.offsetY)
+        val activeDraft = draft?.takeIf { it.photoSize == photoSize }
+        val shownCell = raster?.takeIf { activeDraft != null }?.second ?: overlay.cell
+        val shownOffset = activeDraft?.offset(shownCell) ?: Offset(overlay.offsetX, overlay.offsetY)
         val shownOverlay = overlay.copy(cell = shownCell, offsetX = shownOffset.x, offsetY = shownOffset.y)
         val fitted = computeFittedImageRect(box.width.toFloat(), box.height.toFloat(), photo.width.toFloat(), photo.height.toFloat())
         val selectionColor = MaterialTheme.colorScheme.primary
@@ -272,7 +282,7 @@ internal fun InteractiveOverlayPreview(
                                             val center = target.origin + Offset(cellSize.width / 2, cellSize.height / 2) +
                                                 Offset(translation.x * photo.width / fit.width, translation.y * photo.height / fit.height)
                                             val next = config.copy(textSize = config.textSize * scale, degree = ((config.degree + rotation) % 360 + 360) % 360)
-                                            draft = PreviewDraft(config, next, center, target, repeat)
+                                            draft = PreviewDraft(config, next, center, target, repeat, photoSize)
                                         } else {
                                             val centroid = event.calculateCentroid(useCurrent = false)
                                             val oldZoom = zoom

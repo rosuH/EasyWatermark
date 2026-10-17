@@ -81,7 +81,7 @@
   {
     "command": "wait",
     "input": {
-      "selector": "id=\"choice-1\"",
+      "selector": "id=\"choice-0\"",
       "timeoutMs": 15000
     }
   },
@@ -90,7 +90,7 @@
     "input": {
       "target": {
         "kind": "selector",
-        "selector": "id=\"choice-1\""
+        "selector": "id=\"choice-0\""
       }
     }
   },
@@ -105,10 +105,10 @@
     "input": {
       "kind": "pinch",
       "origin": {
-        "x": 100,
-        "y": 315
+        "x": 200,
+        "y": 183
       },
-      "scale": 1.5
+      "scale": 2.0
     }
   },
   {
@@ -145,8 +145,8 @@
     "input": {
       "target": {
         "kind": "point",
-        "x": 215,
-        "y": 370
+        "x": 92,
+        "y": 245
       },
       "doubleTap": true
     }
@@ -215,8 +215,8 @@
     "input": {
       "kind": "transform",
       "origin": {
-        "x": 223,
-        "y": 412
+        "x": 117,
+        "y": 286
       },
       "delta": {
         "x": 18,
