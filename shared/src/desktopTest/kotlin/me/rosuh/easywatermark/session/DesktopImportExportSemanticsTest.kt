@@ -4,22 +4,28 @@ import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createUserConfigDataStore
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.ImageInfo
+import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.model.WatermarkFontRef
+import me.rosuh.easywatermark.font.DesktopWatermarkFontAccess
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
 import java.io.File
+import javax.imageio.ImageIO
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -152,7 +158,84 @@ class DesktopImportExportSemanticsTest {
     }
 
     @Test
-    fun saveAs_productionSeam_writesExactUserPath_notUniqueSibling() {
+    fun saveAs_missingSelectedFont_failsBeforeExactWrite() = runBlocking {
+        val dir = tempDir("save-as-missing-font")
+        val chosen = File(dir, "chosen.png")
+        val config = WaterMark.default.copy(
+            text = "CUSTOM FONT",
+            fontRef = WatermarkFontRef.Imported(sha256 = "0".repeat(64)),
+        )
+        val failure = assertFailsWith<IllegalArgumentException> {
+            DesktopSaveAsDestination.renderAndSaveExact(
+                imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(40, 30),
+                request = me.rosuh.easywatermark.render.DesktopRenderRequest(
+                    config = config,
+                    prefs = UserPreferences.DEFAULT,
+                    offsetX = 0.5f,
+                    offsetY = 0.5f,
+                ),
+                userChosen = chosen,
+                fontAccess = DesktopWatermarkFontAccess(root = File(dir, "fonts")),
+            )
+        }
+        assertTrue(failure.message?.contains("Imported font is missing") == true, failure.message)
+        assertFalse(chosen.exists(), "Save As must not publish a default-font image")
+        val existing = File(dir, "existing.png")
+        val prior = byteArrayOf(0x11, 0x22, 0x33)
+        existing.writeBytes(prior)
+        assertFailsWith<IllegalArgumentException> {
+            DesktopSaveAsDestination.renderAndSaveExact(
+                imageBytes = DesktopWatermarkComposer.sampleBackgroundPng(40, 30),
+                request = me.rosuh.easywatermark.render.DesktopRenderRequest(
+                    config = config, prefs = UserPreferences.DEFAULT, offsetX = 0.5f, offsetY = 0.5f,
+                ),
+                userChosen = existing,
+                fontAccess = DesktopWatermarkFontAccess(root = File(dir, "fonts")),
+            )
+        }
+        assertContentEquals(prior, existing.readBytes(), "Missing font must not overwrite a chosen file")
+    }
+
+    @Test
+    fun saveAs_selectedSystemFont_matchesBatchPixels_andDiffersFromDefault() = runBlocking {
+        val dir = tempDir("save-as-selected-font")
+        val access = DesktopWatermarkFontAccess(root = File(dir, "fonts"))
+        val candidate = access.listSystemFonts().firstOrNull {
+            val name = it.displayName.lowercase()
+            listOf("times", "courier", "serif", "georgia", "menlo", "monaco").any(name::contains)
+        } ?: error("No distinct system-font candidate available for Desktop render test")
+        val sourceBytes = DesktopWatermarkComposer.sampleBackgroundPng(640, 480)
+        val source = File(dir, "source.png").apply { writeBytes(sourceBytes) }
+        val prefs = UserPreferences.DEFAULT.copy(outputFormat = ImageFormat.PNG)
+        val defaultConfig = WaterMark.default.copy(text = "MWmW 012345 font", fontRef = WatermarkFontRef.Default)
+        val selectedConfig = defaultConfig.copy(fontRef = candidate.ref)
+        fun request(config: WaterMark) = me.rosuh.easywatermark.render.DesktopRenderRequest(
+            config = config,
+            prefs = prefs,
+            offsetX = 0.5f,
+            offsetY = 0.5f,
+        )
+        val defaultOutput = File(dir, "default.png")
+        val selectedOutput = File(dir, "selected.png")
+        DesktopSaveAsDestination.renderAndSaveExact(sourceBytes, request(defaultConfig), defaultOutput, access)
+        DesktopSaveAsDestination.renderAndSaveExact(sourceBytes, request(selectedConfig), selectedOutput, access)
+        val batch = DesktopExportPipelinePort(outputDirProvider = { File(dir, "batch") }, fontAccess = access)
+        val batchSuccess = assertIs<ExportOutcome.Success>(
+            batch.exportOne(ImageInfo(MediaRef(source.absolutePath)), selectedConfig, prefs),
+        )
+        fun decodedPixels(file: File): IntArray {
+            val image = ImageIO.read(file) ?: error("Could not decode ${file.path}")
+            return image.getRGB(0, 0, image.width, image.height, null, 0, image.width)
+        }
+        val defaultPixels = decodedPixels(defaultOutput)
+        val selectedPixels = decodedPixels(selectedOutput)
+        val batchPixels = decodedPixels(File(batchSuccess.media.ref.value))
+        assertFalse(defaultPixels.contentEquals(selectedPixels), "Selected font must change actual Save As pixels")
+        assertContentEquals(selectedPixels, batchPixels, "Save As and Session batch must render the same selected font")
+    }
+
+    @Test
+    fun saveAs_productionSeam_writesExactUserPath_notUniqueSibling() = runBlocking {
         val dir = tempDir("save-as-exact")
         File(dir, "watermarked.jpg").writeBytes(byteArrayOf(0x11, 0x22, 0x33))
         val chosen = File(dir, "user-chosen-name.jpg")

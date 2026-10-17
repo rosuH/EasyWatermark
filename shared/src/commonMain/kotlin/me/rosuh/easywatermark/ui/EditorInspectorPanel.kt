@@ -69,6 +69,14 @@ fun EditorInspectorPanel(
      * Optional E2E initial tab (0=Content, 1=Style, 2=Layout). Desktop `-Dewm.desktop.inspectorTab`.
      */
     initialTabIndex: Int = 0,
+    currentFontName: String = "",
+    supportedStyles: Set<me.rosuh.easywatermark.data.model.TextTypeface> = setOf(
+        me.rosuh.easywatermark.data.model.TextTypeface.Normal,
+        me.rosuh.easywatermark.data.model.TextTypeface.Bold,
+        me.rosuh.easywatermark.data.model.TextTypeface.Italic,
+        me.rosuh.easywatermark.data.model.TextTypeface.BoldItalic,
+    ),
+    onOpenFontPanel: () -> Unit = {},
     contentOptions: List<EditorOptionSpec> = EditorOptionCatalog.content,
     styleOptions: List<EditorOptionSpec> = EditorOptionCatalog.style,
     layoutOptions: List<EditorOptionSpec> = EditorOptionCatalog.layout,
@@ -130,6 +138,9 @@ fun EditorInspectorPanel(
                     onValueChange = onValueChange,
                     colorOption = colorOption,
                     styleOptions = styleOptions,
+                    currentFontName = currentFontName,
+                    supportedStyles = supportedStyles,
+                    onOpenFontPanel = onOpenFontPanel,
                 )
                 else -> LayoutForm(
                     waterMark = waterMark,
@@ -217,6 +228,9 @@ private fun StyleForm(
     onValueChange: (WatermarkConfigChange) -> Unit,
     colorOption: @Composable (Modifier, WaterMark, (Int) -> Unit) -> Unit,
     styleOptions: List<EditorOptionSpec>,
+    currentFontName: String,
+    supportedStyles: Set<me.rosuh.easywatermark.data.model.TextTypeface>,
+    onOpenFontPanel: () -> Unit,
 ) {
     // DEMO rhythm: 平铺 (tile) → size/alpha/degree → 外观 (typeface/color)
     val tile = styleOptions.filter { it.type == FuncType.TileMode }
@@ -257,6 +271,9 @@ private fun StyleForm(
                 onValueChange = onValueChange,
                 colorOption = colorOption,
                 showOuterLabel = spec.type == FuncType.Color,
+                currentFontName = currentFontName,
+                supportedStyles = supportedStyles,
+                onOpenFontPanel = onOpenFontPanel,
             )
         }
     }
@@ -287,6 +304,9 @@ private fun FormOptionBody(
     onValueChange: (WatermarkConfigChange) -> Unit,
     colorOption: @Composable (Modifier, WaterMark, (Int) -> Unit) -> Unit,
     showOuterLabel: Boolean,
+    currentFontName: String = "",
+    supportedStyles: Set<me.rosuh.easywatermark.data.model.TextTypeface> = emptySet(),
+    onOpenFontPanel: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -310,6 +330,16 @@ private fun FormOptionBody(
             framed = false,
             formPath = true,
             modifier = Modifier.fillMaxWidth(),
+            currentFontName = currentFontName,
+            supportedStyles = supportedStyles.ifEmpty {
+                setOf(
+                    me.rosuh.easywatermark.data.model.TextTypeface.Normal,
+                    me.rosuh.easywatermark.data.model.TextTypeface.Bold,
+                    me.rosuh.easywatermark.data.model.TextTypeface.Italic,
+                    me.rosuh.easywatermark.data.model.TextTypeface.BoldItalic,
+                )
+            },
+            onOpenFontPanel = onOpenFontPanel,
         )
     }
 }

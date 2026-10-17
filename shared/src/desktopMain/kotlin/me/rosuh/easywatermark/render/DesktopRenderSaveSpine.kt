@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.render
 
+import androidx.compose.ui.text.font.FontFamily
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.UserPreferences
@@ -53,6 +54,7 @@ object DesktopRenderSaveSpine {
         request: DesktopRenderRequest,
         target: File,
         writeHooks: DesktopAtomicFileWrite.Hooks = DesktopAtomicFileWrite.Hooks(),
+        fontFamily: FontFamily? = FontFamily.Default,
     ): DesktopSavedImage {
         val iconBytes: ByteArray? =
             when (val plan = DesktopSaveDecision.renderPlan(request.config.markMode, request.config.iconUri.value)) {
@@ -69,6 +71,7 @@ object DesktopRenderSaveSpine {
             imageBytes = imageBytes,
             request = request,
             iconBytes = iconBytes,
+            fontFamily = fontFamily,
         )
         target.parentFile?.mkdirs()
         DesktopAtomicFileWrite.publish(target, composed.png, writeHooks)

@@ -351,6 +351,19 @@
       "goal": "Open export, start it, tap Cancel while exporting. Confirm Cancel disappears."
     },
     {
+      "id": "editor-font-system-select-export",
+      "title": "选择系统字体、查看预览并导出",
+      "edges": [
+        "editor-font-system-select-export"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": false,
+      "reason": "Font system-selection evidence uses the Agent Device scripts; the deprecated Artemis adapter is not used.",
+      "goal": "Select the pinned system font in the font panel, observe immediate preview, and export the same fixture. This Artemis entry is topology-only and must not be run."
+    },
+    {
       "id": "editor-style-then-export",
       "title": "改文字大小颜色透明度后导出",
       "edges": [

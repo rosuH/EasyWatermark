@@ -35,6 +35,7 @@ Decisions trace to the CMP migration plan (`docs/superpowers/plans/2026-06-12-cm
 | [0032](0032-android-splash-then-launch-fade-serial.md) | Android splash then Launch fade are serial; iOS launch fill matches first screen (`#262611`, no icon) | **Accepted** (owner 2026-08-26) |
 | [0033](0033-live-overlay-preview.md) | Editor preview is a live two-layer overlay; export still bakes | **Proposed** — Implemented, pending device sign-off |
 | [0034](0034-one-click-android-play-ship.md) | Ship release: CREATE = GitHub (Android + unsigned Desktop) + Play; PLAY = resume Play | **Proposed** |
+| [0035](0035-custom-watermark-fonts.md) | 三端自定义水印字体：系统字体、目录导入与共享渲染 | **Accepted** (owner 2026-09-05) |
 | [0036](0036-pin-r8-pg-map-id.md) | Next GitHub APK pins R8 pg-map-id to 64 zeros before signing and keeps pre-stripped AndroidX `.so` files untouched (#443); Play AAB/mapping not pinned | **Proposed** |
 | [0037](0037-agent-device-testmap-adapter.md) | testmap agent 层改为 Agent Device；L0–L3/地图保留；Artemis 历史 / P4 deprecated | **Accepted** (owner 2026-09-14: default runner Agent Device, P0–P4, no PR split) |
 | [0038](0038-testmap-continuous-routes.md) | Testmap continuous routes beside independent cases; one setup/session/restore and attributable steps | **Proposed** |

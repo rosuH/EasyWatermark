@@ -49,6 +49,14 @@ fun EditorBottomControls(
     onIndicatorPosition: (startPx: Int, endPx: Int) -> Unit = { _, _ -> },
     initialTabIndex: Int = 0,
     initialOptionIndex: Int = 0,
+    currentFontName: String = "",
+    supportedStyles: Set<TextTypeface> = setOf(
+        TextTypeface.Normal,
+        TextTypeface.Bold,
+        TextTypeface.Italic,
+        TextTypeface.BoldItalic,
+    ),
+    onOpenFontPanel: () -> Unit = {},
 ) {
     val contentLabel = stringResource(Res.string.title_content)
     val styleLabel = stringResource(Res.string.title_style)
@@ -76,6 +84,9 @@ fun EditorBottomControls(
                 colorOption = colorOption,
                 iconOption = iconOption,
                 modifier = optionModifier,
+                currentFontName = currentFontName,
+                supportedStyles = supportedStyles,
+                onOpenFontPanel = onOpenFontPanel,
             )
         },
         optionItem = optionItem,
@@ -107,6 +118,14 @@ internal fun EditorOptionControl(
     modifier: Modifier = Modifier,
     framed: Boolean = true,
     formPath: Boolean = false,
+    currentFontName: String = "",
+    supportedStyles: Set<TextTypeface> = setOf(
+        TextTypeface.Normal,
+        TextTypeface.Bold,
+        TextTypeface.Italic,
+        TextTypeface.BoldItalic,
+    ),
+    onOpenFontPanel: () -> Unit = {},
 ) {
     val body: @Composable (Modifier) -> Unit = { innerModifier ->
         when (spec.type) {
@@ -202,12 +221,15 @@ internal fun EditorOptionControl(
                     typeface = waterMark.textTypeface,
                     modifier = innerModifier,
                     formPath = formPath,
+                    currentFontName = currentFontName,
+                    supportedStyles = supportedStyles,
                     onPaintStyleChange = { next ->
                         onValueChange(WatermarkConfigChange.TextStyle(next))
                     },
                     onTypefaceChange = { next: TextTypeface ->
                         onValueChange(WatermarkConfigChange.Typeface(next))
                     },
+                    onOpenFontPanel = onOpenFontPanel,
                 )
             }
 

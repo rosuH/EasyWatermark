@@ -4,6 +4,7 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkConfigRules
+import me.rosuh.easywatermark.data.model.WatermarkFontRef
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.repo.WaterMarkRepository
@@ -34,6 +35,10 @@ class WatermarkConfigEditor(private val repo: WaterMarkRepository) {
 
     suspend fun updateTextTypeface(typeface: TextTypeface) {
         repo.updateTypeFace(typeface)
+    }
+
+    suspend fun updateFontSelection(ref: WatermarkFontRef, supportedStyles: Set<TextTypeface>) {
+        repo.updateFontSelection(ref, supportedStyles)
     }
 
     suspend fun updateAlpha(alpha: Float) {

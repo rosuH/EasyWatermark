@@ -77,18 +77,28 @@ open class WatermarkSessionViewModel(
     private var exportJob: Job? = null
     /** Bumps on each [startExport] so a cancelled job's finally cannot clobber a newer run. */
     private var exportGeneration: Int = 0
+    private var hasSyncedInitialWatermark = false
+
+    /**
+     * Test hook: runs after a DataStore emission is observed and **before** [sessionMutex]
+     * is acquired. Production leaves this null.
+     */
+    internal var beforeWaterMarkSyncLock: (suspend () -> Unit)? = null
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
-            var hasSyncedInitialWatermark = false
-            waterMarkRepo.waterMark.collect { wm ->
-                // The first DataStore emission initializes Session config; it is not a user edit.
-                // It may arrive after an immediate export and must not erase that export's result.
-                if (hasSyncedInitialWatermark) {
-                    resetJobStatus()
+            waterMarkRepo.waterMark.collect {
+                beforeWaterMarkSyncLock?.invoke()
+                sessionMutex.withLock {
+                    val latest = waterMarkRepo.currentConfig()
+                    // First emission initializes Session config; it is not a user edit and
+                    // must not erase an in-flight export result.
+                    if (hasSyncedInitialWatermark) {
+                        resetJobStatus()
+                    }
+                    hasSyncedInitialWatermark = true
+                    publishLaunchWaterMark(latest)
                 }
-                hasSyncedInitialWatermark = true
-                applyIntent(AppIntent.SyncWaterMark(wm))
             }
         }
     }
@@ -176,6 +186,8 @@ open class WatermarkSessionViewModel(
             is WatermarkConfigChange.Degree -> configEditor.updateDegree(change.degree)
             is WatermarkConfigChange.TextSize -> configEditor.updateTextSize(change.size)
             is WatermarkConfigChange.Typeface -> configEditor.updateTextTypeface(change.typeface)
+            is WatermarkConfigChange.FontSelection ->
+                configEditor.updateFontSelection(change.ref, change.supportedStyles)
             is WatermarkConfigChange.TextStyle -> configEditor.updateTextStyle(change.style)
             is WatermarkConfigChange.TileMode -> configEditor.updateTileMode(change.tileMode)
             is WatermarkConfigChange.HorizontalGap -> configEditor.updateHorizon(change.gap)
@@ -305,18 +317,29 @@ open class WatermarkSessionViewModel(
 
     /**
      * Apply a config change only if [stillValid] is true immediately before the write (F16 icon).
-     * Does not roll back a completed DataStore write; callers must not treat a false return as
+     * Does not roll back a completed DataStore write; callers must not treat a null return as
      * "config was never attempted" when [stillValid] flipped during a suspending store edit —
      * icon host code re-checks generation after return and skips host-side bind when stale.
+     *
+     * On success, publishes the **DataStore snapshot** into LaunchScreenState so preview does
+     * not patch a lagged Session object, and returns that committed [WaterMark].
      */
     suspend fun applyConfigIf(
         stillValid: () -> Boolean,
         change: WatermarkConfigChange,
-    ): Boolean {
+    ): WaterMark? {
         return sessionMutex.withLock {
-            if (!stillValid()) return@withLock false
+            if (!stillValid()) return@withLock null
             applyConfigChange(change)
-            true
+            val committed = waterMarkRepo.currentConfig()
+            publishLaunchWaterMark(committed)
+            committed
+        }
+    }
+
+    private suspend fun publishLaunchWaterMark(wm: WaterMark) {
+        withContext(Dispatchers.Main.immediate) {
+            _launchScreenUiStateFlow.update { it.copy(waterMark = wm) }
         }
     }
 

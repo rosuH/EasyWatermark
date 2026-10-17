@@ -1,0 +1,36 @@
+context platform=ios
+env WATERMARK="MWmW FONT"
+open me.rosuh.easywatermark.ios
+press id="store-seed-editor"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible" 90000
+wait absent id="aboutBack" 5000
+wait absent id="openSourceBack" 5000
+press id="watermarkTextContent"
+wait id="watermarkTextEditField"
+fill id="watermarkTextEditField" "${WATERMARK}"
+press id="watermarkTextConfirm"
+wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible"
+press id="editorTab-1"
+wait id="editorOption-TextTypeFace"
+press id="editorOption-TextTypeFace"
+wait id="editorFontEntryRow"
+wait 500
+press id="editorFontEntryRow"
+wait id="editorFontPanel"
+wait id="editorFontSearch"
+press id="editorFontSearch"
+type "Times New Roman" --delay-ms 100
+wait "id=\"editorFontSearch\" value=\"Times New Roman\" visible" 15000
+wait "id=\"editorFontEntry-system:ios:Times New Roman\"" 15000
+press "id=\"editorFontEntry-system:ios:Times New Roman\""
+wait label="Selected" 15000
+press id="editorFontDone"
+wait text "Times New Roman" 15000
+wait 500
+press id="sharedComposeSaveButton"
+wait "id=\"sharedComposeExportSheet\" visible" 20000
+press "label=\"PNG, PNG\""
+press id="sharedComposeExportPrimary"
+wait "id=\"sharedComposeExportCounts\" label=\"Processed 3 · Succeeded 3 · Failed 0\" visible" 90000
+wait "id=\"sharedComposeExportPrimary\" label=\"Share, Share\" visible" 15000
+close

@@ -808,6 +808,41 @@ class SetupSafetyChecks(unittest.TestCase):
         self.assertFalse(any("android.intent.action.SEND" in command for command in starts))
         setup.restore_setup(state)
 
+    def test_font_export_multiple_new_rows_are_not_claimed_or_deleted(self):
+        with patch.object(setup, 'android_wait_editor_ready'):
+            state = setup.apply_setup('editor', platform='android', folder=self.root / 'evidence',
+                                      marker='editorfontsystem', serial='fake-serial')
+        setup.begin_font_export(state, 'run-font', 'edge:editor-font-system-select-export@android#agent@r1of3')
+        self.assertEqual(['1'], state['font_export']['baseline_ids'])
+        with patch.object(setup, 'adb_shell', return_value='Row: 0 _id=1\nRow: 1 _id=2\nRow: 2 _id=3') as shell, \
+                patch.object(setup, 'export_provider_read') as read:
+            with self.assertRaisesRegex(ValueError, 'unique new owned MediaStore row'):
+                setup.capture_font_export(state)
+            read.assert_not_called()
+            self.assertFalse(any(call.args[1:3] == ('content', 'delete') for call in shell.call_args_list))
+        self.assertNotIn('export_output', state)
+        setup.restore_setup(state)
+
+    def test_font_ios_three_private_pngs_are_archived_before_exact_cleanup(self):
+        temporary = self.root / 'ios/tmp'
+        temporary.mkdir()
+        state = setup.apply_setup('editor', platform='ios', folder=self.root / 'evidence',
+                                  marker='editorfontsystem', udid='AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE')
+        setup.begin_font_export(state, 'run-font', 'edge:editor-font-system-select-export@ios#agent@r1of3')
+        originals = {}
+        for number in range(3):
+            path = temporary / (f'ewm_out_00000000-0000-0000-0000-{number:012d}.png')
+            setup.write_png(path, 2, 2, lambda _y: b'\x0a\x14\x1e' * 2)
+            originals[path.name] = path.read_bytes()
+        proof = setup.capture_font_export(state)
+        self.assertEqual(3, len(proof['outputs']))
+        self.assertEqual('verified_deleted', proof['private_cleanup'])
+        for item in proof['outputs']:
+            self.assertEqual(originals[item['private_name']], Path(item['path']).read_bytes())
+            self.assertFalse((temporary / item['private_name']).exists())
+        self.assertEqual('pending', proof['photos_asset_identity'])
+        setup.restore_setup(state)
+
     def test_clamp_and_filmstrip_use_home_only_on_android(self):
         for edge in ("editor-clamp-drag", "editor-filmstrip-switch"):
             for platform in ("android", "ios"):

@@ -42,6 +42,7 @@ import me.rosuh.easywatermark.data.model.JobState
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.data.model.entity.Template
@@ -146,6 +147,7 @@ internal enum class LibraryReadBannerKind {
 class IosProductRootHost(
     private val onPickPhoto: () -> Unit,
     private val onPickIcon: () -> Unit,
+    private val onPickFontFolder: () -> Unit = {},
     private val onShare: (filePath: String) -> Unit,
     /**
      * D4: Photos persistence edge for Swift.
@@ -192,6 +194,23 @@ class IosProductRootHost(
     private var disposed = false
     /** Serializes dispose vs post-publish ownership adoption (Main / delivery continuations). */
     private val lifecycleLock = NSLock()
+    private val fontAccess = me.rosuh.easywatermark.font.IosWatermarkFontAccess()
+    private val fontSession = FontPanelSession(
+        access = fontAccess,
+        scope = hostScope,
+        applySelection = { _, ref, styles ->
+            previewGen += 1
+            val gen = previewGen
+            val committed = services.session.applyConfigIf(
+                stillValid = { !disposed },
+                change = WatermarkConfigChange.FontSelection(ref, styles),
+            )
+            if (committed != null && gen == previewGen) {
+                renderPreviewForCurrentSelection(gen = gen, forceWaterMark = committed)
+            }
+            committed != null
+        },
+    )
 
     /** Progressive path-first import (NotificationCenter control plane; zero public API growth). */
     private val progressiveImport = IosProgressiveImportController(
@@ -1195,10 +1214,21 @@ class IosProductRootHost(
                         seedBitmap = themeSeedBitmap,
                         seedKey = themeSeedKey,
                     ) {
+                    LaunchedEffect(waterMark.fontRef, waterMark.text) {
+                        fontSession.syncFromConfig(waterMark.fontRef, waterMark.text)
+                        fontSession.refreshCurrent(waterMark.fontRef)
+                    }
                     EditorScreen(
                         forcedBottomTab = storeCaptureTab,
                         forcedOptionIndex = storeCaptureOption,
                         openTemplateSheetRequest = storeCaptureOpenTemplates,
+                        fontPanelState = fontSession.state,
+                        onFontPanelEvent = { event ->
+                            when (event) {
+                                FontPanelEvent.ImportFolder -> onPickFontFolder()
+                                else -> fontSession.onEvent(event)
+                            }
+                        },
                         imageList = sessionImages.map { it.toUiProjection() },
                         waterMark = waterMark,
                         selectedImage = (launchUi.curImageInfo ?: sessionImages.firstOrNull())
@@ -1932,6 +1962,25 @@ class IosProductRootHost(
     }
 
     /**
+     * Import fonts from a security-scoped directory path. Caller must keep the scope alive
+     * until [onComplete] runs.
+     */
+    fun importFontsFromDirectory(path: String, onComplete: () -> Unit) {
+        val generation = fontSession.beginImport()
+        hostScope.launch {
+            try {
+                fontSession.runImport(generation) {
+                    fontAccess.importDirectory(path) {
+                        !fontSession.importStillCurrent(generation)
+                    }
+                }
+            } finally {
+                onComplete()
+            }
+        }
+    }
+
+    /**
  * Deliver one picked source photo into the session.
  *
  * **Latency:** always stages + EnterEditor first (filmstrip updates immediately). Watermark
@@ -2219,7 +2268,7 @@ class IosProductRootHost(
                 },
                 change = WatermarkConfigChange.Icon(MediaRef(path)),
             )
-            if (!applied) {
+            if (applied == null) {
                 me.rosuh.easywatermark.data.repo.IosIconPersistence.deleteIfOwned(path)
                 throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
             }
@@ -2262,6 +2311,7 @@ class IosProductRootHost(
         forcePath: String? = null,
         forceOffsetX: Float? = null,
         forceOffsetY: Float? = null,
+        forceWaterMark: WaterMark? = null,
     ) {
         val isDraft = draftOffset != null
         val hostBench = ClampDragBench.previewScope(
@@ -2275,7 +2325,7 @@ class IosProductRootHost(
         }
         val sourcePath = forcePath ?: cur?.uri?.value.orEmpty()
         if (sourcePath.isBlank()) return
-        val wm = launch.waterMark
+        val wm = forceWaterMark ?: launch.waterMark
         val isText = wm.markMode == WatermarkMode.Text
         val previewBucket = committedPreviewBucket
         val ox = draftOffset?.first ?: forceOffsetX ?: cur?.offsetX ?: 0.5f
@@ -2361,14 +2411,26 @@ class IosProductRootHost(
         watermarkedPreviewSourcePath = path
     }
 
-    private fun composeIosOverlayCell(
+    private suspend fun composeIosOverlayCell(
         wm: WaterMark,
         imageWidth: Int,
         ox: Float,
         oy: Float,
     ): OverlayCell {
         val isText = wm.markMode == WatermarkMode.Text
-        val cell = IosPreviewRaster.composeCell(wm, imageWidth)
+        val family = if (isText) {
+            when (val resolution = fontAccess.resolve(wm.fontRef)) {
+                is me.rosuh.easywatermark.font.FontResolution.Success -> {
+                    fontSession.bindResolved(wm.fontRef, resolution.family)
+                    resolution.family
+                }
+                is me.rosuh.easywatermark.font.FontResolution.Failure ->
+                    error(resolution.reason)
+            }
+        } else {
+            null
+        }
+        val cell = IosPreviewRaster.composeCell(wm, imageWidth, family)
         return overlayCellFrom(
             cell = cell,
             config = wm,

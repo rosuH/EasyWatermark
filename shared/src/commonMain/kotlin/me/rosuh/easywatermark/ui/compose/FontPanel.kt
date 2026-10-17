@@ -1,0 +1,803 @@
+package me.rosuh.easywatermark.ui.compose
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
+import me.rosuh.easywatermark.data.model.WatermarkFontRef
+import me.rosuh.easywatermark.font.FontEntry
+import me.rosuh.easywatermark.font.FontImportFailureText
+import me.rosuh.easywatermark.font.FontImportProgress
+import me.rosuh.easywatermark.font.FontSourceTab
+import me.rosuh.easywatermark.shared.generated.resources.Res
+import me.rosuh.easywatermark.shared.generated.resources.cd_font_close
+import me.rosuh.easywatermark.shared.generated.resources.cd_font_selected
+import me.rosuh.easywatermark.shared.generated.resources.font_android_legacy_system
+import me.rosuh.easywatermark.shared.generated.resources.font_candidate_loading
+import me.rosuh.easywatermark.shared.generated.resources.font_import_cancel
+import me.rosuh.easywatermark.shared.generated.resources.font_import_from_folder
+import me.rosuh.easywatermark.shared.generated.resources.font_import_generic_source
+import me.rosuh.easywatermark.shared.generated.resources.font_import_hide_failures
+import me.rosuh.easywatermark.shared.generated.resources.font_import_show_failures
+import me.rosuh.easywatermark.shared.generated.resources.font_import_summary
+import me.rosuh.easywatermark.shared.generated.resources.font_import_truncated
+import me.rosuh.easywatermark.shared.generated.resources.font_imported_empty
+import me.rosuh.easywatermark.shared.generated.resources.font_imported_loading
+import me.rosuh.easywatermark.shared.generated.resources.font_importing
+import me.rosuh.easywatermark.shared.generated.resources.cd_font_search_clear
+import me.rosuh.easywatermark.shared.generated.resources.font_no_system_fonts
+import me.rosuh.easywatermark.shared.generated.resources.font_panel_done
+import me.rosuh.easywatermark.shared.generated.resources.font_panel_title
+import me.rosuh.easywatermark.shared.generated.resources.font_search_no_matches
+import me.rosuh.easywatermark.shared.generated.resources.font_search_placeholder
+import me.rosuh.easywatermark.shared.generated.resources.font_sample_fallback
+import me.rosuh.easywatermark.shared.generated.resources.font_system_default
+import me.rosuh.easywatermark.shared.generated.resources.font_system_loading
+import me.rosuh.easywatermark.shared.generated.resources.font_tab_imported
+import me.rosuh.easywatermark.shared.generated.resources.font_tab_system
+import me.rosuh.easywatermark.shared.generated.resources.font_unavailable
+import me.rosuh.easywatermark.ui.FontNameQuery
+import me.rosuh.easywatermark.ui.FontPanelEvent
+import me.rosuh.easywatermark.ui.FontPanelUiState
+import me.rosuh.easywatermark.ui.SharedProductDrawables
+import me.rosuh.easywatermark.ui.compose.DesignChoiceChips
+import me.rosuh.easywatermark.ui.compose.DesignChoiceOption
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
+import org.jetbrains.compose.resources.stringResource
+
+internal const val FONT_PANEL_TAG = "editorFontPanel"
+internal const val FONT_DEFAULT_ROW_TAG = "editorFontDefault"
+internal const val FONT_IMPORT_BUTTON_TAG = "editorFontImport"
+internal const val FONT_DONE_BUTTON_TAG = "editorFontDone"
+internal const val FONT_SEARCH_TAG = "editorFontSearch"
+internal const val FONT_SEARCH_CLEAR_TAG = "editorFontSearchClear"
+internal const val FONT_SEARCH_NO_MATCHES_TAG = "editorFontSearchNoMatches"
+private val FontPanelActionMinHeight = 48.dp
+private val FontPanelMinHeight = 280.dp
+private val FontPanelSearchIconSize = 20.dp
+private val FontPanelSheetHandleAllowance = 56.dp
+private val FontPanelEditorPeek = 24.dp
+private val FontPanelStackBelow = 280.dp
+private val FontPanelCompactHeaderMaxHeight = 400.dp
+private val FontPanelActionPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+
+private enum class FontViewportMode { Loading, Error, Empty, NoMatch, List }
+
+private data class FontViewport(
+    val tab: FontSourceTab,
+    val mode: FontViewportMode,
+)
+
+@Composable
+fun FontPanel(
+    state: FontPanelUiState,
+    onEvent: (FontPanelEvent) -> Unit,
+    modifier: Modifier = Modifier,
+    useLargeDialog: Boolean = false,
+    sampleFamilies: Map<String, FontFamily> = emptyMap(),
+) {
+    val closeCd = stringResource(Res.string.cd_font_close)
+    val density = LocalDensity.current
+    val windowSize = LocalWindowInfo.current.containerSize
+    val windowHeight = with(density) { windowSize.height.toDp() }
+    val windowWidth = with(density) { windowSize.width.toDp() }
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val handleAllowance = if (useLargeDialog) 0.dp else FontPanelSheetHandleAllowance
+    val budget = (windowHeight - statusTop - handleAllowance - FontPanelEditorPeek)
+        .coerceAtLeast(FontPanelMinHeight)
+        .let { if (useLargeDialog) minOf(it, 720.dp) else it }
+    val stackActions = windowWidth - 40.dp < FontPanelStackBelow
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(budget)
+            .imePadding()
+            .then(if (useLargeDialog) Modifier else Modifier.navigationBarsPadding())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 16.dp)
+            .testTag(FONT_PANEL_TAG),
+    ) {
+        // Use the space left after window/IME insets, never the filtered result count.
+        val compactHeader = maxHeight < FontPanelCompactHeaderMaxHeight
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = if (compactHeader) 0.dp else 12.dp, bottom = if (compactHeader) 0.dp else 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (compactHeader) {
+                    DefaultFontRow(
+                        selected = state.selectedRef is WatermarkFontRef.Default && state.pendingRef == null,
+                        pending = state.pendingRef is WatermarkFontRef.Default,
+                        onClick = { onEvent(FontPanelEvent.Select(WatermarkFontRef.Default)) },
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Text(
+                        text = stringResource(Res.string.font_panel_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                IconButton(
+                    onClick = { onEvent(FontPanelEvent.Dismiss) },
+                    modifier = Modifier
+                        .testTag("editorFontClose")
+                        .semantics { contentDescription = closeCd },
+                ) {
+                    Icon(
+                        painter = SharedProductDrawables.closePainter(),
+                        contentDescription = closeCd,
+                    )
+                }
+            }
+
+            val motionPolicy = currentMotionPolicy()
+            val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+            val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
+            val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+            val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
+            AnimatedVisibility(
+                visible = state.unavailableMessage != null,
+                enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+                exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+            ) {
+                val message = state.unavailableMessage.orEmpty()
+                Text(
+                    text = message.ifBlank { stringResource(Res.string.font_unavailable) },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .testTag("editorFontUnavailable"),
+                )
+            }
+
+            if (!compactHeader) {
+                DefaultFontRow(
+                    selected = state.selectedRef is WatermarkFontRef.Default && state.pendingRef == null,
+                    pending = state.pendingRef is WatermarkFontRef.Default,
+                    onClick = { onEvent(FontPanelEvent.Select(WatermarkFontRef.Default)) },
+                )
+            }
+            HorizontalDivider()
+
+            DesignChoiceChips(
+                options = listOf(
+                    DesignChoiceOption(
+                        label = stringResource(Res.string.font_tab_system),
+                        value = FontSourceTab.System,
+                    ),
+                    DesignChoiceOption(
+                        label = stringResource(Res.string.font_tab_imported),
+                        value = FontSourceTab.Imported,
+                    ),
+                ),
+                selected = state.sourceTab,
+                onSelected = { onEvent(FontPanelEvent.SourceTab(it)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .testTag("editorFontSourceTabs"),
+                equalWidth = true,
+            )
+
+            FontSearchField(
+                query = state.searchQuery,
+                onEvent = onEvent,
+            )
+
+            FontListBody(
+                state = state,
+                sampleFamilies = sampleFamilies,
+                onSelect = { onEvent(FontPanelEvent.Select(it)) },
+                onVisible = { onEvent(FontPanelEvent.VisibleEntries(it)) },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
+
+            ImportFooter(
+                state = state,
+                onEvent = onEvent,
+                stackActions = stackActions,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DefaultFontRow(
+    selected: Boolean,
+    pending: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedCd = stringResource(Res.string.cd_font_selected)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(onClick = onClick)
+            .testTag(FONT_DEFAULT_ROW_TAG)
+            .semantics {
+                role = Role.RadioButton
+                this.selected = selected
+                contentDescription = "System default"
+            }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = stringResource(Res.string.font_system_default),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        when {
+            pending -> CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            selected -> Text(
+                text = "✓",
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { contentDescription = selectedCd },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FontSearchField(
+    query: String,
+    onEvent: (FontPanelEvent) -> Unit,
+) {
+    val clearCd = stringResource(Res.string.cd_font_search_clear)
+    var input by remember {
+        mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
+    }
+    OutlinedTextField(
+        value = input,
+        onValueChange = { updated ->
+            val previousText = input.text
+            input = updated
+            if (updated.text != previousText) onEvent(FontPanelEvent.SearchQuery(updated.text))
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .testTag(FONT_SEARCH_TAG),
+        singleLine = true,
+        shape = RectangleShape,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        placeholder = {
+            Text(text = stringResource(Res.string.font_search_placeholder))
+        },
+        leadingIcon = {
+            Icon(
+                painter = SharedProductDrawables.magnifyingGlassPainter(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(FontPanelSearchIconSize),
+            )
+        },
+        trailingIcon = if (input.text.isNotEmpty()) {
+            {
+                IconButton(
+                    onClick = {
+                        input = TextFieldValue("")
+                        onEvent(FontPanelEvent.ClearSearch)
+                    },
+                    modifier = Modifier
+                        .testTag(FONT_SEARCH_CLEAR_TAG)
+                        .semantics { contentDescription = clearCd },
+                ) {
+                    Icon(
+                        painter = SharedProductDrawables.closePainter(),
+                        contentDescription = clearCd,
+                    )
+                }
+            }
+        } else {
+            null
+        },
+    )
+}
+
+@Composable
+private fun FontListBody(
+    state: FontPanelUiState,
+    sampleFamilies: Map<String, FontFamily>,
+    onSelect: (WatermarkFontRef) -> Unit,
+    onVisible: (List<FontEntry>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val sampleFallback = stringResource(Res.string.font_sample_fallback)
+    val sample = state.sampleText.ifBlank { sampleFallback }.replace('\n', ' ')
+    val noMatches = stringResource(Res.string.font_search_no_matches)
+    val motionPolicy = currentMotionPolicy()
+    val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+    val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
+    val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+    val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
+    val viewport = FontViewport(
+        tab = state.sourceTab,
+        mode = fontViewportMode(state),
+    )
+    Column(modifier = modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = state.sourceTab == FontSourceTab.System && state.systemListRestricted,
+            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+        ) {
+            Text(
+                text = stringResource(Res.string.font_android_legacy_system),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .testTag("editorFontLegacyNote"),
+            )
+        }
+        AnimatedContent(
+            targetState = viewport,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            transitionSpec = {
+                fadeIn(animationSpec = fadeSpec) togetherWith fadeOut(animationSpec = fadeSpec) using
+                    SizeTransform(clip = false) { _, _ ->
+                        tween<IntSize>(durationMillis = 0)
+                    }
+            },
+            label = "fontPanelViewport",
+        ) { current ->
+            val source = when (current.tab) {
+                FontSourceTab.System -> state.systemFonts
+                FontSourceTab.Imported -> state.importedFonts
+            }
+            when (current.mode) {
+                FontViewportMode.Loading -> StatusLine(
+                    text = stringResource(
+                        if (current.tab == FontSourceTab.System) {
+                            Res.string.font_system_loading
+                        } else {
+                            Res.string.font_imported_loading
+                        },
+                    ),
+                    tag = if (current.tab == FontSourceTab.System) {
+                        "editorFontSystemLoading"
+                    } else {
+                        "editorFontImportedLoading"
+                    },
+                )
+                FontViewportMode.Error -> StatusLine(
+                    text = when (current.tab) {
+                        FontSourceTab.System -> state.systemError.orEmpty()
+                        FontSourceTab.Imported -> state.importedError.orEmpty()
+                    },
+                    tag = if (current.tab == FontSourceTab.System) {
+                        "editorFontSystemError"
+                    } else {
+                        "editorFontImportedError"
+                    },
+                    error = true,
+                )
+                FontViewportMode.Empty -> StatusLine(
+                    text = stringResource(
+                        if (current.tab == FontSourceTab.System) {
+                            Res.string.font_no_system_fonts
+                        } else {
+                            Res.string.font_imported_empty
+                        },
+                    ),
+                    tag = if (current.tab == FontSourceTab.System) {
+                        "editorFontSystemEmpty"
+                    } else {
+                        "editorFontImportedEmpty"
+                    },
+                )
+                FontViewportMode.NoMatch -> StatusLine(noMatches, FONT_SEARCH_NO_MATCHES_TAG)
+                FontViewportMode.List -> FontEntryList(
+                    entries = FontNameQuery.filter(source, state.searchQuery),
+                    selectedRef = state.selectedRef,
+                    pendingRef = state.pendingRef,
+                    sample = sample,
+                    sampleFamilies = sampleFamilies,
+                    fadeMs = fadeMs,
+                    onSelect = onSelect,
+                    onVisible = onVisible,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(
+                            if (current.tab == FontSourceTab.System) {
+                                "editorFontSystemList"
+                            } else {
+                                "editorFontImportedList"
+                            },
+                        ),
+                )
+            }
+        }
+    }
+}
+
+private fun fontViewportMode(state: FontPanelUiState): FontViewportMode {
+    val loading = when (state.sourceTab) {
+        FontSourceTab.System -> state.systemLoading && state.systemFonts.isEmpty()
+        FontSourceTab.Imported -> state.importedLoading && state.importedFonts.isEmpty()
+    }
+    val error = when (state.sourceTab) {
+        FontSourceTab.System -> state.systemError
+        FontSourceTab.Imported -> state.importedError
+    }
+    val source = when (state.sourceTab) {
+        FontSourceTab.System -> state.systemFonts
+        FontSourceTab.Imported -> state.importedFonts
+    }
+    return when {
+        loading -> FontViewportMode.Loading
+        error != null && source.isEmpty() -> FontViewportMode.Error
+        source.isEmpty() -> FontViewportMode.Empty
+        FontNameQuery.filter(source, state.searchQuery).isEmpty() -> FontViewportMode.NoMatch
+        else -> FontViewportMode.List
+    }
+}
+
+@Composable
+private fun FontEntryList(
+    entries: List<FontEntry>,
+    selectedRef: WatermarkFontRef,
+    pendingRef: WatermarkFontRef?,
+    sample: String,
+    sampleFamilies: Map<String, FontFamily>,
+    fadeMs: Int,
+    onSelect: (WatermarkFontRef) -> Unit,
+    onVisible: (List<FontEntry>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedCd = stringResource(Res.string.cd_font_selected)
+    val loadingCd = stringResource(Res.string.font_candidate_loading)
+    val listState = rememberLazyListState()
+    LaunchedEffect(listState, entries) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.mapNotNull { info ->
+                entries.getOrNull(info.index)
+            }
+        }
+            .distinctUntilChanged()
+            .collect { visible ->
+                if (visible.isNotEmpty()) onVisible(visible)
+            }
+    }
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        state = listState,
+    ) {
+        items(entries, key = { it.ref.fingerprint() }) { entry ->
+            val selected = pendingRef == null && entry.ref == selectedRef
+            val pending = entry.ref == pendingRef
+            Row(
+                modifier = Modifier
+                    .animateItem(
+                        fadeInSpec = tween<Float>(fadeMs, easing = FastOutSlowInEasing),
+                        fadeOutSpec = tween<Float>(fadeMs, easing = FastOutSlowInEasing),
+                        placementSpec = tween<IntOffset>(fadeMs, easing = FastOutSlowInEasing),
+                    )
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .clickable(enabled = entry.available) { onSelect(entry.ref) }
+                    .testTag("editorFontEntry-${entry.ref.fingerprint()}")
+                    .semantics {
+                        role = Role.RadioButton
+                        this.selected = selected
+                        contentDescription = entry.displayName
+                    }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = entry.displayName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = sample,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = sampleFamilies[entry.ref.fingerprint()],
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                when {
+                    pending -> CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .semantics { contentDescription = loadingCd },
+                        strokeWidth = 2.dp,
+                    )
+                    selected -> Text(
+                        text = "✓",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.semantics { contentDescription = selectedCd },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportFooter(
+    state: FontPanelUiState,
+    onEvent: (FontPanelEvent) -> Unit,
+    stackActions: Boolean,
+) {
+    val importing = state.importProgress is FontImportProgress.Running
+    val done = state.importProgress as? FontImportProgress.Done
+    val motionPolicy = currentMotionPolicy()
+    val fadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+    val sizeMs = motionDurationMs(motionPolicy, EwmTheme.motion.contentSizeMs)
+    val fadeSpec = tween<Float>(durationMillis = fadeMs, easing = FastOutSlowInEasing)
+    val sizeSpec = tween<IntSize>(durationMillis = sizeMs, easing = FastOutSlowInEasing)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AnimatedVisibility(
+            visible = importing || done != null,
+            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (importing) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Text(
+                            text = stringResource(Res.string.font_importing),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .testTag("editorFontImporting"),
+                        )
+                    }
+                } else if (done != null) {
+                    val result = done.result
+                    Text(
+                        text = stringResource(
+                            Res.string.font_import_summary,
+                            result.added,
+                            result.duplicates,
+                            result.failed.size,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.testTag("editorFontImportSummary"),
+                    )
+                    result.truncateReason?.let { reason ->
+                        Text(
+                            text = stringResource(Res.string.font_import_truncated, reason),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    if (result.failed.isNotEmpty()) {
+                        TextButton(onClick = { onEvent(FontPanelEvent.ToggleImportFailures) }) {
+                            Text(
+                                text = stringResource(
+                                    if (state.showImportFailures) {
+                                        Res.string.font_import_hide_failures
+                                    } else {
+                                        Res.string.font_import_show_failures
+                                    },
+                                ),
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = state.showImportFailures,
+                            enter = fadeIn(fadeSpec) + expandVertically(animationSpec = sizeSpec),
+                            exit = fadeOut(fadeSpec) + shrinkVertically(animationSpec = sizeSpec),
+                        ) {
+                            val genericSource = stringResource(Res.string.font_import_generic_source)
+                            Column {
+                                result.failed.take(8).forEach { failure ->
+                                    Text(
+                                        text = FontImportFailureText.visibleLine(
+                                            failure.fileName,
+                                            failure.reason,
+                                            genericSource,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        val actionText: @Composable (String) -> Unit = { label ->
+            Text(
+                text = label,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+        }
+        val secondaryLabel = stringResource(
+            if (importing) Res.string.font_import_cancel else Res.string.font_import_from_folder,
+        )
+        val doneLabel = stringResource(Res.string.font_panel_done)
+        val doneModifier = Modifier
+            .defaultMinSize(minHeight = FontPanelActionMinHeight)
+            .heightIn(min = FontPanelActionMinHeight)
+            .testTag(FONT_DONE_BUTTON_TAG)
+        if (stackActions) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FontPanelSecondaryAction(
+                    importing = importing,
+                    onEvent = onEvent,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    actionText(secondaryLabel)
+                }
+                Button(
+                    onClick = { onEvent(FontPanelEvent.Dismiss) },
+                    modifier = Modifier.fillMaxWidth().then(doneModifier),
+                    shape = RectangleShape,
+                    contentPadding = FontPanelActionPadding,
+                ) {
+                    actionText(doneLabel)
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FontPanelSecondaryAction(
+                    importing = importing,
+                    onEvent = onEvent,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    actionText(secondaryLabel)
+                }
+                Button(
+                    onClick = { onEvent(FontPanelEvent.Dismiss) },
+                    modifier = Modifier.weight(1f).then(doneModifier),
+                    shape = RectangleShape,
+                    contentPadding = FontPanelActionPadding,
+                ) {
+                    actionText(doneLabel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FontPanelSecondaryAction(
+    importing: Boolean,
+    onEvent: (FontPanelEvent) -> Unit,
+    modifier: Modifier = Modifier,
+    label: @Composable () -> Unit,
+) {
+    OutlinedButton(
+        onClick = {
+            onEvent(
+                if (importing) FontPanelEvent.CancelImport else FontPanelEvent.ImportFolder,
+            )
+        },
+        modifier = modifier
+            .defaultMinSize(minHeight = FontPanelActionMinHeight)
+            .heightIn(min = FontPanelActionMinHeight)
+            .then(if (importing) Modifier else Modifier.testTag(FONT_IMPORT_BUTTON_TAG)),
+        shape = RectangleShape,
+        contentPadding = FontPanelActionPadding,
+    ) {
+        label()
+    }
+}
+
+@Composable
+private fun StatusLine(text: String, tag: String, error: Boolean = false) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 16.dp)
+            .testTag(tag),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (error) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+    }
+}
