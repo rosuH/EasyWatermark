@@ -4,3 +4,4 @@ paths:
   exclude:
     # Local-only E2E tooling; it is not shipped with the app.
     - tools/testmap
+    - ./tools/testmap
