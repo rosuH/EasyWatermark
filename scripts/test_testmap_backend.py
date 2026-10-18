@@ -714,6 +714,113 @@ class BackendChecks(unittest.TestCase):
                 self.assertEqual(2, adb.call_count)
 
 
+class CliReviewChecks(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.runs = Path(self.temp.name)
+        self.edges = [{"id": "about"}, {"id": "about-x"}]
+        self.stack = contextlib.ExitStack()
+        self.stack.enter_context(patch.object(runner, "RUNS_DIR", self.runs))
+        self.stack.enter_context(
+            patch.object(runner, "CONFIRMATIONS_PATH", self.runs / "confirmations.json")
+        )
+        self.stack.enter_context(patch.object(runner, "_edge_result_cache", None))
+        self.stack.enter_context(
+            patch.object(runner, "write_historical_projection", lambda: self.runs)
+        )
+        self.stack.enter_context(
+            patch.object(runner, "load_map", return_value=([], self.edges))
+        )
+        self.addCleanup(self.stack.close)
+        self.addCleanup(self.temp.cleanup)
+
+    def write_run(self, run_id, states):
+        tasks = []
+        for edge, state in states.items():
+            row = {
+                "id": f"edge:{edge}@android#agent",
+                "edge": edge,
+                "platform": "android",
+                "state": state,
+            }
+            if edge == "about":
+                row["evidence_dir"] = str(self.runs / run_id / "steps")
+            tasks.append(row)
+        rec = {
+            "id": run_id,
+            "state": "failed" if "failed" in states.values() else "passed",
+            "selection": [],
+            "tasks": tasks,
+            "started": "2026-09-25T00:00:00Z",
+            "finished": "2026-09-25T00:01:00Z",
+        }
+        (self.runs / f"{run_id}.json").write_text(json.dumps(rec) + "\n", encoding="utf-8")
+        runner._edge_result_cache = None
+
+    def run_cli(self, *argv):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = runner.main(list(argv))
+        return code, out.getvalue(), err.getvalue()
+
+    def test_review_cli_confirms_latest_lists_stale_and_prints_evidence(self):
+        first = "20260925T010000-aaa0001"
+        second = "20260925T010100-aaa0002"
+        self.write_run(first, {"about": "passed", "about-x": "passed"})
+
+        code, out, _ = self.run_cli("--review", "edge:about@android#agent")
+
+        self.assertEqual(0, code)
+        self.assertIn(f"confirmed about run={first}", out)
+        self.assertIn(str(self.runs / first / "steps"), out)
+
+        self.write_run(second, {"about": "review_required"})
+        code, out, _ = self.run_cli("--review")
+
+        self.assertEqual(0, code)
+        self.assertRegex(out, rf"stale\s+about\s+{second}\s+review_required")
+        self.assertRegex(out, rf"pending\s+about-x\s+{first}\s+passed")
+
+        code, out, _ = self.run_cli("--review", "about")
+
+        self.assertEqual(0, code)
+        self.assertIn(f"confirmed about run={second}", out)
+
+    def test_review_cli_explicit_run_and_revoke(self):
+        first = "20260925T010200-aaa0003"
+        second = "20260925T010300-aaa0004"
+        self.write_run(first, {"about": "passed"})
+        self.write_run(second, {"about": "review_required"})
+
+        code, out, _ = self.run_cli("--review", "--run-id", first, "about")
+
+        self.assertEqual(0, code)
+        self.assertIn(f"confirmed about run={first}", out)
+        saved = json.loads((self.runs / "confirmations.json").read_text(encoding="utf-8"))
+        self.assertEqual(first, saved["about"]["run_id"])
+
+        code, out, _ = self.run_cli("--review", "--revoke", "about")
+
+        self.assertEqual(0, code)
+        self.assertIn("revoked about", out)
+        self.assertEqual(
+            {},
+            json.loads((self.runs / "confirmations.json").read_text(encoding="utf-8")),
+        )
+
+    def test_review_cli_refuses_failed_latest_result(self):
+        first = "20260925T010400-aaa0005"
+        second = "20260925T010500-aaa0006"
+        self.write_run(first, {"about": "passed"})
+        self.write_run(second, {"about": "failed"})
+
+        code, _, err = self.run_cli("--review", "about")
+
+        self.assertEqual(1, code)
+        self.assertIn("is failed", err)
+        self.assertFalse((self.runs / "confirmations.json").exists())
+
+
 # Fake command-line tools use only this test's temporary directories. They do
 # not forward any command to adb, simctl, an installed app, or a device.
 FAKE_DEVICE_CLI = r"""#!/usr/bin/env python3

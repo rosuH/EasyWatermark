@@ -12,7 +12,7 @@ After a **product** code change or new requirement, before asking to merge or sh
 2. Run suggested host scripts when they are not docs-only.
 3. Run selected `#agent` edges **3 times** (`EWM_AGENT_REPEATS`, min 1) via `scripts/e2e-verify.sh --change '…' --run --android-device '<authorized-serial>' --ios-device '<authorized-udid>'`. Supply the exact device ID for each selected platform; omit flags for unselected platforms.
 4. Fill stability / UI / optional perf in the generated `docs/testmap/runs/<ts>-<sha>-verify.md`.
-5. Human Confirm on the console. Agent must not mint it.
+5. Human Confirm on the console or `scripts/e2e-run.sh --review <edge>`. Agent must not mint it.
 6. Only then ask the owner to merge.
 
 `scripts/e2e-verify.sh --change '…'` writes the report stub without executing devices. `--run` executes agent repeats and fills the stability table. A failed runner, missing execution, or mixed/failed repetitions keeps the report blocked; a later successful attempt does not erase an earlier failure. Known coverage gaps remain explicit in the report and require the owner to accept the limitation.

@@ -80,13 +80,24 @@ The backend owns validation. A busy runner returns 409; a forbidden stop returns
 
 ### Human Confirm
 
-Only the user's page interaction may call `/api/confirm`. Agents must not call it via a browser, HTTP tool, script, or self-check. Automated tests use mocks or internal validation functions and must not create real confirmations.
+Only the user may confirm or revoke, through the console or the CLI. Agents must not mint a confirmation through the page, a script, or a self-check. Automated tests use temporary records, mocks, or internal validation functions and must not create real confirmations.
 
 - Confirm uses `POST {token, edge_id, run_id}`. The client submits the run ID already displayed to the user; it must not silently switch to another run at click time.
 - The run must have ended. Every counted task covering the edge must be `passed` or `review_required`; failed, running, paused, pending, interrupted, stopped, uncovered, and unknown results are rejected. A stopped task that never started does not count as coverage.
 - Revoke uses `POST {token, edge_id, revoke: true}` or `DELETE {token, edge_id}`. The UI asks for a second click before revocation. Undo after confirmation restores the prior run when there was a prior confirmation.
 - The page supplies `<meta name="ewm-confirm-token">`. Tokens expire after 12 hours; multiple pages remain valid, up to 64 tokens. A 403 asks the user to refresh; a 400 shows the validation reason. Do not retry confirmation automatically.
 - `result_runs` maps each edge to its newest covering result. It is not the singular `latest_run`. A newer covering run makes an older confirmation stale; a host-only run without edge results does not. Show missing platforms explicitly.
+
+The CLI writes the same confirmation record:
+
+```sh
+scripts/e2e-run.sh --review
+scripts/e2e-run.sh --review edge:<id>@android#agent
+scripts/e2e-run.sh --review --run-id <run-id> <edge-id>
+scripts/e2e-run.sh --review --revoke <edge-id>
+```
+
+With no ids, `--review` lists `pending`, `reviewed`, and `stale` edges with their latest result run. With an edge or task id, it confirms that edge's latest result run, or the explicit `--run-id`, and prints its evidence paths. This is an explicit human action, not an agent auto-pass.
 
 ## Checks and release evidence
 
