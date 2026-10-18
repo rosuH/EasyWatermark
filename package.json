@@ -1,0 +1,15 @@
+{
+  "name": "easywatermark-tooling",
+  "private": true,
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "testmap:agent-ai:check": "node scripts/testmap_agent_device_ai.mjs --self-check && node scripts/testmap_hybrid_check.mjs && node scripts/testmap_ios_picker.mjs --self-check && node scripts/testmap_pick_export_pilot_check.mjs && python3 scripts/testmap_pick_export_evidence.py --self-check && python3 scripts/testmap_ios_pick_export_evidence.py --self-check && python3 scripts/testmap_run.py --self-check && python3 scripts/test_testmap_hybrid.py"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.71",
+    "agent-device": "0.21.2",
+    "ai": "7.0.68"
+  }
+}

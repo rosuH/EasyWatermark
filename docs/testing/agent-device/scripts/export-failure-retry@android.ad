@@ -1,0 +1,6 @@
+context platform=android
+wait "label=\"Retry failed\""
+press "role=\"textview\" label=\"Retry failed\""
+wait text "Succeeded 1"
+wait text "Failed 0"
+close

@@ -31,6 +31,8 @@ out/
 build/
 # Agent Device replay evidence (also matched by build/ above)
 build/agent-device/
+node_modules/
+__pycache__/
 
 # Agent/local investigation artifacts must never enter repository history.
 .scratch/

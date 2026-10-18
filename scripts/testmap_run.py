@@ -28,6 +28,7 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from urllib.parse import quote as urlquote
 
 sys.dont_write_bytecode = True
@@ -67,8 +68,10 @@ from testmap_agent_device import (  # noqa: E402
     agent_device_cases_by_id,
     agent_device_cmd,
     agent_device_enabled,
+    agent_device_mode,
     agent_platforms_for_edge,
     case_platforms,
+    case_setup,
     case_supports_platform,
     evidence_dir_for,
     agent_device_bin,
@@ -87,6 +90,7 @@ from testmap_setup import (  # noqa: E402
     begin_font_export,
     capture_font_export,
     ios_installed,
+    load_setup_backup,
     product_version,
     repair_failure_source,
     restore_setup,
@@ -348,6 +352,37 @@ def _assert_agent_device_argv(cmd: list[str]) -> None:
         raise ValueError("do not invoke agent-device via npx @latest")
     if "--device" in cmd:
         raise ValueError("agent-device must pin --serial or --udid, not --device")
+    if Path(cmd[0]).name in {"node", "nodejs"}:
+        if len(cmd) < 2 or Path(cmd[1]).name != "testmap_agent_device_ai.mjs":
+            raise ValueError("unexpected Node command for Agent Device")
+        required = (
+            "--edge-id",
+            "--platform",
+            "--session",
+            "--app-id",
+            "--goal",
+            "--output-dir",
+            "--model",
+            "--base-url",
+            "--timeout-ms",
+        )
+        for flag in required:
+            if cmd.count(flag) != 1 or cmd.index(flag) + 1 >= len(cmd):
+                raise ValueError(f"agent-device AI requires one {flag}")
+        has_serial = "--serial" in cmd
+        has_udid = "--udid" in cmd
+        if has_serial == has_udid:
+            raise ValueError(
+                "agent-device AI requires exactly one of --serial or --udid"
+            )
+        platform = cmd[cmd.index("--platform") + 1]
+        if (platform == "android") != has_serial or (
+            platform == "ios"
+        ) != has_udid:
+            raise ValueError("agent-device AI device flag must match --platform")
+        if not _cmd_flag(cmd, "--timeout-ms").isdigit() or int(_cmd_flag(cmd, "--timeout-ms")) <= 0:
+            raise ValueError("agent-device AI requires a positive --timeout-ms")
+        return
     if "replay" in cmd or "batch" in cmd:
         has_serial = "--serial" in cmd
         has_udid = "--udid" in cmd
@@ -656,6 +691,9 @@ def apply_device(spec: dict, device: dict) -> dict:
         )
         output.mkdir(parents=True, exist_ok=True)
         ensure_pinned_agent_device()
+        mode = spec.get("agent_mode") or agent_device_mode()
+        if spec.get("route_script") and mode != "replay":
+            raise ValueError("Continuous routes require replay; hybrid runs one case contract")
         if platform == "android":
             env["ANDROID_SERIAL"] = device["id"]
             env["ADB_DEVICE_SERIAL"] = device["id"]
@@ -664,6 +702,7 @@ def apply_device(spec: dict, device: dict) -> dict:
                 platform="android",
                 serial=device["id"],
                 output_dir=output,
+                mode=mode,
             )
         elif platform == "ios":
             spec["cmd"] = agent_device_cmd(
@@ -671,6 +710,7 @@ def apply_device(spec: dict, device: dict) -> dict:
                 platform="ios",
                 udid=device["id"],
                 output_dir=output,
+                mode=mode,
             )
         else:
             raise ValueError(
@@ -878,22 +918,25 @@ def _agent_device_spec(edge_id: str, platform: str, request: str) -> dict:
         )
     output = evidence_dir_for(edge_id)
     dry = os.environ.get("TESTMAP_AGENT_DEVICE_DRY") == "1"
+    mode = agent_device_mode()
     cmd = agent_device_cmd(
         edge_id,
         platform=platform,
         serial="<device>" if platform == "android" else None,
         udid="<device>" if platform == "ios" else None,
         output_dir=output,
+        mode=mode,
     )
     return {
-        "label": f"Agent Device {edge_id} ({platform})",
+        "label": f"Agent Device {'AI SDK' if mode == 'ai-sdk' else 'replay'} {edge_id} ({platform})",
         "parse_xml": False,
         "heavy": True,
         "builder": "agent-device",
         "needs_device": None if dry else platform,
         "edge_id": edge_id,
         "agent_platform": platform,
-        "setup": case.get("setup") or "home",
+        "agent_mode": mode,
+        "setup": case_setup(case, platform) if mode == "ai-sdk" else case.get("setup") or "home",
         "agent_device_output": str(output),
         "runnable_refs": [f"AgentDevice.{edge_id}"],
         "skipped_refs": [],
@@ -1786,10 +1829,39 @@ def _publish_artemis_live(spec: dict) -> None:
         return
 
 
+def _is_agent_ai(spec: dict) -> bool:
+    cmd = spec.get("cmd") or []
+    return (spec.get("builder") == "agent-device" and len(cmd) > 1
+            and Path(cmd[0]).name in {"node", "nodejs"}
+            and Path(cmd[1]).name == "testmap_agent_device_ai.mjs")
+
+
+def _is_normal_hybrid(spec: dict) -> bool:
+    cmd = spec.get("cmd") or []
+    return (
+        spec.get("builder") == "agent-device"
+        and len(cmd) > 1 and Path(cmd[1]).name == "testmap_agent_device_ai.mjs"
+        and "--pilot-arm" not in cmd
+        and "--controller" in cmd
+        and cmd[cmd.index("--controller") + 1:cmd.index("--controller") + 2] == ["hybrid"]
+    )
+
+
+def _owns_pick_export_setup(spec: dict) -> bool:
+    platform = spec.get("agent_platform") or spec.get("needs_device")
+    return (_is_normal_hybrid(spec) and spec.get("edge_id") == "pick-to-editor"
+            and platform in {"android", "ios"})
+
+
 def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
     """Harness preconditions for Agent Device. Skip dry-run and unknown setup keys."""
     if os.environ.get("TESTMAP_AGENT_DEVICE_DRY") == "1":
         return None
+    if (_owns_pick_export_setup(spec)
+            and (spec.get("agent_platform") or spec.get("needs_device")) == "ios"
+            and (not (os.environ.get("TESTMAP_IOS_OWNED_DEVICE") or "").strip()
+                 or os.environ.get("TESTMAP_AGENT_DEVICE_SKIP_SETUP") == "1")):
+        raise ValueError("iOS hybrid pick-to-editor requires TESTMAP_IOS_OWNED_DEVICE and owned setup")
     if os.environ.get("TESTMAP_AGENT_DEVICE_SKIP_SETUP") == "1":
         return None
     setup = spec.get("setup")
@@ -1801,8 +1873,12 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
     if platform == "android" and spec.get("edge_id") in {"editor-clamp-drag", "editor-filmstrip-switch"} and setup == "editor":
         setup = "home"  # Select A+B from Launch; editor Add More would append to preloaded A.
     if platform == "android" and setup not in ANDROID_SETUPS:
+        if _is_agent_ai(spec):
+            raise ValueError(f"Unsupported hybrid Android setup: {setup}")
         return None
     if platform == "ios" and setup not in IOS_SETUPS:
+        if _is_agent_ai(spec):
+            raise ValueError(f"Unsupported hybrid iOS setup: {setup}")
         return None
     if platform not in {"android", "ios"}:
         return None
@@ -1819,6 +1895,35 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
             return None
     output = Path(spec.get("agent_device_output") or "")
     folder = output if str(output) else REPO_ROOT / "build" / "agent-device" / "setup"
+    if _owns_pick_export_setup(spec):
+        if should_stop and should_stop():
+            raise InterruptedError("Stopped before owned pick preparation")
+        if platform == "ios":
+            from testmap_ios_pick_export_evidence import prepare
+        else:
+            from testmap_pick_export_evidence import prepare
+        state = prepare(udid if platform == "ios" else serial, folder, f"auto-{time.time_ns():x}")
+        state["_pick_export_owned"] = True
+        try:
+            if should_stop and should_stop():
+                raise InterruptedError("Stopped during owned pick preparation")
+            source = state["source"]
+            if platform == "ios":
+                photo_label = source["picker_photo_label"]
+            else:
+                moment = datetime.fromtimestamp(source["picker_epoch_seconds"], ZoneInfo(source["picker_timezone"]))
+                photo_label = (f"Photo taken on {moment.strftime('%b')} {moment.day}, {moment.year}, "
+                               f"{moment.hour % 12 or 12}:{moment.minute:02}:{moment.second:02} {moment.strftime('%p')}")
+            spec["env"] = {
+                **(spec.get("env") or {}),
+                "TESTMAP_PICK_EXPORT_TEXT": state["marker_text"],
+                "TESTMAP_PICK_EXPORT_PHOTO_LABEL": photo_label,
+                **({"TESTMAP_IOS_PICKER_STATE": state["state_path"]} if platform == "ios" else {}),
+            }
+        except BaseException:
+            _restore_agent_setup(state, logf)
+            raise
+        return state
     edge_id = str(spec.get("edge_id") or "edge")
     marker = re.sub(r"[^A-Za-z0-9]", "", edge_id)[:16] or "edge"
     if logf is not None:
@@ -1849,6 +1954,30 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         should_stop=should_stop,
         **cancel_options,
     )
+    if _is_normal_hybrid(spec) and edge_id == "export-failure-recovery":
+        try:
+            recovery_path = (folder / "ai-source-recovery-state.json").resolve()
+            native = state.get("source_recovery") if platform == "android" else state.get("export_control")
+            run_id = (native or {}).get("run_id")
+            if not run_id or not state.get("journal"):
+                raise ValueError("Hybrid recovery requires the native setup journal and run identity")
+            method = "repair-failure-source" if platform == "android" else "ios-fail-next-seam-consumed"
+            state.update(_ai_recovery_state_path=str(recovery_path), _ai_recovery_active=True,
+                         _ai_recovery_method=method, _ai_recovery_run_id=run_id)
+            # Never serialize private_backup bytes into the public handoff. The
+            # CLI bridge reloads the native journal and retains its one-shot guards.
+            handoff = {key: state.get(key) for key in ("journal", "platform", "setup", "serial", "udid")}
+            handoff.update(run_id=run_id, _ai_recovery_active=True, _ai_source_recovered=False,
+                           _ai_recovery_state_path=str(recovery_path))
+            temporary = recovery_path.with_suffix(".json.tmp")
+            temporary.write_text(json.dumps(handoff, indent=2) + "\n", encoding="utf-8")
+            temporary.replace(recovery_path)
+            spec["env"] = {**(spec.get("env") or {}),
+                           "TESTMAP_AGENT_DEVICE_RECOVERY_STATE": str(recovery_path),
+                           "TESTMAP_AGENT_DEVICE_PYTHON": sys.executable}
+        except BaseException:
+            _restore_agent_setup(state, logf)
+            raise
     if edge_id in {"editor-font-system-select-export", "editor-preview-gestures"}:
         identity = spec.get("step_evidence_task") or {}
         repeat = identity.get("repeat") or {}
@@ -1866,7 +1995,27 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
 
 def _finish_agent_setup(spec, state, code, logf, should_stop=None):
     """Archive registered pipeline exports before restoring either replay format."""
+    verification = None
+    cleanup = None
     try:
+        if state and state.get("_pick_export_owned"):
+            output = Path(spec["agent_device_output"])
+            result = load_result_json(output / "result.json") or {}
+            trace = load_result_json(output / "hybrid-trace.json") or load_result_json(output / "pilot-trace.json") or {}
+            state["ui_success"] = (
+                code == 0 and result.get("status") == "executed_review_required"
+                and result.get("controller") == "hybrid" and result.get("edge_id") == "pick-to-editor"
+                and result.get("platform") == spec.get("agent_platform")
+                and not (result.get("evidence") or {}).get("closeError")
+                and trace.get("arm") == "hybrid" and trace.get("success") is True)
+            try:
+                if state.get("platform") == "ios":
+                    from testmap_ios_pick_export_evidence import verify
+                else:
+                    from testmap_pick_export_evidence import verify
+                verification = verify(state, output)
+            except Exception as exc:
+                verification = {"success": False, "error": str(exc)}
         if (code == 0 and state is not None
                 and spec.get("edge_id") in {"editor-font-system-select-export", "editor-preview-gestures"}
                 and not (should_stop and should_stop())):
@@ -1878,7 +2027,10 @@ def _finish_agent_setup(spec, state, code, logf, should_stop=None):
                 logf.write(f"registered export capture failed: {exc}\n")
                 logf.flush()
     finally:
-        _restore_agent_setup(state, logf)
+        if state and (state.get("_pick_export_owned") or state.get("_ai_recovery_state_path")):
+            cleanup = _restore_agent_setup(state, logf, raise_on_failure=False)
+        else:
+            cleanup = _restore_agent_setup(state, logf)
         if spec.get("font_export") and state:
             proof = spec["font_export"]
             proof["private_restored"] = state.get("phase") == "restored"
@@ -1886,21 +2038,82 @@ def _finish_agent_setup(spec, state, code, logf, should_stop=None):
                 proof["cleanup"] = state["export_output"].get("cleanup")
             if proof.get("manifest"):
                 Path(proof["manifest"]).write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
+    if state and (state.get("_pick_export_owned") or state.get("_ai_recovery_state_path")):
+        path = Path(spec["agent_device_output"]) / "result.json"
+        result = load_result_json(path) or {}
+        failed = not (cleanup or {}).get("success")
+        if state.get("_pick_export_owned"):
+            result.update(export_verification=verification, pick_export_cleanup=cleanup)
+            failed = failed or not (verification or {}).get("success")
+        if state.get("_ai_recovery_state_path"):
+            result["host_recovery"] = {"state_path": state["_ai_recovery_state_path"],
+                                       "method": state["_ai_recovery_method"],
+                                       "completed": state.get("_ai_recovery_completed") is True,
+                                       "proof": state.get("_ai_recovery_proof"),
+                                       "cleanup": cleanup}
+            failed = failed or not result["host_recovery"]["completed"]
+        if failed:
+            code = code or 2
+            result["status"] = "interrupted" if code in {130, -15, -9} else "failed"
+            result["verification_error"] = "Owned fixture verification, native recovery or cleanup failed; see result evidence"
+            result["error"] = result.get("error") or result["verification_error"]
+            logf.write(result["verification_error"] + "\n")
+            logf.flush()
+        temporary = path.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        temporary.replace(path)
     return code
 
 
-def _restore_agent_setup(state: dict | None, logf) -> None:
+def _restore_agent_setup(state: dict | None, logf, *, raise_on_failure: bool = True) -> dict | None:
     if not state:
         return
     try:
-        restore_setup(state)
+        if state.get("_pick_export_owned"):
+            if state.get("platform") == "ios":
+                from testmap_ios_pick_export_evidence import restore
+            else:
+                from testmap_pick_export_evidence import restore
+            cleanup = restore(state, Path(state["folder"]).parent)
+            if raise_on_failure and cleanup.get("success") is not True:
+                raise SetupRestoreError(f"Owned pick/export restore failed: {cleanup}")
+            return cleanup
+        try:
+            if state.get("_ai_recovery_state_path"):
+                path = Path(state["_ai_recovery_state_path"])
+                handoff = load_result_json(path) or {}
+                if (handoff.get("journal") != state.get("journal")
+                        or handoff.get("run_id") != state["_ai_recovery_run_id"]
+                        or handoff.get("platform") != state.get("platform")
+                        or handoff.get("_ai_recovery_state_path") != str(path)):
+                    raise ValueError("Hybrid recovery handoff identity changed")
+                completed = handoff.get("_ai_source_recovered") is True and bool(handoff.get("proof"))
+                if state.get("platform") == "android":
+                    native = load_setup_backup(Path(state["journal"]))
+                    if any(native.get(k) != state.get(k) for k in ("platform", "serial", "marker", "lock", "fixtures", "source_id")):
+                        raise ValueError("Native recovery journal identity changed")
+                    state["source_recovery"] = native.get("source_recovery")
+                    completed = completed and (state.get("source_recovery") or {}).get("status") == "source_restored"
+                state["_ai_recovery_completed"] = completed
+                state["_ai_recovery_proof"] = handoff.get("proof")
+                handoff["_ai_recovery_active"] = False
+                state["_ai_recovery_active"] = False
+                temporary = path.with_suffix(".json.tmp")
+                temporary.write_text(json.dumps(handoff, indent=2) + "\n", encoding="utf-8")
+                temporary.replace(path)
+        finally:
+            restore_setup(state)
         if logf is not None:
             logf.write("setup restore: verified\n")
             logf.flush()
+        if state.get("_ai_recovery_state_path"):
+            return {"success": True}
     except (ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
         if logf is not None:
             logf.write(f"setup restore failed: {exc}\n")
             logf.flush()
+        if not raise_on_failure and (state.get("_pick_export_owned") or state.get("_ai_recovery_state_path")):
+            return {"success": False, "error": str(exc)}
         raise SetupRestoreError(f"setup restore failed: {exc}") from exc
 
 
@@ -2295,6 +2508,8 @@ def _cancel_gate_evidence(spec: dict, code: int) -> dict:
 
 def ingest_agent_device_result(spec: dict, code: int) -> dict:
     extra = _ingest_agent_device_result(spec, code)
+    if _is_agent_ai(spec):
+        return extra
     if spec.get("edge_id") == "export-save-success" and spec.get("agent_platform") == "android":
         gate = spec.get("export_file") or {"status":"unverified", "reason":"Missing real returned-URI file acceptance"}
         extra["export_file"] = gate
@@ -4632,7 +4847,7 @@ def run_task(
         if str(output):
             output.mkdir(parents=True, exist_ok=True)
         try:
-            if spec.get("edge_id") in {"editor-clamp-drag", "editor-filmstrip-switch", "export-save-success"} and spec.get("agent_platform") == "android":
+            if not _is_agent_ai(spec) and spec.get("edge_id") in {"editor-clamp-drag", "editor-filmstrip-switch", "export-save-success"} and spec.get("agent_platform") == "android":
                 require_clamp_pixels()
             maybe_prepare_ios_runner(spec, logf, should_stop=should_stop)
             setup_state = _apply_agent_setup(spec, logf, should_stop=should_stop)
@@ -4683,7 +4898,7 @@ def run_task(
             on_steps(watch_plat, rows)
     evidence_events = None
     evidence_manifest = None
-    if spec.get("edge_id") in {"editor-to-template-sheet", "editor-clamp-drag", "editor-filmstrip-switch", "export-save-success"} and watch_plat == "android":
+    if not _is_agent_ai(spec) and spec.get("edge_id") in {"editor-to-template-sheet", "editor-clamp-drag", "editor-filmstrip-switch", "export-save-success"} and watch_plat == "android":
         is_clamp = spec["edge_id"] in {"editor-clamp-drag", "editor-filmstrip-switch"}
         is_filmstrip = spec["edge_id"] == "editor-filmstrip-switch"
         is_export = spec["edge_id"] == "export-save-success"
@@ -4838,14 +5053,15 @@ def run_task(
             proc,
             sink,
             tee_stdout,
-            deadline_s=420 if spec.get("builder") == "agent-device" else None,
+            deadline_s=(int(_cmd_flag(cmd, "--timeout-ms") or "360000") / 1000 + 90
+                        if _is_agent_ai(spec) else 420 if spec.get("builder") == "agent-device" else None),
         )
     finally:
         stop_tail.set()
         try:
             # Stop skips optional evidence; rollback precedes slow session shutdown.
             try:
-                if spec.get("builder") == "agent-device" and not (should_stop and should_stop()) and spec.get("edge_id") == "export-cancel":
+                if spec.get("builder") == "agent-device" and not _is_agent_ai(spec) and not (should_stop and should_stop()) and spec.get("edge_id") == "export-cancel":
                     _capture_cancel_surface(cmd, spec, logf, should_stop=should_stop)
             finally:
                 code = _finish_agent_setup(spec, setup_state, code, logf, should_stop)

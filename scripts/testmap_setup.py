@@ -255,10 +255,10 @@ def make_large_image_preview_fixture(folder: Path, marker: str) -> dict[str, Pat
     return {"A": path}
 
 
-def push_android_fixtures(serial: str, fixtures: dict[str, Path]) -> None:
-    adb_shell(serial, "mkdir", "-p", f"/sdcard/{FIXTURE_FOLDER}")
+def push_android_fixtures(serial: str, fixtures: dict[str, Path], relative_folder: str = FIXTURE_FOLDER) -> None:
+    adb_shell(serial, "mkdir", "-p", f"/sdcard/{relative_folder}")
     for path in fixtures.values():
-        remote = f"/sdcard/{FIXTURE_FOLDER}/{path.name}"
+        remote = f"/sdcard/{relative_folder}/{path.name}"
         adb(serial, ["push", str(path), remote])
         adb_shell(
             serial,

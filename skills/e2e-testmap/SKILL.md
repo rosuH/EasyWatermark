@@ -1,11 +1,10 @@
 ---
 name: e2e-testmap
 description: >
-  Run EasyWatermark change-to-verify paths (testmap + Agent Device).
-  Use when the user says 跑测试, 跑链路, run e2e, testmap, Agent Device,
-  pick-to-editor, 验证改动, 合入前, 上线前, 出报告, or /e2e-testmap.
-  Default agent task is edge:<id>@android#agent or @ios#agent — not Artemis,
-  not a GitHub required check.
+  Run EasyWatermark Testmap paths through Agent Device for a named journey
+  or change-to-verify request. Use for 跑链路, run e2e, Testmap, Agent Device,
+  pick-to-editor, 合入前, 上线前, or /e2e-testmap. Unit-only requests do not
+  need this workflow; it is not a GitHub required check.
 ---
 
 # e2e-testmap
@@ -34,6 +33,19 @@ curl -sS -X POST http://127.0.0.1:8931/api/run \
 ```
 
 Report run id, state, evidence dir. Do not mint Confirm. Skip a platform when `supported` is false.
+
+### Optional AI SDK mode
+
+Agent Device defaults to replay. AI SDK defaults to hybrid: Grok plans, Jev chooses controls, and valid low-confidence choices return to Grok. Read `docs/testmap/README.md` from the repository root for provider settings, credentials, and evidence requirements before an AI run.
+
+```bash
+TESTMAP_AGENT_DEVICE_MODE=ai-sdk scripts/e2e-run.sh \
+  --device '<android-serial>' edge:pick-to-editor@android#agent
+```
+
+Console jobs inherit the server process environment. A one-off shell or `curl` environment does not switch an already-running console to AI mode; use the explicit CLI above or configure the console before starting it.
+
+iOS full pick/edit/export uses an opt-in, newly created dedicated simulator with an empty active Photos library. Follow the operating guide's preparation requirements; never register a personal or preexisting simulator as owned. The host supplies the prepared fixture journal. PHPicker screenshot controls have unknown native selection state. Missing native flags cannot prove false, editability, or focus. A successful loop is insufficient: required export-file checks and cleanup must both pass. Harness maintenance checks are in `eval/README.md`; routing coverage alone does not establish device acceptance.
 
 The CLI (`scripts/e2e-run.sh` / `scripts/testmap_run.py`) is the only runner. The console does not execute cases. `POST /api/run` starts that CLI and returns the run id. Stop signals the `pid` stored in the record.
 
@@ -89,7 +101,8 @@ Standing orders: do not shut down live emulators/simulators; `--serial` / `--udi
 - Process 0 / batch success / `review_required` is not a product pass.
 - `drive: seam|none` stays that way even if the agent walked a system picker.
 - `REPLAY_DIVERGENCE`, timeout, and setup failure are execution failures to investigate. Record the actual failure and distinguish environment, assertion, and product causes using evidence; do not automatically convert them to a product pass or blame the device. Use bounded single-case diagnosis before repeats. Preserve `--plan-digest` when resuming a replay.
-- Photo Picker uses batch JSON (`find` + `first: true`); native `.ad` cannot pass `--first`.
+- Android replay Photo Picker uses batch JSON (`find` + `first: true`); native `.ad` cannot pass `--first`. AI fixture selection uses the prepared image identity, never order or recency.
+- AI failures retain their trace and failed status; do not silently fall back to replay as evidence of hybrid success.
 
 ## Out of scope
 
