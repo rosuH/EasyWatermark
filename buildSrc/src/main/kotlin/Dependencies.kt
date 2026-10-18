@@ -10,6 +10,6 @@ object Apps {
     // S4d-175: single source of truth for the product version, consumed by :app (AGP versionCode/versionName)
     // and :desktopApp (Compose Desktop nativeDistributions.packageVersion).
     // Scheme: major * 10000 + minor * 100 + patch (2.10.0 -> 21000).
-    const val versionCode = 30003
-    const val versionName = "3.0.3"
+    const val versionCode = 30004
+    const val versionName = "3.0.4"
 }
