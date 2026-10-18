@@ -4017,7 +4017,7 @@ def _run_android_ai_journey(spec, logf, *, tee_stdout=False, on_proc=None,
 
 
 _FILMSTRIP_SOURCE_SHA256 = "866d131c18848b0bfedb4cad87c2fdbd13be15e0b7ab8fa5b0d82af1b93861a5"
-_CLAMP_SOURCE_SHA256 = "13dda76251de32ebc5f264b6b4808da75fe1a0e7e20dcd9f0a3cc5536f43e60c"
+_CLAMP_SOURCE_SHA256 = "810c3d6fabe67a70b5bfc67930bd21a9746309a64d04f26bb2d904ed45153f80"
 
 
 def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=None,
@@ -4370,29 +4370,34 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
         before2, _ = measure("before-2", 43, 45)
         proof["before_stable"] = compare_clamp_pixels(before1, before2)
         gesture = proof["gesture"] = clamp_pan(before2)
-        actions[45] = {"command": "gesture", "input": gesture}
+        actions[46] = {"command": "gesture", "input": gesture}
+        row = parse_steps_json(json.dumps([actions[46]]), "android")[0]
+        row["n"] = indices.index(47) + 1
+        live_rows[indices.index(47)] = row
+        actions[45] = {"command": "press", "input": {"target": {"kind": "point", **gesture["origin"]}}}
         row = parse_steps_json(json.dumps([actions[45]]), "android")[0]
         row["n"] = indices.index(46) + 1
         live_rows[indices.index(46)] = row
-        execute("pan", 46, 46)
-        after1, _ = measure("after-1", 47, 49)
-        after2, bound = measure("after-2", 50, 52)
+        execute("select-watermark", 46, 46)
+        execute("pan", 47, 47)
+        after1, _ = measure("after-1", 48, 50)
+        after2, bound = measure("after-2", 51, 53)
         proof["after_stable"] = compare_clamp_pixels(after1, after2)
         proof["pan_observed"] = compare_clamp_pixels(before2, after2, gesture["delta"])
-        bind_ref(53, bound["B"], 52)
-        data, pixels, _ = bracket("focus-B", 53, 56)
-        bound, focused, _ = editor(data, pixels, 56)
+        bind_ref(54, bound["B"], 53)
+        data, pixels, _ = bracket("focus-B", 54, 57)
+        bound, focused, _ = editor(data, pixels, 57)
         if focused != "B":
             raise ValueError("CLAMP filmstrip did not show owned B")
-        bind_ref(57, bound["A"], 56)
-        returned1, _ = measure("return-A-1", 57, 60)
-        returned2, _ = measure("return-A-2", 61, 63)
+        bind_ref(58, bound["A"], 57)
+        returned1, _ = measure("return-A-1", 58, 61)
+        returned2, _ = measure("return-A-2", 62, 64)
         proof["return_stable"] = compare_clamp_pixels(returned1, returned2)
         proof["same_selection_offset"] = compare_clamp_pixels(after2, returned2)
         proof["return_still_displaced"] = compare_clamp_pixels(before2, returned2, gesture["delta"])
-        execute("reopen", 64, 66)
-        reopened1, _ = measure("reopened-1", 67, 69)
-        reopened2, _ = measure("reopened-2", 70, 72)
+        execute("reopen", 65, 67)
+        reopened1, _ = measure("reopened-1", 68, 70)
+        reopened2, _ = measure("reopened-2", 71, 73)
         proof["reopen_stable"] = compare_clamp_pixels(reopened1, reopened2)
         proof["session_reopen_observed"] = compare_clamp_pixels(after2, reopened2)
         proof["reopen_still_displaced"] = compare_clamp_pixels(before2, reopened2, gesture["delta"])
@@ -4401,7 +4406,7 @@ def _run_android_clamp(spec, state, source, logf, *, tee_stdout=False, on_proc=N
             raise ValueError("CLAMP app process changed across SDK reopen")
         media()
         union()
-        execute("close", 73, 73)
+        execute("close", 74, 74)
         if executed != indices:
             raise ValueError("CLAMP canonical action coverage is incomplete")
         proof["status"], code = "evidence_complete", 0

@@ -1,6 +1,6 @@
 # ADR-0040: Preview gesture targets and watermark editing
 
-Status: Proposed (interaction demo approved by the owner on 2026-10-18; implementation acceptance pending).
+Status: Accepted (interaction and physical iPhone implementation accepted by the owner on 2026-10-18).
 
 ## Context
 
@@ -10,10 +10,11 @@ Research: [official product interaction evidence](https://github.com/rosuH/EasyW
 
 ## Decision
 
-- The first pointer chooses the target. It stays fixed until all pointers lift; adding a second finger or crossing the selection does not retarget. When multiple pointers share the initial native timestamp (including UIKit delivering them in separate events), prefer a watermark hit because those touches have no temporal first pointer.
+- Revision approved by the owner on 2026-10-18 after physical iPhone review: a completed tap selects the watermark group; a blank tap or Done clears selection. Each gesture captures the selection that existed before pointer down. Unselected gestures always pan/zoom the photo, even over watermark pixels. Selected gestures anywhere transform the watermark/group. Adding fingers, landing in gaps, and crossing cells never retarget. This replaces pointer-down glyph arbitration, which was ambiguous for dense patterns.
+- Reset view and Done sit in a fixed, opaque 48 dp toolbar outside the photo; remove the Edit watermark shortcut. Owner-approved controls use 20 dp linear icons without filled containers: a primary checkmark for Done and on-surface inward arrows for Reset view, each with a 48 dp target and a long-press/focus tooltip. Fixed slots prevent layout movement as the controls fade. Reset interpolates the photo view to Fit over the existing 240 ms motion token; touch or scroll cancels at the current view. Reduced/off motion restores Fit immediately. Done clears selection without changing the view; Reset preserves selection and watermark edits. A second completed tap on a selected text watermark opens the existing text sheet, without a double-tap deadline. Selection outlines identify the repeated group.
 - Tap watermark pixels to select. One-finger drag moves the selected watermark; two fingers resize and rotate it. REPEAT changes the whole pattern, never an individual copy. CLAMP changes the single cell.
-- Blank photo gestures pan/zoom only the viewing surface (1–4×); Reset view restores Fit. View transform and selection chrome do not enter Session, caches, export, or preferences. Photo change resets the view and selection.
-- Double tap a text watermark opens the existing WatermarkTextEditSheet. Its Confirm/Cancel/template behavior is shared with the Content editor. Image watermarks retain their image-content controls.
+- With no selection, photo gestures pan/zoom only the viewing surface (1–4×); Reset view restores Fit. View transform and selection chrome do not enter Session, caches, export, or preferences. Photo change resets the view and selection. Changing tile mode or watermark content type clears the previous selection.
+- A first tap selects a text watermark/group; a subsequent tap on watermark pixels opens the existing WatermarkTextEditSheet regardless of elapsed time. A quick double-tap works through the same two taps. Dragging or multi-touch never opens editing. Its Confirm/Cancel/template behavior is shared with the Content editor. Image watermarks retain their image-content controls.
 - Gesture drafts render cells only, using the same font resolution and raster pipeline as committed preview/export. No photo re-decode or persistent edit during a gesture. A successful end submits one atomic config change for size/rotation/repeated origin; CLAMP offset uses the existing Session commit and one non-draft overlay paint.
 - A gesture draft owns its source pixel dimensions. Normalization uses that coordinate frame; pending rasters from an obsolete resolution cannot commit. The final normalized offset is retained until matching host layers arrive.
 - Repeat origin is global config, normalized to photo dimensions. New preference keys default to zero, preserving existing repeated output. CLAMP offsets remain per-photo Session state. The two are not interchangeable.

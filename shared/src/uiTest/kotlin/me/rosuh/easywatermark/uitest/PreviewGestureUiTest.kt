@@ -42,14 +42,47 @@ class PreviewGestureUiTest {
                 CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", WaterMark.default, {}, { opened++ })) {
                     LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
                         overlayCellFrom(cell, WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP), .4f, .4f, 300), null,
-                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp).testTag("gesturePane"),
                         onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
                 }
             }
         }
-        onNodeWithTag("gesturePane").performTouchInput { doubleClick(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput { doubleClick(Offset(width * .5f, height * .45f)) }
         runOnIdle { assertEquals(1, opened) }
-        onNodeWithTag("gesturePane").performTouchInput { doubleClick(Offset(width * .1f, height * .1f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput { doubleClick(Offset(width * .1f, height * .1f)) }
+        runOnIdle { assertEquals(1, opened) }
+    }
+
+    @Test
+    fun thinGlyphGapSelects_andSelectedTapEditsWithoutDoubleTapDeadline() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Transparent)
+        CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(cell), Size(60f, 30f)) {
+            drawRect(Color.Red, Offset(31f, 16f), Size(2f, 2f))
+        }
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP)
+        var opened = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, { opened++ })) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        // The tap is 1px from a thin glyph, between all 25 points in the old sampler.
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        runOnIdle { assertEquals(0, opened) }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            advanceEventTime(1200)
+            click(Offset(width * .5f, height * .45f))
+        }
+        runOnIdle { assertEquals(1, opened) }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .1f, height * .1f)) }
+        onNodeWithTag("previewViewTarget").assertExists()
         runOnIdle { assertEquals(1, opened) }
     }
 
@@ -65,22 +98,25 @@ class PreviewGestureUiTest {
             AppTheme {
                 CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, { error("drag must not change config") }, {})) {
                     LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo, overlay, null,
-                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp).testTag("gesturePane"),
                         onOffsetCommit = { x, y -> commits++; offset = Offset(x, y); overlay = overlay.withOffset(x, y) },
                         renderGestureCell = { cell })
                 }
             }
         }
-        onNodeWithTag("gesturePane").performTouchInput {
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
             down(Offset(width * .5f, height * .45f))
             moveTo(Offset(width * .6f, height * .55f))
         }
         runOnIdle { assertEquals(0, commits) }
-        onNodeWithTag("gesturePane").performTouchInput { up() }
+        onNodeWithTag("previewGestureSurface").performTouchInput { up() }
         waitUntil { commits == 1 }
         runOnIdle { assertTrue(offset.x > .4f && offset.y > .4f) }
+        onNodeWithTag("previewSelectionDone").assertIsDisplayed().performClick()
+        onNodeWithTag("previewEditText").assertDoesNotExist()
         // Starting in blank space and crossing the watermark keeps the view target.
-        onNodeWithTag("gesturePane").performTouchInput { swipe(Offset(width * .1f, height * .1f), Offset(width * .8f, height * .8f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput { swipe(Offset(width * .1f, height * .1f), Offset(width * .8f, height * .8f)) }
         runOnIdle { assertEquals(1, commits) }
     }
 
@@ -100,16 +136,17 @@ class PreviewGestureUiTest {
                 }, {})) {
                     LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
                         overlayCellFrom(cell, config, offset.x, offset.y, 300), null,
-                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp).testTag("gesturePane"),
                         onOffsetCommit = { x, y -> offset = Offset(x, y) }, renderGestureCell = { cell })
                 }
             }
         }
-        onNodeWithTag("gesturePane").performTouchInput {
-            down(0, Offset(width * .45f, height * .45f))
-            down(1, Offset(width * .8f, height * .8f))
-            moveTo(0, Offset(width * .35f, height * .35f))
-            moveTo(1, Offset(width * .8f, height * .9f))
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .1f, height * .1f))
+            down(1, Offset(width * .3f, height * .1f))
+            moveTo(0, Offset(width * .05f, height * .05f))
+            moveTo(1, Offset(width * .4f, height * .2f))
             up(0); up(1)
         }
         waitUntil { changes.size == 1 }
@@ -118,7 +155,7 @@ class PreviewGestureUiTest {
     }
 
     @Test
-    fun simultaneousPointersPreferWatermark_beforeTargetLock() = runComposeUiTest {
+    fun unselectedSimultaneousPointersAlwaysZoomPhoto_evenOnWatermark() = runComposeUiTest {
         val photo = bitmap(300, 300, Color.White)
         val cell = bitmap(60, 30, Color.Red)
         var config by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP))
@@ -133,20 +170,24 @@ class PreviewGestureUiTest {
                 }, {})) {
                     LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
                         overlayCellFrom(cell, config, offset.x, offset.y, 300), null,
-                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp).testTag("gesturePane"),
                         onOffsetCommit = { x, y -> offset = Offset(x, y) }, renderGestureCell = { cell })
                 }
             }
         }
-        onNodeWithTag("gesturePane").performTouchInput {
+        onNodeWithTag("previewGestureSurface").performTouchInput {
             down(0, Offset(width * .8f, height * .8f))
             down(1, Offset(width * .45f, height * .45f))
             moveTo(0, Offset(width * .9f, height * .9f))
             moveTo(1, Offset(width * .35f, height * .35f))
             up(0); up(1)
         }
-        waitUntil { changes.size == 1 }
-        runOnIdle { assertTrue(changes.single().size > 14f) }
+        runOnIdle { assertTrue(changes.isEmpty()) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        val photoBounds = onNodeWithTag("previewGestureSurface").fetchSemanticsNode().boundsInRoot
+        val resetBounds = onNodeWithTag("previewResetView").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertTrue(resetBounds.bottom <= photoBounds.top, "reset must be outside photo")
+        onNodeWithTag("previewResetView").performClick()
         onNodeWithTag("previewResetView").assertDoesNotExist()
     }
 
@@ -160,12 +201,12 @@ class PreviewGestureUiTest {
                 CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, { error("view changed config") }, {})) {
                     LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
                         overlayCellFrom(cell, config, .4f, .4f, 300), null,
-                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp).testTag("gesturePane"),
                         onOffsetCommit = { _, _ -> error("view changed Session offset") }, renderGestureCell = { cell })
                 }
             }
         }
-        onNodeWithTag("gesturePane").performTouchInput {
+        onNodeWithTag("previewGestureSurface").performTouchInput {
             down(0, Offset(width * .1f, height * .1f))
             advanceEventTime(16)
             down(1, Offset(width * .5f, height * .45f))
@@ -192,21 +233,22 @@ class PreviewGestureUiTest {
                     { error("superseded draft must not commit") }, { opened++ })) {
                     LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
                         overlayCellFrom(cell, config, .4f, .4f, 300), null,
-                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp).testTag("gesturePane"),
                         onOffsetCommit = { _, _ -> error("superseded offset must not commit") },
                         renderGestureCell = { rendering = true; gate.await(); cell })
                 }
             }
         }
-        onNodeWithTag("gesturePane").performTouchInput {
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
             swipe(Offset(width * .5f, height * .45f), Offset(width * .6f, height * .55f))
         }
         waitUntil { rendering }
         runOnIdle { config = config.copy(text = "Changed elsewhere") }
         runOnIdle { gate.complete(Unit) }
         waitForIdle()
-        onNodeWithTag("gesturePane").performTouchInput {
-            doubleClick(Offset(width * .5f, height * .45f))
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            click(Offset(width * .5f, height * .45f))
         }
         waitUntil { opened == 1 }
     }
@@ -227,14 +269,15 @@ class PreviewGestureUiTest {
                 }, {})) {
                     LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
                         overlayCellFrom(cell, config, 0f, 0f, photo.width), null,
-                        modifier = Modifier.size(300.dp).testTag("gesturePane"),
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp).testTag("gesturePane"),
                         onOffsetCommit = { _, _ -> error("repeat must not change per-photo offsets") },
                         renderGestureCell = { cell })
                 }
             }
         }
         runOnIdle { photo = bitmap(600, 600, Color.White); cell = bitmap(120, 60, Color.Red) }
-        onNodeWithTag("gesturePane").performTouchInput {
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
             down(Offset(width * .5f, height * .45f))
             moveTo(Offset(width * .6f, height * .55f))
             up()
@@ -244,13 +287,146 @@ class PreviewGestureUiTest {
             assertEquals(.1f, changes.single().repeatOffsetX!!, .001f)
             assertEquals(.1f, changes.single().repeatOffsetY!!, .001f)
         }
-        onNodeWithTag("gesturePane").performTouchInput {
+        onNodeWithTag("previewGestureSurface").performTouchInput {
             down(Offset(width * .5f, height * .45f))
             moveTo(Offset(width * .6f, height * .55f))
             up()
         }
         waitUntil { changes.size == 2 }
         runOnIdle { assertEquals(.2f, changes.last().repeatOffsetX!!, .001f) }
+    }
+
+    @Test
+    fun stationarySelectedPinchLeavesDoneAvailable_withoutHostChange() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config,
+                    { error("stationary gesture must not change config") }, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .1f, height * .1f))
+            down(1, Offset(width * .8f, height * .8f))
+            up(0); up(1)
+        }
+        waitForIdle()
+        onNodeWithTag("previewSelectionDone").assertIsEnabled().performClick()
+        onNodeWithTag("previewViewTarget").assertExists()
+    }
+
+    @Test
+    fun changingTileModeClearsTheOldGroupSelection() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        var config by mutableStateOf(WaterMark.default)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        runOnIdle { config = config.copy(tileMode = WatermarkTileMode.CLAMP) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewSelectionDone").assertDoesNotExist()
+    }
+
+    @Test
+    fun switchingPhotosKeepsThumbnailAndLiveViewportIdentical() = runComposeUiTest {
+        var photo by mutableStateOf(bitmap(300, 300, Color.White))
+        var identity by mutableStateOf("square")
+        var chrome by mutableStateOf(OverlayPreviewChrome.WaitThumb)
+        val cell = bitmap(60, 30, Color.Red)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(identity, WaterMark.default, {}, {})) {
+                    LiveOverlayPreview(chrome, photo,
+                        overlayCellFrom(cell, WaterMark.default, 0f, 0f, photo.width),
+                        waitThumb = { modifier ->
+                            androidx.compose.foundation.Image(photo, null, modifier.testTag("waitingPhoto"),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+                        },
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        for ((name, dimensions) in listOf("square" to (300 to 300), "portrait" to (200 to 400), "landscape" to (400 to 200))) {
+            runOnIdle {
+                identity = name
+                photo = bitmap(dimensions.first, dimensions.second, Color.White)
+                chrome = OverlayPreviewChrome.WaitThumb
+            }
+            val waiting = onNodeWithTag("waitingPhoto").fetchSemanticsNode().boundsInRoot
+            runOnIdle { chrome = OverlayPreviewChrome.LiveLayers }
+            val live = onNodeWithTag("previewGestureSurface").fetchSemanticsNode().boundsInRoot
+            assertEquals(live, waiting, "$name thumbnail and live photo must fit into the same viewport")
+        }
+    }
+
+    @Test
+    fun resetAnimationCanBeInterrupted_andDoneKeepsPhotoView() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config,
+                    { error("view controls must not change config") }, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> error("view controls must not change offset") },
+                        renderGestureCell = { cell })
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .2f, height * .2f))
+            down(1, Offset(width * .8f, height * .8f))
+            moveTo(0, Offset(width * .05f, height * .05f))
+            moveTo(1, Offset(width * .95f, height * .95f))
+            up(0); up(1)
+        }
+        mainClock.autoAdvance = false
+        onNodeWithTag("previewResetView").performClick()
+        mainClock.advanceTimeBy(80)
+        onNodeWithTag("previewResetView").assertIsNotEnabled()
+        onNodeWithTag("previewGestureSurface").performTouchInput { down(Offset(width * .1f, height * .1f)); up() }
+        mainClock.advanceTimeBy(400)
+        onNodeWithTag("previewResetView").assertIsEnabled()
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        mainClock.advanceTimeBy(240)
+        onNodeWithTag("previewSelectionDone").performClick()
+        mainClock.advanceTimeBy(240)
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewResetView").assertIsDisplayed()
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        // Reset keeps the selection and never changes watermark config or Session offsets.
+        onNodeWithTag("previewResetView").performClick()
+        mainClock.advanceTimeBy(600)
+        onNodeWithTag("previewResetView").assertDoesNotExist()
+        mainClock.autoAdvance = true
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        val done = onNodeWithTag("previewSelectionDone").assertIsDisplayed()
+        done.assertWidthIsEqualTo(48.dp)
+        done.assertHeightIsEqualTo(48.dp)
+        done.performClick()
+        onNodeWithTag("previewViewTarget").assertExists()
     }
 
     @Test

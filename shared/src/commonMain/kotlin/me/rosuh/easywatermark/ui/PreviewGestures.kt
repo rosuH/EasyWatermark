@@ -1,12 +1,18 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,12 +31,16 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filterNotNull
 import me.rosuh.easywatermark.data.model.*
 import me.rosuh.easywatermark.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.painterResource
+import me.rosuh.easywatermark.ui.theme.*
 import kotlin.math.*
 
 internal data class PreviewInteraction(
@@ -39,6 +49,7 @@ internal data class PreviewInteraction(
     val onConfig: (WatermarkConfigChange) -> Unit,
     val onEditText: () -> Unit,
 )
+internal val PreviewToolbarHeight = 48.dp
 internal val LocalPreviewInteraction = staticCompositionLocalOf<PreviewInteraction?> { null }
 
 internal data class PreviewCellHit(val origin: Offset, val column: Int, val row: Int)
@@ -90,6 +101,7 @@ private data class PreviewDraft(
 }
 
 /** UI-only view/selection/draft state; hosts retain Session and source ownership. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun InteractiveOverlayPreview(
     photo: ImageBitmap,
@@ -103,6 +115,19 @@ internal fun InteractiveOverlayPreview(
         var box by remember { mutableStateOf(IntSize.Zero) }
         var zoom by remember { mutableFloatStateOf(1f) }
         var pan by remember { mutableStateOf(Offset.Zero) }
+        val scope = rememberCoroutineScope()
+        var resetJob by remember { mutableStateOf<Job?>(null) }
+        var resetting by remember { mutableStateOf(false) }
+        val motionPolicy = currentMotionPolicy()
+        val fadeMs = motionDurationMs(motionPolicy, EwmMotionTokens.optionPanelFadeMs)
+        val resetMs = motionDurationMs(motionPolicy, EwmMotionTokens.shellShortMs,
+            reducedScale = 0f)
+        fun interruptReset() { resetJob?.cancel(); resetJob = null; resetting = false }
+        LaunchedEffect(motionPolicy) {
+            if (motionPolicy != MotionPolicy.Full && resetting) {
+                interruptReset(); zoom = 1f; pan = Offset.Zero
+            }
+        }
         var selected by remember { mutableStateOf<PreviewCellHit?>(null) }
         var draft by remember { mutableStateOf<PreviewDraft?>(null) }
         var raster by remember { mutableStateOf<Pair<WaterMark, ImageBitmap>?>(null) }
@@ -114,6 +139,7 @@ internal fun InteractiveOverlayPreview(
         val currentOverlay by rememberUpdatedState(overlay)
         val currentCommit by rememberUpdatedState(onOffsetCommit)
         val currentRender by rememberUpdatedState(renderCell)
+        LaunchedEffect(overlay.tileMode, interaction.config.markMode) { selected = null }
         // One conflated cell-only raster at a time, including the exact final cell before commit.
         LaunchedEffect(Unit) {
             snapshotFlow { draft }.filterNotNull().conflate().collect { request ->
@@ -152,7 +178,7 @@ internal fun InteractiveOverlayPreview(
                 }
             }
         }
-        LaunchedEffect(overlay, interaction.config, dragging) {
+        LaunchedEffect(overlay, interaction.config, dragging, draft?.stage) {
             val pending = draft
             if (!dragging && pending?.stage == 2 && (
                 (overlay.renderedConfig == pending.config &&
@@ -167,168 +193,198 @@ internal fun InteractiveOverlayPreview(
         val shownOverlay = overlay.copy(cell = shownCell, offsetX = shownOffset.x, offsetY = shownOffset.y)
         val fitted = computeFittedImageRect(box.width.toFloat(), box.height.toFloat(), photo.width.toFloat(), photo.height.toFloat())
         val selectionColor = MaterialTheme.colorScheme.primary
-        Box(Modifier.fillMaxSize().clipToBounds().onSizeChanged { box = it }) {
-            Box(
-                Modifier.fillMaxSize().graphicsLayer {
-                    scaleX = zoom; scaleY = zoom; translationX = pan.x; translationY = pan.y
-                },
-            ) {
-                Image(photo, contentDescription, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.High)
-                Canvas(Modifier.fillMaxSize()) {
-                    drawLiveOverlayLayer(photo.width, photo.height, shownOverlay)
-                    val hit = selected
-                    val fit = fitted
-                    if (hit != null && fit != null) {
-                        val sx = fit.width / photo.width
-                        val sy = fit.height / photo.height
-                        val origin = Offset(shownOffset.x * photo.width, shownOffset.y * photo.height) +
-                            Offset(hit.column * shownCell.width.toFloat(), hit.row * shownCell.height.toFloat())
-                        val topLeft = Offset(fit.left + origin.x * sx, fit.top + origin.y * sy)
-                        drawRect(selectionColor, topLeft, Size(shownCell.width * sx, shownCell.height * sy), style = Stroke(2f / zoom))
+        Column(Modifier.fillMaxSize()) {
+            // Keep controls outside the photo and reserve their height across selection changes.
+            Row(Modifier.fillMaxWidth().height(PreviewToolbarHeight).background(MaterialTheme.colorScheme.surface),
+                horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp)) {
+                    androidx.compose.animation.AnimatedVisibility(selected != null, enter = fadeIn(tween(fadeMs)), exit = fadeOut(tween(fadeMs))) {
+                        val label = stringResource(Res.string.preview_selection_done)
+                        TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text(stringResource(Res.string.preview_selection_done_hint)) } }, state = rememberTooltipState()) {
+                            IconButton(onClick = { selected = null }, enabled = selected != null && !dragging && draft == null,
+                                modifier = Modifier.size(48.dp).testTag("previewSelectionDone")) {
+                                Icon(painterResource(Res.drawable.ic_preview_done), label, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+                Box(Modifier.size(48.dp)) {
+                    androidx.compose.animation.AnimatedVisibility(zoom != 1f || pan != Offset.Zero || resetting,
+                        enter = fadeIn(tween(fadeMs)), exit = fadeOut(tween(fadeMs))) {
+                        val label = stringResource(Res.string.preview_reset_view)
+                        TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text(stringResource(Res.string.preview_reset_view_hint)) } }, state = rememberTooltipState()) {
+                            IconButton(onClick = {
+                                val fromZoom = zoom
+                                val fromPan = pan
+                                resetting = true
+                                resetJob = scope.launch {
+                                    try {
+                                        animate(0f, 1f, animationSpec = tween(resetMs, easing = FastOutSlowInEasing)) { value, _ ->
+                                            zoom = fromZoom + (1f - fromZoom) * value
+                                            pan = fromPan * (1f - value)
+                                        }
+                                        zoom = 1f; pan = Offset.Zero
+                                    } finally { resetting = false }
+                                }
+                            }, enabled = !dragging && !resetting,
+                                modifier = Modifier.size(48.dp).testTag("previewResetView")) {
+                                Icon(painterResource(Res.drawable.ic_preview_fit), label, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
                     }
                 }
             }
-            Box(Modifier.fillMaxSize().testTag(if (selected == null) "previewViewTarget" else "previewWatermarkTarget")
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            if (event.type != PointerEventType.Scroll || dragging) continue
-                            val change = event.changes.firstOrNull() ?: continue
-                            val fit = computeFittedImageRect(size.width.toFloat(), size.height.toFloat(), photo.width.toFloat(), photo.height.toFloat()) ?: continue
-                            val center = Offset(size.width / 2f, size.height / 2f)
-                            val next = (zoom * exp(-change.scrollDelta.y * .08f)).coerceIn(1f, 4f)
-                            pan = boundedViewPan((pan + center - change.position) * (next / zoom) - center + change.position, next, fit)
-                            zoom = next
-                            event.changes.forEach { it.consume() }
+            Box(Modifier.fillMaxWidth().weight(1f).clipToBounds().testTag("previewGestureSurface").onSizeChanged { box = it }) {
+                Box(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        scaleX = zoom; scaleY = zoom; translationX = pan.x; translationY = pan.y
+                    },
+                ) {
+                    Image(photo, contentDescription, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.High)
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawLiveOverlayLayer(photo.width, photo.height, shownOverlay)
+                        val hit = selected
+                        val fit = fitted
+                        if (hit != null && fit != null) {
+                            val sx = fit.width / photo.width
+                            val sy = fit.height / photo.height
+                            val origin = Offset(shownOffset.x * photo.width, shownOffset.y * photo.height)
+                            if (shownOverlay.tileMode == WatermarkTileMode.REPEAT) {
+                                // A pattern is one selected object, independent of its copy count.
+                                drawRect(selectionColor, Offset(fit.left, fit.top), Size(fit.width, fit.height), style = Stroke(2f / zoom))
+                            }
+                            val topLeft = Offset(fit.left + (origin.x + hit.column * shownCell.width) * sx,
+                                fit.top + (origin.y + hit.row * shownCell.height) * sy)
+                            drawRect(selectionColor, topLeft, Size(shownCell.width * sx, shownCell.height * sy), style = Stroke(2f / zoom))
                         }
                     }
                 }
-                .pointerInput(interaction.identity, photo.width, photo.height) {
-                    var previousTap: Pair<Long, Offset>? = null
-                    awaitEachGesture {
-                        val firstDown = awaitFirstDown(requireUnconsumed = false)
-                        if ((draft?.stage ?: 0) > 0) { firstDown.consume(); return@awaitEachGesture }
-                        val fit = computeFittedImageRect(size.width.toFloat(), size.height.toFloat(), photo.width.toFloat(), photo.height.toFloat()) ?: return@awaitEachGesture
-                        val boxSize = Size(size.width.toFloat(), size.height.toFloat())
-                        val config = current.config
-                        val startOverlay = currentOverlay
-                        val repeat = startOverlay.tileMode == WatermarkTileMode.REPEAT
-                        val origin = Offset(startOverlay.offsetX * photo.width, startOverlay.offsetY * photo.height)
-                        val cellSize = Size(startOverlay.cell.width.toFloat(), startOverlay.cell.height.toFloat())
-                        val pixels = startOverlay.cell.toPixelMap()
-                        fun hitAt(position: Offset): PreviewCellHit? {
-                            val normalized = photoPoint(position, boxSize, fit, zoom, pan)
-                            val point = Offset(normalized.x * photo.width, normalized.y * photo.height)
-                            val candidate = previewCellHit(point, Size(photo.width.toFloat(), photo.height.toFloat()), cellSize, origin, repeat)
-                            // Transparent gap is photo space; keep a bounded margin for small text.
-                            return candidate?.takeIf { startOverlay.alpha > .01f }?.takeIf {
-                                val local = point - it.origin
-                                val radius = (12.dp.toPx() * photo.width / fit.width / zoom).coerceAtMost(24f)
-                                (-2..2).any { dx -> (-2..2).any { dy ->
-                                    val x = (local.x + dx * radius / 2).toInt()
-                                    val y = (local.y + dy * radius / 2).toInt()
-                                    x in 0 until pixels.width && y in 0 until pixels.height && pixels[x, y].alpha > .05f
-                                } }
+                Box(Modifier.fillMaxSize().testTag(if (selected == null) "previewViewTarget" else "previewWatermarkTarget")
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.type != PointerEventType.Scroll || dragging) continue
+                                val change = event.changes.firstOrNull() ?: continue
+                                interruptReset()
+                                val fit = computeFittedImageRect(size.width.toFloat(), size.height.toFloat(), photo.width.toFloat(), photo.height.toFloat()) ?: continue
+                                val center = Offset(size.width / 2f, size.height / 2f)
+                                val next = (zoom * exp(-change.scrollDelta.y * .08f)).coerceIn(1f, 4f)
+                                pan = boundedViewPan((pan + center - change.position) * (next / zoom) - center + change.position, next, fit)
+                                zoom = next
+                                event.changes.forEach { it.consume() }
                             }
                         }
-                        // Simultaneous native touches have no temporal first pointer. Prefer a
-                        // watermark hit in that initial event; later fingers never retarget.
-                        val down = currentEvent.changes.firstOrNull {
-                            it.pressed && !it.previousPressed && hitAt(it.position) != null
-                        } ?: firstDown
-                        var hit = hitAt(down.position)
-                        selected = hit
-                        renderFailed = false
-                        down.consume()
-                        val startId = current.identity
-                        var scale = 1f
-                        var rotation = 0f
-                        var translation = Offset.Zero
-                        var moved = false
-                        var multi = false
-                        var cancelled = false
-                        var lastPosition = down.position
-                        val initialPointerCount = currentEvent.changes.count { it.pressed }
-                        val gestureBench = ClampDragBench.previewScope("preview_gesture")
-                        var addedPointerDelayMs: Long? = null
-                        dragging = true
-                        try {
-                            do {
-                                val event = awaitPointerEvent()
-                                if (event.changes.any { it.isConsumed }) { cancelled = true; break }
-                                val added = event.changes.firstOrNull { it.pressed && !it.previousPressed }
-                                if (added != null) addedPointerDelayMs = added.uptimeMillis - firstDown.uptimeMillis
-                                // UIKit may deliver simultaneous starts in separate pointer events.
-                                if (!moved && hit == null && added?.uptimeMillis == firstDown.uptimeMillis) {
-                                    hit = hitAt(added.position)
-                                    selected = hit
+                    }
+                    .pointerInput(interaction.identity, photo.width, photo.height) {
+                        awaitEachGesture {
+                            val firstDown = awaitFirstDown(requireUnconsumed = false)
+                            interruptReset()
+                            if ((draft?.stage ?: 0) > 0) { firstDown.consume(); return@awaitEachGesture }
+                            val fit = computeFittedImageRect(size.width.toFloat(), size.height.toFloat(), photo.width.toFloat(), photo.height.toFloat()) ?: return@awaitEachGesture
+                            val boxSize = Size(size.width.toFloat(), size.height.toFloat())
+                            val config = current.config
+                            val startOverlay = currentOverlay
+                            val repeat = startOverlay.tileMode == WatermarkTileMode.REPEAT
+                            val origin = Offset(startOverlay.offsetX * photo.width, startOverlay.offsetY * photo.height)
+                            val cellSize = Size(startOverlay.cell.width.toFloat(), startOverlay.cell.height.toFloat())
+                            val pixels = startOverlay.cell.toPixelMap()
+                            fun hitAt(position: Offset): PreviewCellHit? {
+                                val normalized = photoPoint(position, boxSize, fit, zoom, pan)
+                                val point = Offset(normalized.x * photo.width, normalized.y * photo.height)
+                                val candidate = previewCellHit(point, Size(photo.width.toFloat(), photo.height.toFloat()), cellSize, origin, repeat)
+                                // Transparent gap is photo space; keep a bounded margin for small text.
+                                return candidate?.takeIf { startOverlay.alpha > .01f }?.takeIf {
+                                    val local = point - it.origin
+                                    // Check the whole visible touch margin: sparse samples miss thin glyphs.
+                                    val radius = 12.dp.toPx() * photo.width / fit.width / zoom
+                                    val xs = ceil(local.x - radius).toInt().coerceAtLeast(0)..
+                                        floor(local.x + radius).toInt().coerceAtMost(pixels.width - 1)
+                                    val ys = ceil(local.y - radius).toInt().coerceAtLeast(0)..
+                                        floor(local.y + radius).toInt().coerceAtMost(pixels.height - 1)
+                                    ys.any { y -> xs.any { x ->
+                                        val dx = x - local.x; val dy = y - local.y
+                                        dx * dx + dy * dy <= radius * radius && pixels[x, y].alpha > .05f
+                                    } }
                                 }
-                                val pressed = event.changes.count { it.pressed }
-                                if (pressed > 1) { multi = true; previousTap = null }
-                                val deltaPan = event.calculatePan()
-                                val deltaZoom = event.calculateZoom()
-                                val deltaRotation = event.calculateRotation()
-                                if (pressed > 0) {
-                                    lastPosition = event.changes.first().position
-                                    moved = moved || (lastPosition - down.position).getDistance() > viewConfiguration.touchSlop || multi
-                                    if (moved) {
-                                        previousTap = null
-                                        val target = hit
-                                        if (target != null) {
-                                            scale = (scale * deltaZoom).coerceIn(WatermarkConfigRules.MIN_TEXT_SIZE / config.textSize, WatermarkConfigRules.MAX_TEXT_SIZE / config.textSize)
-                                            rotation += deltaRotation
-                                            translation += deltaPan / zoom
-                                            val center = target.origin + Offset(cellSize.width / 2, cellSize.height / 2) +
-                                                Offset(translation.x * photo.width / fit.width, translation.y * photo.height / fit.height)
-                                            val next = config.copy(textSize = config.textSize * scale, degree = ((config.degree + rotation) % 360 + 360) % 360)
-                                            draft = PreviewDraft(config, next, center, target, repeat, photoSize)
-                                        } else {
-                                            val centroid = event.calculateCentroid(useCurrent = false)
-                                            val oldZoom = zoom
-                                            zoom = (zoom * deltaZoom).coerceIn(1f, 4f)
-                                            pan = boundedViewPan((pan + boxSize.center - centroid) * (zoom / oldZoom) - boxSize.center + centroid + deltaPan, zoom, fit)
+                            }
+                            val down = firstDown
+                            val hit = selected?.let { it.copy(origin = origin + Offset(it.column * cellSize.width, it.row * cellSize.height)) }
+                            renderFailed = false
+                            down.consume()
+                            val startId = current.identity
+                            var scale = 1f
+                            var rotation = 0f
+                            var translation = Offset.Zero
+                            var moved = false
+                            var multi = false
+                            var cancelled = false
+                            var lastPosition = down.position
+                            val initialPointerCount = currentEvent.changes.count { it.pressed }
+                            val gestureBench = ClampDragBench.previewScope("preview_gesture")
+                            var addedPointerDelayMs: Long? = null
+                            dragging = true
+                            try {
+                                do {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.any { it.isConsumed }) { cancelled = true; break }
+                                    val added = event.changes.firstOrNull { it.pressed && !it.previousPressed }
+                                    if (added != null) addedPointerDelayMs = added.uptimeMillis - firstDown.uptimeMillis
+                                    val pressed = event.changes.count { it.pressed }
+                                    if (pressed > 1) { multi = true }
+                                    val deltaPan = event.calculatePan()
+                                    val deltaZoom = event.calculateZoom()
+                                    val deltaRotation = event.calculateRotation()
+                                    if (pressed > 0) {
+                                        lastPosition = event.changes.first().position
+                                        moved = moved || (lastPosition - down.position).getDistance() > viewConfiguration.touchSlop || multi
+                                        if (moved) {
+                                            val target = hit
+                                            if (target != null) {
+                                                scale = (scale * deltaZoom).coerceIn(WatermarkConfigRules.MIN_TEXT_SIZE / config.textSize, WatermarkConfigRules.MAX_TEXT_SIZE / config.textSize)
+                                                rotation += deltaRotation
+                                                translation += deltaPan / zoom
+                                                val center = target.origin + Offset(cellSize.width / 2, cellSize.height / 2) +
+                                                    Offset(translation.x * photo.width / fit.width, translation.y * photo.height / fit.height)
+                                                val next = config.copy(textSize = config.textSize * scale, degree = ((config.degree + rotation) % 360 + 360) % 360)
+                                                draft = PreviewDraft(config, next, center, target, repeat, photoSize)
+                                            } else {
+                                                val centroid = event.calculateCentroid(useCurrent = false)
+                                                val oldZoom = zoom
+                                                zoom = (zoom * deltaZoom).coerceIn(1f, 4f)
+                                                pan = boundedViewPan((pan + boxSize.center - centroid) * (zoom / oldZoom) - boxSize.center + centroid + deltaPan, zoom, fit)
+                                            }
                                         }
                                     }
-                                }
-                                event.changes.forEach { it.consume() }
-                            } while (event.changes.any { it.pressed })
-                            if (!cancelled && startId == current.identity && config == current.config) {
-                                val committed = draft
-                                if (hit != null && moved && committed != null) {
-                                    draft = committed.copy(stage = 1)
-                                } else if (hit != null && !moved && !multi) {
-                                    val prior = previousTap
-                                    if (prior != null && down.uptimeMillis - prior.first in viewConfiguration.doubleTapMinTimeMillis..viewConfiguration.doubleTapTimeoutMillis &&
-                                        (down.position - prior.second).getDistance() <= viewConfiguration.touchSlop * 2 && config.markMode == WatermarkMode.Text
-                                    ) { previousTap = null; current.onEditText() }
-                                    else previousTap = down.uptimeMillis to down.position
-                                } else previousTap = null
-                            } else { draft = null; raster = null; previousTap = null }
-                        } finally {
-                            dragging = false
-                            gestureBench.finish(mapOf("target" to if (hit == null) "view" else "watermark",
-                                "initialPointers" to initialPointerCount, "addedDelayMs" to addedPointerDelayMs))
-                            if (current.identity != startId || cancelled || draft?.stage == 0) { draft = null; raster = null; previousTap = null }
+                                    event.changes.forEach { it.consume() }
+                                } while (event.changes.any { it.pressed })
+                                if (!cancelled && startId == current.identity && config == current.config) {
+                                    val committed = draft
+                                    if (hit != null && moved && committed != null) {
+                                        draft = committed.copy(stage = 1)
+                                    } else if (!moved && !multi) {
+                                        val tapped = hitAt(down.position)
+                                        selected = tapped
+                                        if (hit != null && tapped != null && config.markMode == WatermarkMode.Text) {
+                                            current.onEditText()
+                                        }
+                                    }
+                                } else { draft = null; raster = null }
+                            } finally {
+                                dragging = false
+                                gestureBench.finish(mapOf("target" to if (hit == null) "view" else "watermark",
+                                    "initialPointers" to initialPointerCount, "addedDelayMs" to addedPointerDelayMs))
+                                if (current.identity != startId || cancelled || draft?.stage == 0) { draft = null; raster = null }
+                            }
                         }
-                    }
-                })
-            if (renderFailed) Text(
-                stringResource(Res.string.dialog_save_error_render),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-            Row(Modifier.align(Alignment.TopEnd)) {
-                if (selected != null && interaction.config.markMode == WatermarkMode.Text) {
-                    TextButton(onClick = interaction.onEditText, modifier = Modifier.testTag("previewEditText")) {
-                        Text(stringResource(Res.string.dialog_title_edit_watermark))
-                    }
-                }
-                if (zoom != 1f || pan != Offset.Zero) {
-                    TextButton(onClick = { zoom = 1f; pan = Offset.Zero }, modifier = Modifier.testTag("previewResetView")) {
-                        Text(stringResource(Res.string.preview_reset_view))
-                    }
-                }
+                    })
+                if (renderFailed) Text(
+                    stringResource(Res.string.dialog_save_error_render),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
         }
     }

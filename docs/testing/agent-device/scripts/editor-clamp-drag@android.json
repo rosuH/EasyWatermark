@@ -367,6 +367,16 @@
     }
   },
   {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "point",
+        "x": "__CLAMP_X__",
+        "y": "__CLAMP_Y__"
+      }
+    }
+  },
+  {
     "command": "gesture",
     "input": {
       "kind": "pan",

@@ -96,8 +96,8 @@
     "input": {
       "kind": "pinch",
       "origin": {
-        "x": 250,
-        "y": 400
+        "x": 350,
+        "y": 713
       },
       "scale": 1.5
     }
@@ -137,10 +137,38 @@
       "target": {
         "kind": "point",
         "x": 75,
-        "y": 650
-      },
-      "count": 2,
-      "intervalMs": 120
+        "y": 713
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewWatermarkTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "absent": "id=\"watermarkTextEditField\"",
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 1200
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "point",
+        "x": 75,
+        "y": 713
+      }
     }
   },
   {
@@ -203,12 +231,26 @@
     }
   },
   {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewWatermarkTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "absent": "id=\"previewEditText\"",
+      "timeoutMs": 3000
+    }
+  },
+  {
     "command": "gesture",
     "input": {
       "kind": "transform",
       "origin": {
-        "x": 84,
-        "y": 757
+        "x": 450,
+        "y": 820
       },
       "delta": {
         "x": 50,
@@ -230,6 +272,63 @@
     "command": "wait",
     "input": {
       "durationMs": 650
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"previewSelectionDone\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewViewTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "gesture",
+    "input": {
+      "kind": "pinch",
+      "origin": {
+        "x": 350,
+        "y": 713
+      },
+      "scale": 1.5
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewResetView\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewViewTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"previewResetView\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "absent": "id=\"previewResetView\"",
+      "timeoutMs": 5000
     }
   },
   {
@@ -269,7 +368,7 @@
   {
     "command": "wait",
     "input": {
-      "selector": "id=\"sharedComposeExportCounts\" label=\"Processed 1 \u00b7 Succeeded 1 \u00b7 Failed 0\" visible",
+      "selector": "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 1 · Failed 0\" visible",
       "timeoutMs": 90000
     }
   },

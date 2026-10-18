@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -149,21 +150,24 @@ fun LiveOverlayPreview(
     onOffsetCommit: ((Float, Float) -> Unit)? = null,
     renderGestureCell: (suspend (WaterMark) -> ImageBitmap)? = null,
 ) {
+    val interaction = LocalPreviewInteraction.current
+    val interactive = interaction != null && onOffsetCommit != null && renderGestureCell != null
+    // Wait thumbs and live layers must use the same Fit viewport during photo switches.
+    val waitingModifier = if (interactive) modifier.padding(top = PreviewToolbarHeight) else modifier
     when (chrome) {
         OverlayPreviewChrome.EditorEmpty,
         OverlayPreviewChrome.WaitEmpty,
-        -> Box(modifier)
+        -> Box(waitingModifier)
         OverlayPreviewChrome.WaitThumb -> {
-            Box(modifier) {
+            Box(waitingModifier) {
                 waitThumb?.invoke(Modifier.fillMaxSize())
             }
         }
         OverlayPreviewChrome.LiveLayers -> {
             if (photo == null || overlay == null) {
-                Box(modifier)
+                Box(waitingModifier)
                 return
             }
-            val interaction = LocalPreviewInteraction.current
             if (interaction != null && onOffsetCommit != null && renderGestureCell != null) {
                 Box(modifier) {
                     InteractiveOverlayPreview(photo, overlay, interaction, onOffsetCommit, renderGestureCell, contentDescription)

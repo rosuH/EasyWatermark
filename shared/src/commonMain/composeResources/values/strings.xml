@@ -221,4 +221,7 @@
     <string name="ios_import_retry">Retry</string>
     <string name="ios_import_remove">Remove</string>
     <string name="preview_reset_view">Reset view</string>
+    <string name="preview_selection_done">Done</string>
+    <string name="preview_selection_done_hint">Finish watermark adjustment</string>
+    <string name="preview_reset_view_hint">Restore full view</string>
 </resources>

@@ -24,6 +24,14 @@ import testmap_setup as setup
 
 
 class BackendChecks(unittest.TestCase):
+    def test_clamp_pan_selects_a_real_glyph_pixel_when_bbox_center_is_empty(self):
+        from testmap_steps import clamp_pan
+        before = {"bbox": [550, 350, 650, 450], "fit": [0, 0, 1000, 600],
+                  "white": [4, 60, 996, 540], "_mask": {(598, 400), (602, 400)}}
+        pan = clamp_pan(before)
+        self.assertEqual({"x": 598, "y": 400}, pan["origin"])
+        self.assertEqual({"x": 120, "y": 60}, pan["delta"])
+
     def test_registered_batch_export_captures_before_private_restore(self):
         state = {"phase": "active"}
         spec = {"edge_id": "editor-preview-gestures"}
@@ -2848,8 +2856,8 @@ class AndroidClampChecks(unittest.TestCase):
         self.assertEqual(8, len(proof['provider_readbacks']))
         self.assertEqual(8, len(proof['date_queries']))
         mapping = [m for phase in proof['phases'] for m in phase['mapping'] if m['kind'] == 'action']
-        self.assertEqual(list(range(1, 71)), [m['step'] for m in mapping])
-        self.assertEqual([n for n in range(1, 74) if n not in (28, 29, 32)], [m['source_step'] for m in mapping])
+        self.assertEqual(list(range(1, 72)), [m['step'] for m in mapping])
+        self.assertEqual([n for n in range(1, 75) if n not in (28, 29, 32)], [m['source_step'] for m in mapping])
         for phase in proof['phases']:
             self.assertEqual(phase['source_sha256'], hashlib.sha256(Path(phase['source']).read_bytes()).hexdigest())
             self.assertEqual(phase['script_sha256'], hashlib.sha256(Path(phase['script']).read_bytes()).hexdigest())
@@ -2857,7 +2865,11 @@ class AndroidClampChecks(unittest.TestCase):
         for binding in proof['ref_bindings']:
             self.assertEqual(binding['snapshot']['sha256'], hashlib.sha256(Path(binding['snapshot']['path']).read_bytes()).hexdigest())
             self.assertEqual(binding['png_bracket']['sha256'], hashlib.sha256(Path(binding['png_bracket']['png']).read_bytes()).hexdigest())
-        self.assertEqual(68, len([e for e in self.events if e.get('shot')]))
+        self.assertEqual(69, len([e for e in self.events if e.get('shot')]))
+        selection = next(phase for phase in proof['phases'] if phase['phase'] == 'select-watermark')
+        tap = runner.parse_script(Path(selection['source']))[0]
+        self.assertEqual('press', tap['command'])
+        self.assertEqual(proof['gesture']['origin'], tap['point'])
         pan = next(phase for phase in proof['phases'] if phase['phase'] == 'pan')
         gesture = runner.parse_script(Path(pan['source']))[0]
         self.assertEqual(proof['gesture']['origin'], gesture['point'])
