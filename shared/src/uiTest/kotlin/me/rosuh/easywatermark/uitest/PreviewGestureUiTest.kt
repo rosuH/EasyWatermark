@@ -291,6 +291,28 @@ class PreviewGestureUiTest {
     }
 
     @Test
+    fun changingTileModeClearsTheOldGroupSelection() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        var config by mutableStateOf(WaterMark.default)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        runOnIdle { config = config.copy(tileMode = WatermarkTileMode.CLAMP) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewSelectionDone").assertDoesNotExist()
+    }
+
+    @Test
     fun inverseViewCoordinatesAndRepeatPhaseRemainConsistent() {
         val fit = computeFittedImageRect(400f, 600f, 800f, 400f)!!
         assertEquals(Offset(.5f, .5f), photoPoint(Offset(240f, 320f), Size(400f, 600f), fit, 2f, Offset(40f, 20f)))

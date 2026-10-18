@@ -115,6 +115,7 @@ internal fun InteractiveOverlayPreview(
         val currentOverlay by rememberUpdatedState(overlay)
         val currentCommit by rememberUpdatedState(onOffsetCommit)
         val currentRender by rememberUpdatedState(renderCell)
+        LaunchedEffect(overlay.tileMode, interaction.config.markMode) { selected = null }
         // One conflated cell-only raster at a time, including the exact final cell before commit.
         LaunchedEffect(Unit) {
             snapshotFlow { draft }.filterNotNull().conflate().collect { request ->
