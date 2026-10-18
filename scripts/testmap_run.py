@@ -6,6 +6,8 @@ Importable by the local console, and runnable as a foreground CLI:
     python3 scripts/testmap_run.py --list
     python3 scripts/testmap_run.py guard
     python3 scripts/testmap_run.py guard l1-desktop
+    python3 scripts/testmap_run.py --review
+    python3 scripts/testmap_run.py --review edge:launch-to-about@android#agent
 """
 
 from __future__ import annotations
@@ -1669,6 +1671,96 @@ def revoke_confirmation(edge_id: str) -> bool:
     del data[edge_id]
     save_confirmations(data)
     return True
+
+
+def _review_evidence(rec: dict | None, edge_id: str) -> list[str]:
+    out: list[str] = []
+    for task in (rec or {}).get("tasks") or []:
+        tid = str(task.get("id") or "")
+        if str(task.get("edge") or task_edge_id(tid) or "") != edge_id:
+            continue
+        path = (
+            task.get("evidence_dir")
+            or task.get("agent_device_output")
+            or task.get("e2e_output")
+        )
+        if path and str(path) not in out:
+            out.append(str(path))
+    if not out and rec:
+        steps = RUNS_DIR / str(rec.get("id") or "") / "steps"
+        if steps.is_dir():
+            out.append(str(steps))
+    return out
+
+
+def print_review_status(edges: list[dict]) -> int:
+    results, result_runs = _latest_edge_projection(edges)
+    confirmations = load_confirmations()
+    rows = []
+    for edge in edges:
+        edge_id = str(edge.get("id") or "")
+        latest = result_runs.get(edge_id)
+        confirmed = confirmations.get(edge_id) or {}
+        if not latest and not confirmed:
+            continue
+        if not latest:
+            status = "run-missing"
+        elif not confirmed:
+            status = "pending"
+        elif confirmed.get("run_id") == latest:
+            status = "reviewed"
+        else:
+            status = "stale"
+        run_id = latest or str(confirmed.get("run_id") or "")
+        rows.append((status, edge_id, run_id, results.get(edge_id, "")))
+    if not rows:
+        print("no edge results yet")
+        return 0
+    print(f"{'status':<10} {'edge':<32} {'run':<32} result")
+    for status, edge_id, run_id, state in rows:
+        print(f"{status:<10} {edge_id:<32} {run_id:<32} {state}")
+    print("\nconfirm after reviewing: scripts/e2e-run.sh --review <edge-or-task-id>")
+    return 0
+
+
+def review_edges(
+    edge_ids: list[str],
+    *,
+    run_id: str | None = None,
+    revoke: bool = False,
+) -> int:
+    _nodes, edges = load_map()
+    if not edge_ids:
+        return print_review_status(edges)
+    known = {str(edge.get("id") or "") for edge in edges}
+    result_runs = edge_result_runs(edges)
+    failed = False
+    for raw in edge_ids:
+        raw = str(raw).strip()
+        edge_id = task_edge_id(raw) or raw
+        if edge_id not in known:
+            print(f"unknown edge: {edge_id}", file=sys.stderr)
+            failed = True
+            continue
+        if revoke:
+            changed = revoke_confirmation(edge_id)
+            print(f"{'revoked' if changed else 'not confirmed'} {edge_id}")
+            continue
+        target = run_id or result_runs.get(edge_id)
+        if not target:
+            print(f"{edge_id}: no edge result yet; run e2e first", file=sys.stderr)
+            failed = True
+            continue
+        try:
+            row = record_confirmation(edge_id, target, edges)
+        except ValueError as exc:
+            print(f"{edge_id}: {exc}", file=sys.stderr)
+            failed = True
+            continue
+        print(f"confirmed {edge_id} run={row['run_id']}")
+        for evidence in _review_evidence(load_run(row["run_id"]), edge_id):
+            print(f"  {evidence}")
+    return 1 if failed else 0
 
 
 def log_tail(path: Path | None, n: int = 40) -> list[str]:
@@ -6659,6 +6751,20 @@ def main(argv: list[str] | None = None) -> int:
         help="Validate every suite and edge spawn command against task CLI rules.",
     )
     parser.add_argument(
+        "--review",
+        action="store_true",
+        help="List review status, or confirm the positional edge/task ids.",
+    )
+    parser.add_argument(
+        "--run-id",
+        help="Run id to confirm; defaults to the latest result run for each edge.",
+    )
+    parser.add_argument(
+        "--revoke",
+        action="store_true",
+        help="With --review, clear the edge confirmation instead of confirming it.",
+    )
+    parser.add_argument(
         "--device",
         default=None,
         help="Device id from `python3 scripts/testmap_devices.py`, or auto.",
@@ -6680,10 +6786,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "tasks",
         nargs="*",
-        help="Runnable task ids (see --list).",
+        help="Runnable task ids (see --list), or edge/task ids for --review.",
     )
     parser.add_argument("--execution-mode", choices=("independent", "route"), default="independent")
     args = parser.parse_args(argv)
+    if (args.review and args.run_id and args.revoke) or (
+        not args.review and (args.run_id or args.revoke)
+    ):
+        parser.error("--run-id and --revoke require --review and cannot be combined")
+    if args.review and (args.run_id or args.revoke) and not args.tasks:
+        parser.error("--run-id and --revoke require an edge/task id")
     if args.self_check:
         errors = validate_all_console_cmds()
         if artifact_png("live", "../preview.png") is not None:
@@ -6701,6 +6813,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.list:
         print_task_list()
         return 0
+    if args.review:
+        return review_edges(args.tasks, run_id=args.run_id, revoke=args.revoke)
     if not args.tasks:
         parser.print_help()
         return 2
