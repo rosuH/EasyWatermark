@@ -80,8 +80,8 @@ object CommonWatermarkPipeline {
             background = background,
             cell = cell,
             tileMode = tileMode,
-            offsetX = offsetX,
-            offsetY = offsetY,
+            offsetX = if (tileMode == WatermarkTileMode.REPEAT) config.repeatOffsetX else offsetX,
+            offsetY = if (tileMode == WatermarkTileMode.REPEAT) config.repeatOffsetY else offsetY,
             alpha = (config.alpha.coerceIn(0, 255)) / 255f,
         )
     }

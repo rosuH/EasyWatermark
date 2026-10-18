@@ -67,6 +67,8 @@ class WaterMarkRepository(
         val KEY_TILE_MODE = intPreferencesKey(SP_KEY_TILE_MODEL)
         val KEY_OFFSET_X = floatPreferencesKey(SP_KEY_OFFSET_X)
         val KEY_OFFSET_Y = floatPreferencesKey(SP_KEY_OFFSET_Y)
+        val KEY_REPEAT_X = floatPreferencesKey("repeat_pattern_x")
+        val KEY_REPEAT_Y = floatPreferencesKey("repeat_pattern_y")
         val KEY_FONT_REF = stringPreferencesKey(SP_KEY_FONT_REF)
     }
 
@@ -98,6 +100,8 @@ class WaterMarkRepository(
                 tileMode = tileModeFromStorageId(it[KEY_TILE_MODE]),
                 enableBounds = it[KEY_ENABLE_BOUNDS] ?: false,
                 fontRef = WatermarkFontCodec.decode(it[KEY_FONT_REF]),
+                repeatOffsetX = it[PreferenceKeys.KEY_REPEAT_X]?.takeIf(Float::isFinite) ?: 0f,
+                repeatOffsetY = it[PreferenceKeys.KEY_REPEAT_Y]?.takeIf(Float::isFinite) ?: 0f,
             )
         }
 
@@ -163,6 +167,16 @@ class WaterMarkRepository(
     suspend fun updateVertical(gap: Int) {
         dataStore.edit {
             it[KEY_VERTICAL_GAP] = WatermarkConfigRules.clampVerticalGap(gap)
+        }
+    }
+
+    suspend fun updateTransform(size: Float, degree: Float, repeatX: Float? = null, repeatY: Float? = null) {
+        require(size.isFinite() && degree.isFinite() && (repeatX == null || repeatX.isFinite()) && (repeatY == null || repeatY.isFinite()))
+        dataStore.edit {
+            it[KEY_TEXT_SIZE] = size.coerceIn(WatermarkConfigRules.MIN_TEXT_SIZE, WatermarkConfigRules.MAX_TEXT_SIZE)
+            it[KEY_DEGREE] = ((degree % 360f) + 360f) % 360f
+            if (repeatX != null) it[PreferenceKeys.KEY_REPEAT_X] = repeatX
+            if (repeatY != null) it[PreferenceKeys.KEY_REPEAT_Y] = repeatY
         }
     }
 

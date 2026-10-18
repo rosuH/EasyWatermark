@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import me.rosuh.easywatermark.ui.compose.WatermarkTextEditSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -120,6 +122,7 @@ fun EditorScreen(
     onFontPanelEvent: (FontPanelEvent) -> Unit = {},
     openFontSheetRequest: Int = 0,
 ) {
+    var showPreviewTextEditor by remember { mutableStateOf(false) }
     val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
     val selected = selectedImage ?: imageList.firstOrNull()
     val hasProgressiveSlots = progressiveSlots?.state?.slots?.isNotEmpty() == true
@@ -179,6 +182,19 @@ fun EditorScreen(
         },
         openRequest = openFontSheetRequest,
     ) { showFontSheet ->
+        if (showPreviewTextEditor) {
+            WatermarkTextEditSheet(
+                initialText = waterMark.text,
+                templateIcon = icons.templateList,
+                enabled = true,
+                onConfirm = { onConfigChange(WatermarkConfigChange.Text(it)); showPreviewTextEditor = false },
+                onDismiss = { showPreviewTextEditor = false },
+                onGoTemplateList = { showPreviewTextEditor = false; showTemplateSheet() },
+            )
+        }
+        CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+            selected?.uri?.value.orEmpty(), waterMark, onConfigChange, { showPreviewTextEditor = true },
+        )) {
         Surface(
             modifier = modifier
                 .fillMaxSize()
@@ -314,6 +330,7 @@ fun EditorScreen(
                 }
             }
         }
+    }
     }
     }
 }

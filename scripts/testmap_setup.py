@@ -72,7 +72,7 @@ EXPORT_CONTROL = "files/testmap-export-control.json"
 EXPORT_EVENTS = "files/testmap-export-events.jsonl"
 EXPORT_CONTROL_PATHS = (EXPORT_CONTROL, EXPORT_EVENTS)
 EXPORT_RUN_ID = r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}"
-FONT_EXPORT_MARKER = r"editorfontsystem-[a-f0-9]{32}"
+FONT_EXPORT_MARKER = r"(?:editorfontsystem|editorpreviewges)-[a-f0-9]{32}"
 FONT_EXPORT_NAME = r"ewm_out_[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\.png"
 
 IOS_EXPORT_CONTROL = "Documents/testmap-export-control.json"
@@ -1088,7 +1088,7 @@ def _font_ios_outputs(root: Path) -> dict[str, Path]:
 
 
 def begin_font_export(state: dict, run_id: str, task_id: str) -> None:
-    """Snapshot only the new font edge's output namespace before replay."""
+    """Snapshot only the registered font/gesture edge output namespace before replay."""
     _validate_setup(state)
     if (state["phase"] != "active" or state["setup"] != "editor"
             or not re.fullmatch(FONT_EXPORT_MARKER, state["marker"])

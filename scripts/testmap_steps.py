@@ -58,7 +58,10 @@ def clamp_pixels(path: Path, rect: dict, fixture: Path) -> dict:
     for py in range(white[1], white[3]):
         for px in range(white[0], white[2]):
             r, g, b = raster[px, py]
-            if r >= 200 and g >= 90 and r - g >= 12 and g - b >= 25 and r - b >= 45:
+            # Fixture watermark is #FFB800 blended onto white. Theme selection chrome
+            # may also be orange; its red/green-to-blue ratio is different.
+            if (r >= 200 and g >= 90 and r - g >= 12 and g - b >= 25 and r - b >= 45
+                    and .20 <= (r - g) / (r - b) <= .36):
                 points.add((px, py))
                 if len(points) > 100_000:
                     raise ValueError("CLAMP glyph mask exceeds its bound")

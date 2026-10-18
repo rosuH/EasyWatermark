@@ -497,9 +497,11 @@ fun DrawScope.drawWatermarkTiles(
             )
         }
         WatermarkTileMode.REPEAT -> {
-            var y = 0
+            val phaseX = ((offsetX * bgWidth) % cellWidth + cellWidth) % cellWidth
+            val phaseY = ((offsetY * bgHeight) % cellHeight + cellHeight) % cellHeight
+            var y = if (phaseY == 0f) 0f else phaseY - cellHeight
             while (y < bgHeight) {
-                var x = 0
+                var x = if (phaseX == 0f) 0f else phaseX - cellWidth
                 while (x < bgWidth) {
                     drawImage(
                         image = cell,

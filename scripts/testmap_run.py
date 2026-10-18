@@ -1849,7 +1849,7 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         should_stop=should_stop,
         **cancel_options,
     )
-    if edge_id == "editor-font-system-select-export":
+    if edge_id in {"editor-font-system-select-export", "editor-preview-gestures"}:
         identity = spec.get("step_evidence_task") or {}
         repeat = identity.get("repeat") or {}
         task_id = f"{identity.get('id', '')}@r{repeat.get('k', 1)}of{repeat.get('n', 1)}"
@@ -1862,6 +1862,31 @@ def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
         logf.write(f"setup recovery backup: {state['journal']}\n")
         logf.flush()
     return state
+
+
+def _finish_agent_setup(spec, state, code, logf, should_stop=None):
+    """Archive registered pipeline exports before restoring either replay format."""
+    try:
+        if (code == 0 and state is not None
+                and spec.get("edge_id") in {"editor-font-system-select-export", "editor-preview-gestures"}
+                and not (should_stop and should_stop())):
+            try:
+                spec["font_export"] = capture_font_export(state)
+            except (ValueError, OSError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
+                code = 2
+                spec["font_export"] = {"status": "unverified", "reason": str(exc)}
+                logf.write(f"registered export capture failed: {exc}\n")
+                logf.flush()
+    finally:
+        _restore_agent_setup(state, logf)
+        if spec.get("font_export") and state:
+            proof = spec["font_export"]
+            proof["private_restored"] = state.get("phase") == "restored"
+            if state.get("export_output"):
+                proof["cleanup"] = state["export_output"].get("cleanup")
+            if proof.get("manifest"):
+                Path(proof["manifest"]).write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
+    return code
 
 
 def _restore_agent_setup(state: dict | None, logf) -> None:
@@ -4705,6 +4730,7 @@ def run_task(
     env = os.environ.copy()
     env.update(spec.get("env") or {})
     if spec.get("builder") == "agent-device" and rows and script and script.suffix == ".json":
+        code = 2
         try:
             def run_batch(batch_rows):
                 return _run_batched_steps(cmd, batch_rows, logf, tee_stdout, on_proc,
@@ -4722,7 +4748,7 @@ def run_task(
                     _capture_cancel_surface(cmd, spec, logf, should_stop=should_stop)
             finally:
                 try:
-                    _restore_agent_setup(setup_state, logf)
+                    code = _finish_agent_setup(spec, setup_state, code, logf, should_stop)
                     if spec.get("source_recovery"):
                         spec["source_recovery"]["private_restored"] = True
                         (output / "android-failure-recovery.json").write_text(json.dumps(spec["source_recovery"], indent=2) + "\n")
@@ -4731,6 +4757,8 @@ def run_task(
                         evidence_events.finish()
                     release_agent_session(cmd, logf)
         extra = ingest_agent_device_result(spec, code)
+        if spec.get("font_export"):
+            extra["font_export"] = spec["font_export"]
         _publish_agent_device_live(spec)
         return code, extra.get("cases") or [], extra
     output = Path(spec.get("agent_device_output") or "")
@@ -4815,26 +4843,7 @@ def run_task(
                 if spec.get("builder") == "agent-device" and not (should_stop and should_stop()) and spec.get("edge_id") == "export-cancel":
                     _capture_cancel_surface(cmd, spec, logf, should_stop=should_stop)
             finally:
-                try:
-                    if (code == 0 and spec.get("builder") == "agent-device"
-                            and spec.get("edge_id") == "editor-font-system-select-export"
-                            and setup_state is not None and not (should_stop and should_stop())):
-                        try:
-                            spec["font_export"] = capture_font_export(setup_state)
-                        except (ValueError, OSError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
-                            code = 2
-                            spec["font_export"] = {"status": "unverified", "reason": str(exc)}
-                            logf.write(f"font export capture failed: {exc}\n")
-                            logf.flush()
-                finally:
-                    _restore_agent_setup(setup_state, logf)
-                    if spec.get("font_export") and setup_state:
-                        spec["font_export"]["private_restored"] = setup_state.get("phase") == "restored"
-                        if setup_state.get("export_output"):
-                            spec["font_export"]["cleanup"] = setup_state["export_output"].get("cleanup")
-                        manifest = spec["font_export"].get("manifest")
-                        if manifest:
-                            Path(manifest).write_text(json.dumps(spec["font_export"], indent=2) + "\n", encoding="utf-8")
+                code = _finish_agent_setup(spec, setup_state, code, logf, should_stop)
         finally:
             if tail is not None:
                 tail.join(timeout=3)

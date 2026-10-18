@@ -24,6 +24,23 @@ import testmap_setup as setup
 
 
 class BackendChecks(unittest.TestCase):
+    def test_registered_batch_export_captures_before_private_restore(self):
+        state = {"phase": "active"}
+        spec = {"edge_id": "editor-preview-gestures"}
+        order = []
+        def capture(current):
+            self.assertEqual("active", current["phase"])
+            order.append("capture")
+            return {"status": "evidence_complete"}
+        def restore(current, _log):
+            order.append("restore")
+            current["phase"] = "restored"
+        with patch.object(runner, "capture_font_export", side_effect=capture), \
+                patch.object(runner, "_restore_agent_setup", side_effect=restore):
+            self.assertEqual(0, runner._finish_agent_setup(spec, state, 0, io.StringIO()))
+        self.assertEqual(["capture", "restore"], order)
+        self.assertTrue(spec["font_export"]["private_restored"])
+
     def test_connected_android_tasks_bind_only_selected_serial_in_env(self):
         device = {'id': 'emulator-5554', 'name': 'Selected', 'kind': 'emulator'}
         for task_id, gradle_task in (
@@ -806,6 +823,14 @@ class SetupSafetyChecks(unittest.TestCase):
         starts = [call[3] for call in calls if call[2] == "shell" and "am start" in call[3]]
         self.assertTrue(any("android.intent.action.MAIN" in command for command in starts))
         self.assertFalse(any("android.intent.action.SEND" in command for command in starts))
+        setup.restore_setup(state)
+
+    def test_gesture_export_requires_registered_marker(self):
+        with patch.object(setup, 'android_wait_editor_ready'):
+            state = setup.apply_setup('editor', platform='android', folder=self.root / 'evidence',
+                                      marker='editorpreviewges', serial='fake-serial')
+        setup.begin_font_export(state, 'run-gesture', 'edge:editor-preview-gestures@android#agent@r1of3')
+        self.assertEqual(['1'], state['font_export']['baseline_ids'])
         setup.restore_setup(state)
 
     def test_font_export_multiple_new_rows_are_not_claimed_or_deleted(self):
@@ -2792,6 +2817,21 @@ class AndroidClampChecks(unittest.TestCase):
     def run_case(self):
         return runner.run_task(self.spec, io.StringIO(), should_stop=lambda: self.stopped,
                                on_step_event=lambda platform, event: self.events.append(event))
+
+    def test_theme_selection_outline_is_not_a_gold_glyph(self):
+        from PIL import ImageDraw
+        from testmap_steps import clamp_pixels, compare_clamp_pixels
+        self.tab = 'Style'
+        before, after = self.root / 'before.png', self.root / 'after.png'
+        self.png(before)
+        with self.Image.open(before) as image:
+            ImageDraw.Draw(image).rectangle((560, 520, 642, 594), outline=(255, 183, 125), width=2)
+            image.save(after)
+        rect = {'x': 60, 'y': 100, 'width': 960, 'height': 800}
+        a = clamp_pixels(before, rect, Path(self.state['fixtures']['A']))
+        b = clamp_pixels(after, rect, Path(self.state['fixtures']['A']))
+        self.assertEqual(a['_mask'], b['_mask'])
+        self.assertEqual(1.0, compare_clamp_pixels(a, b)['pixel_similarity'])
 
     def test_real_pixels_phases_mapping_and_inline(self):
         import hashlib

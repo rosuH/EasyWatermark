@@ -456,7 +456,6 @@ fun launchDesktopWindow() = application {
     // Last measured preview pane size in layout px (density-applied via onSizeChanged).
     var previewBoxSizePx by remember { mutableStateOf(IntSize.Zero) }
     // UI-only CLAMP drag draft (never Session/export). selectionId + offsets.
-    var clampDraft by remember { mutableStateOf<Triple<String, Float, Float>?>(null) }
     // E0: Session owns product route; FileDialog stays Desktop edge.
     val launchUi by session.launchScreenUiStateFlow.collectAsState()
     val productRoute = ProductShellNav.routeFromLaunchUi(launchUi.uiState)
@@ -868,7 +867,6 @@ fun launchDesktopWindow() = application {
                 // Preview only — never touch lastSavedFile (import is not an explicit save).
                 // H0.1-fix: light in-memory preview (no saveFlow); clear any CLAMP draft.
                 if (ok) {
-                    clampDraft = null
                     // Import now probes source W×H — recompute pane-stable bucket before first paint.
                     recomputeCommittedPreviewBucket()
                     offsetPreviewGeneration += 1
@@ -1328,76 +1326,20 @@ fun launchDesktopWindow() = application {
                             )
                             val photo = previewPhoto
                             val liveOverlay = overlayCell
-                            val dragModifier = if (
-                                chrome == OverlayPreviewChrome.LiveLayers &&
-                                photo != null &&
-                                liveOverlay != null &&
-                                !busy &&
-                                dragItem != null
-                            ) {
-                                Modifier
-                                    .padding(12.dp)
-                                    .desktopClampPreviewOffsetDrag(
-                                        enabled = true,
-                                        selectionId = dragItem.uri.value,
-                                        isClamp = waterMark.tileMode == WatermarkTileMode.CLAMP,
-                                        imageWidth = photo.width.toFloat(),
-                                        imageHeight = photo.height.toFloat(),
-                                        offsetX = clampDraft?.takeIf { it.first == dragItem.uri.value }?.second
-                                            ?: dragItem.offsetX,
-                                        offsetY = clampDraft?.takeIf { it.first == dragItem.uri.value }?.third
-                                            ?: dragItem.offsetY,
-                                        onOffsetDraft = { x, y ->
-                                            val id = dragItem.uri.value
-                                            if (id.isEmpty()) {
-                                                return@desktopClampPreviewOffsetDrag
-                                            }
-                                            clampDraft = Triple(id, x, y)
-                                            overlayCell = overlayCell?.withOffset(x, y)
-                                        },
-                                        onOffsetDraftClear = {
-                                            clampDraft = null
-                                        },
-                                        onOffsetCommit = { x, y ->
-                                            val dragUri = dragItem.uri
-                                            val item = session
-                                                .launchScreenUiStateFlow
-                                                .value
-                                                .curImageInfo
-                                                ?.takeIf { it.uri == dragUri }
-                                                ?: return@desktopClampPreviewOffsetDrag
-                                            val b = me.rosuh.easywatermark.ui
-                                                .ClampDragBench
-                                                .previewScope("desktop_offset_commit")
-                                            session.applyOffset(
-                                                item.copy(offsetX = x, offsetY = y),
-                                            )
-                                            offsetPreviewGeneration++
-                                            b.mark("applyOffset")
-                                            clampDraft = null
-                                            overlayCell = overlayCell?.withOffset(x, y)
-                                            paintConflator.submit(
-                                                DesktopPreviewPaint(
-                                                    gen = offsetPreviewGeneration,
-                                                    isDraft = false,
-                                                    overrideOffset = null,
-                                                ),
-                                            )
-                                            b.mark("offsetPreviewGenerationBump")
-                                            b.finish(
-                                                mapOf(
-                                                    "offsetX" to x,
-                                                    "offsetY" to y,
-                                                    "debounceMs" to 0,
-                                                    "saveFlow" to false,
-                                                ),
-                                            )
-                                        },
-                                    )
-                            } else {
-                                Modifier.padding(12.dp)
-                            }
                             LiveOverlayPreview(
+                                onOffsetCommit = { x, y ->
+                                    val live = session.launchScreenUiStateFlow.value.curImageInfo
+                                        ?.takeIf { it.uri == dragItem?.uri }
+                                    if (live != null && previewReadyUri == live.uri.value) {
+                                        session.applyOffset(live.copy(offsetX = x, offsetY = y))
+                                        overlayCell = overlayCell?.withOffset(x, y)
+                                        offsetPreviewGeneration++
+                                        paintConflator.submit(DesktopPreviewPaint(gen = offsetPreviewGeneration, isDraft = false, overrideOffset = null))
+                                    }
+                                },
+                                renderGestureCell = { config ->
+                                    withContext(Dispatchers.Default) { composeDesktopOverlayCell(config, photo!!.width) }
+                                },
                                 chrome = chrome,
                                 photo = if (chrome == OverlayPreviewChrome.LiveLayers) photo else null,
                                 overlay = if (chrome == OverlayPreviewChrome.LiveLayers) liveOverlay else null,
@@ -1419,7 +1361,7 @@ fun launchDesktopWindow() = application {
                                 modifier = previewModifier
                                     .fillMaxSize()
                                     .onSizeChanged { size -> onPreviewBoxSizeChanged(size) }
-                                    .then(dragModifier),
+                                    .padding(12.dp),
                             )
                         },
                         thumbnail = { imageInfo, contentDescription, thumbModifier ->

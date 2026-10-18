@@ -271,6 +271,7 @@ internal class L1Session {
                 is WatermarkConfigChange.MarkMode -> editor.updateMarkMode(change.mode)
                 is WatermarkConfigChange.Color -> editor.updateTextColor(change.color)
                 is WatermarkConfigChange.AlphaPercent -> editor.updateAlpha(change.percent)
+                is WatermarkConfigChange.Transform -> editor.updateTransform(change.size, change.degree, change.repeatOffsetX, change.repeatOffsetY)
                 is WatermarkConfigChange.Degree -> editor.updateDegree(change.degree)
                 is WatermarkConfigChange.TextSize -> editor.updateTextSize(change.size)
                 is WatermarkConfigChange.Typeface -> editor.updateTextTypeface(change.typeface)

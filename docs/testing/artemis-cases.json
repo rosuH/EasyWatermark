@@ -375,6 +375,19 @@
       "supported": false,
       "reason": "Deprecated Artemis adapter; new edges are Agent Device only.",
       "goal": "In one editor session change watermark text, size, color, and opacity, then export once."
+    },
+    {
+      "id": "editor-preview-gestures",
+      "title": "缩放查看、双击编辑、变换水印并导出",
+      "edges": [
+        "editor-preview-gestures"
+      ],
+      "platform": "android",
+      "setup": "editor",
+      "verify": "export-one",
+      "supported": false,
+      "reason": "Deprecated Artemis adapter; native gesture evidence uses Agent Device only.",
+      "goal": "Topology-only; run the registered Agent Device case and review actual preview and export pixels."
     }
   ]
 }

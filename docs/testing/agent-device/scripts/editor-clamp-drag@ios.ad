@@ -9,7 +9,8 @@ press id="editorTab-1"
 wait id="editorControl-TileMode"
 press label="Single"
 wait label="Single"
-gesture pan 200 350 80 40 500
+gesture pan 232 386 80 40 500
+wait id="previewWatermarkTarget" 10000
 wait 500
 wait "id=\"sharedComposeSaveButton\" label=\"Save\" visible"
 wait absent id="aboutBack" 5000

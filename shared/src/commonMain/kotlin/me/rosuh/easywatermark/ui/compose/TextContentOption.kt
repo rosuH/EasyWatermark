@@ -217,7 +217,7 @@ private fun InlineTextContentField(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WatermarkTextEditSheet(
+internal fun WatermarkTextEditSheet(
     initialText: String,
     templateIcon: Painter?,
     enabled: Boolean,

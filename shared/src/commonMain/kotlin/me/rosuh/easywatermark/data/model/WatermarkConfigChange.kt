@@ -22,6 +22,8 @@ sealed class WatermarkConfigChange {
     data class AlphaPercent(val percent: Float) : WatermarkConfigChange()
     data class Degree(val degree: Float) : WatermarkConfigChange()
     data class TextSize(val size: Float) : WatermarkConfigChange()
+    /** One gesture commits size and rotation in one config write. */
+    data class Transform(val size: Float, val degree: Float, val repeatOffsetX: Float? = null, val repeatOffsetY: Float? = null) : WatermarkConfigChange()
     data class Typeface(val typeface: TextTypeface) : WatermarkConfigChange()
     /**
      * Atomic font identity + style capability (ADR-0035). Repository writes font key and
