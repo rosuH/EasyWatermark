@@ -44,6 +44,10 @@ AGENT_DEVICE_CASES_PATH = REPO_ROOT / "docs" / "testing" / "agent-device-cases.j
 DEFAULT_EVIDENCE_ROOT = REPO_ROOT / "build" / "agent-device"
 SCRIPT_ROOT = REPO_ROOT / "docs" / "testing" / "agent-device" / "scripts"
 PINNED_VERSION = "0.21.2"
+AI_HARNESS = REPO_ROOT / "scripts" / "testmap_agent_device_ai.mjs"
+AI_MODEL = "cursor/grok-4.7@500k"
+MAGPIE_BASE_URL = "http://127.0.0.1:3425/v1"
+AGENT_DEVICE_MODES = frozenset({"replay", "ai-sdk"})
 ANDROID_PACKAGE = "me.rosuh.easywatermark.debug"
 IOS_PACKAGE = "me.rosuh.easywatermark.ios"
 AGENT_PLATFORMS = ("android", "ios")
@@ -278,6 +282,16 @@ def agent_device_enabled() -> bool:
     return os.environ.get("TESTMAP_AGENT_DEVICE") != "0"
 
 
+def agent_device_mode() -> str:
+    mode = (os.environ.get("TESTMAP_AGENT_DEVICE_MODE") or "replay").strip().lower()
+    if mode not in AGENT_DEVICE_MODES:
+        raise ValueError(
+            "TESTMAP_AGENT_DEVICE_MODE must be replay or ai-sdk, "
+            f"got {mode!r}"
+        )
+    return mode
+
+
 def agent_device_bin() -> str:
     env = (os.environ.get("AGENT_DEVICE_BIN") or "").strip()
     if env:
@@ -299,7 +313,10 @@ def is_agent_device_cmd(cmd: list[str]) -> bool:
     joined = " ".join(cmd)
     if "npx" in cmd[0] or "npx " in joined or "@latest" in joined:
         return False
-    return Path(cmd[0]).name == "agent-device"
+    return Path(cmd[0]).name == "agent-device" or (
+        Path(cmd[0]).name in {"node", "nodejs"} and len(cmd) > 1
+        and Path(cmd[1]).name == AI_HARNESS.name
+    )
 
 
 def agent_device_version(bin_path: str | None = None) -> str:
@@ -422,6 +439,134 @@ def maybe_prepare_ios_runner(spec: dict, logf, should_stop=None) -> None:
     _prepared_udids.add(udid)
 
 
+def case_setup(case: dict, platform: str) -> str:
+    default = case.get("setup") or "home"
+    if "android_setup" in case:
+        allowed = {"editor-filmstrip-switch": "editor-pair", "export-cancel": "export-batch", "launch-to-gallery": "gallery"}
+        override = case["android_setup"]
+        if case.get("id") not in allowed or override != allowed[case["id"]]:
+            raise ValueError(f"Unsupported android_setup for {case.get('id')}: {override!r}")
+        if platform == "android":
+            return override
+    return default
+
+
+def agent_device_timeout_ms() -> int:
+    raw = os.environ.get("TESTMAP_AGENT_DEVICE_TIMEOUT_MS")
+    if not raw:
+        return 360000
+    try:
+        value = int(raw)
+    except ValueError:
+        return 360000
+    return value if value > 0 else 360000
+
+
+def case_ai_goal(case: dict) -> str:
+    explicit = case.get("ai_goal")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+    title = str(case.get("title") or case.get("id") or "Testmap path").strip()
+    goal = f"完成 EasyWatermark Testmap 路径「{title}」。"
+    verify = str(case.get("verify") or "")
+    expected_exports = {"export-one": "1", "export-two": "2"}.get(verify)
+    if expected_exports:
+        goal += (
+            f"如果路径包含导出，只有界面明确显示成功 {expected_exports} 项且失败 0 项时才结束；"
+            "不要以点击按钮代替结果验证。"
+        )
+    else:
+        goal += "只在该路径要求的可观察界面已经出现时结束。"
+    goal += "最终报告实际观察、是否达成以及任何不确定点。"
+    return goal
+
+
+def case_ai_contract(case: dict, platform: str) -> dict:
+    """Existing case payload as planner context; not another execution topology."""
+    script = case_script_path(case, platform)
+    contract = {
+        "edgeId": case["id"], "platform": platform,
+        "title": case.get("title") or case["id"],
+        "verify": case.get("verify") or "ui-only", "setup": case_setup(case, platform),
+        "scriptPath": str(script.relative_to(REPO_ROOT)) if script.is_relative_to(REPO_ROOT) else str(script),
+        "script": script.read_text(encoding="utf-8"),
+        "honesty": case.get("honesty") or "",
+        "supported": case_supports_platform(case, platform),
+        "supportReason": (case.get("reason") or {}).get(platform) or "",
+    }
+    if case["id"] == "export-failure-recovery":
+        retry = script.with_name(f"export-failure-retry@{platform}.ad")
+        contract["recovery"] = {
+            "method": "ios-fail-next-seam-consumed" if platform == "ios" else "owned-android-source-repair",
+            "note": "On iOS the existing fail-next seam is one-shot: host validates its consumed current-run receipt before Retry; no source file is rewritten." if platform == "ios" else "Host restores and verifies the owned damaged source before Retry.",
+            "action": "restore-source",
+            "scriptPath": str(retry.relative_to(REPO_ROOT)) if retry.is_relative_to(REPO_ROOT) else str(retry),
+            "script": retry.read_text(encoding="utf-8"),
+        }
+    return contract
+
+
+def agent_device_ai_cmd(
+    edge_id: str,
+    *,
+    platform: str,
+    output_dir: Path,
+    case: dict,
+    serial: str | None = None,
+    udid: str | None = None,
+    timeout_ms: int | None = None,
+) -> list[str]:
+    if platform == "desktop":
+        raise ValueError("Agent Device is not used for Compose Desktop")
+    if platform not in AGENT_PLATFORMS:
+        raise ValueError(f"Agent Device platform must be android or ios, got {platform}")
+    if platform == "android" and not serial:
+        raise ValueError("Android Agent Device AI requires --serial")
+    if platform == "ios" and not udid:
+        raise ValueError("iOS Agent Device AI requires --udid")
+    node = os.environ.get("AGENT_DEVICE_NODE_BIN") or shutil.which("node") or "node"
+    cmd = [
+        node,
+        str(AI_HARNESS),
+        "--edge-id",
+        edge_id,
+        "--platform",
+        platform,
+        "--session",
+        session_name(edge_id, platform),
+        "--app-id",
+        package_for(platform),
+        "--goal",
+        case_ai_goal(case),
+        "--output-dir",
+        str(output_dir),
+        "--model",
+        os.environ.get("TESTMAP_AGENT_DEVICE_AI_MODEL") or AI_MODEL,
+        "--base-url",
+        os.environ.get("MAGPIE_BASE_URL") or MAGPIE_BASE_URL,
+        "--timeout-ms",
+        str(timeout_ms or agent_device_timeout_ms()),
+    ]
+    if platform == "android":
+        cmd.extend(["--serial", serial or ""])
+    else:
+        cmd.extend(["--udid", udid or ""])
+    pilot_arm = os.environ.get("TESTMAP_AGENT_DEVICE_PILOT_ARM")
+    if pilot_arm:
+        if pilot_arm not in {"jev", "grok", "hybrid"} or edge_id not in {"launch-to-about", "pick-to-editor"} or (edge_id == "pick-to-editor" and pilot_arm == "jev") or platform != "android":
+            raise ValueError("pilot requires Android launch-to-about (jev/grok/hybrid) or pick-to-editor (grok/hybrid)")
+        cmd.extend(["--pilot-arm", pilot_arm])
+        cmd[cmd.index("--session") + 1] += f"-pilot-{pilot_arm}-{output_dir.parent.name}"
+    else:
+        controller = (os.environ.get("TESTMAP_AGENT_DEVICE_AI_CONTROLLER") or "hybrid").strip().lower()
+        if controller not in {"hybrid", "grok"}:
+            raise ValueError("TESTMAP_AGENT_DEVICE_AI_CONTROLLER must be hybrid or grok")
+        cmd.extend(["--controller", controller])
+        if controller == "hybrid":
+            cmd.extend(["--case-contract", json.dumps(case_ai_contract(case, platform), ensure_ascii=False)])
+    return cmd
+
+
 def agent_device_cmd(
     edge_id: str,
     *,
@@ -431,6 +576,7 @@ def agent_device_cmd(
     udid: str | None = None,
     script: Path | None = None,
     timeout_ms: int | None = None,
+    mode: str | None = None,
 ) -> list[str]:
     """Build `agent-device replay` argv. Android always --serial; iOS always --udid."""
     if platform == "desktop":
@@ -442,6 +588,15 @@ def agent_device_cmd(
             raise ValueError("Android Agent Device replay requires --serial")
     elif not udid:
         raise ValueError("iOS Agent Device replay requires --udid")
+    selected_mode = mode or agent_device_mode()
+    if selected_mode not in AGENT_DEVICE_MODES:
+        raise ValueError(f"unknown Agent Device mode: {selected_mode}")
+    if selected_mode == "ai-sdk":
+        case = agent_device_cases_by_id().get(edge_id)
+        if not case or not case_supports_platform(case, platform):
+            raise ValueError(f"unsupported Agent Device case: {edge_id}@{platform}")
+        return agent_device_ai_cmd(edge_id, platform=platform, output_dir=output_dir,
+                                   case=case, serial=serial, udid=udid, timeout_ms=timeout_ms)
     if script is None:
         cases = agent_device_cases_by_id()
         case = cases.get(edge_id)

@@ -4,6 +4,83 @@
 
 The operating contract is [historical test-map ADR](historical-adr-0032-e2e-test-map-and-harness.md). Current ADR-0032 concerns splash motion. [ADR-0037](../adr/0037-agent-device-testmap-adapter.md) defines the Agent Device adapter. These tools are local checks, not new GitHub required checks.
 
+## Optional AI SDK hybrid
+
+Agent Device defaults to deterministic replay/batch. For a bounded exploratory run, opt into the optional AI SDK harness:
+
+```
+npm ci
+TESTMAP_AGENT_DEVICE_MODE=ai-sdk \
+  scripts/e2e-run.sh edge:launch-to-about@android#agent
+```
+
+AI SDK defaults to **hybrid**: Grok plans the journey, Jev chooses controls, and a valid decision below confidence `0.9` hands back to Grok with a fresh snapshot. Grok chooses a current target for an uncertain control choice, or replans the remaining route for a low-confidence `none`. Invalid responses, high-confidence `none`, missing required state and provider errors stop the attempt. An explicitly optional incidental overlay may be skipped on a valid high-confidence `none`; skipped actions alone cannot complete a journey. Overall mode still defaults to replay.
+
+The general hybrid controller covers every supported Android/iOS binding in `agent-device-cases.json` (25 Android + 22 iOS). It reads the existing case script, setup, verification and honesty fields as planning context; unsupported cases and Compose Desktop remain outside Agent Device. Select the original Grok ToolLoopAgent with `TESTMAP_AGENT_DEVICE_AI_CONTROLLER=grok`. `TESTMAP_AGENT_DEVICE_PILOT_ARM` remains an explicit benchmark override and takes precedence. Direct Node invocations accept `--controller hybrid|grok` and default to hybrid too.
+
+Jev requests `jev-latest` through the TypeSafe HTTP API; traces retain the returned model version. It reads `TYPESAFE_AI_API_KEY` from the process environment or the existing private, gitignored `build/agent-device/jev-pilot.env`. The key is never passed in argv or saved in task metadata. Normal Android Testmap hybrid `pick-to-editor` runs use [`testmap_pick_export_evidence.py`](../../scripts/testmap_pick_export_evidence.py): prepare a uniquely identified synthetic image, verify the fresh app-owned published MediaStore PNG, remove only owned fixture/export entries, preserve baseline IDs, and restore/read back preference bytes. iOS uses its separate oracle below; the comparison runner retains its own preparation and restoration.
+
+iOS `pick-to-editor` opts in through [`testmap_ios_pick_export_evidence.py`](../../scripts/testmap_ios_pick_export_evidence.py). `TESTMAP_IOS_OWNED_DEVICE` must be the absolute path to this checkout's `build/agent-device/ios-hybrid-owned-device.json`, identifying a newly created dedicated simulator (`created_for_this_run=true`, name prefix `EWM-Hybrid-Owned-`). The CLI UDID, ownership metadata and preparation state must agree. Preparation requires an empty active Photos library and imports only the synthetic fixture. `TESTMAP_IOS_PICKER_STATE` references the successful `pick-export/prepare.json`; the visual bridge requires `prepared=true`, an empty baseline and the unchanged source hash. Existing personal libraries are outside this opt-in.
+
+Maintainers must pre-provision the new dedicated simulator, clean Debug app installation and ownership metadata; there is no repository provisioning CLI. Register only a simulator created for this run: never change metadata to claim a personal or preexisting simulator. Confirm the empty active library and the PhotoKit helper's real full read/write UI authorization; a `simctl` TCC grant alone is not sufficient evidence. For `simctl clone` environments, confirm app installation/registration and that the product/helper data containers resolve inside the new simulator. The recorded run and seed instances were destroyed; their UDIDs and old metadata cannot be reused.
+
+With those prerequisites satisfied, run the existing entry point from the repository root, with any benchmark pilot override unset:
+
+```bash
+TESTMAP_AGENT_DEVICE_MODE=ai-sdk \
+TESTMAP_AGENT_DEVICE_AI_CONTROLLER=hybrid \
+TESTMAP_AGENT_DEVICE_TIMEOUT_MS=1800000 \
+TESTMAP_IOS_OWNED_DEVICE="$PWD/build/agent-device/ios-hybrid-owned-device.json" \
+  scripts/e2e-run.sh --device '<new-owned-udid>' edge:pick-to-editor@ios#agent
+```
+
+The screenshot-based iOS controller can exceed the global default of `360000` ms (6 minutes). This example sets a per-run timeout of `1800000` ms (30 minutes); adjust `TESTMAP_AGENT_DEVICE_TIMEOUT_MS` as needed. The global default remains unchanged.
+
+This runs verification, not one-command provisioning. The runner supplies `TESTMAP_IOS_PICKER_STATE` after `prepare()` succeeds. The evidence module's only standalone CLI is `--self-check`; it does not prepare a device. Cleanup destroys this dedicated instance, so every later run needs a newly provisioned instance and matching metadata.
+
+When native AX omits the real PHPicker grid, [`testmap_ios_picker.mjs`](../../scripts/testmap_ios_picker.mjs) asks Grok to describe screenshot controls with the owned fixture as a reference. Jev chooses candidates; the existing low-confidence Grok handoff/replan receives current visual context. Visual `selected` stays unknown. A visual click must rebind to the unchanged cropped-image hash; this bridge does not inject a product fixture or bypass PHPicker. Native permission alerts and loading states stay on the AX path. The product retains add-only Photos access; the isolated PhotoKit oracle needs full read/write access to the owned synthetic library.
+
+The file oracle requires exactly one new original Photos PNG resource matching the fresh app `ewm_out_*` hash, independently decodes 960×640 pixels, checks retained source bands and changed pixels, and checks persisted marker bytes. These checks do not prove the exact rendered text. Cleanup restores and verifies both DataStores and the app preference plist, revalidates active asset IDs/resource hashes, then destroys only the ownership-checked dedicated simulator and its data directory, including Recently Deleted. Unknown assets or failed restoration block destruction. This opt-in does not establish ordinary iOS Simulator or physical-device acceptance.
+
+The generic controller keeps a route overview and plans 2–12 steps per batch, up to 80 steps overall. Later batches receive the latest observed UI and completed steps. Jev chooses clicks, input fields, scroll/gesture surfaces and slider tracks. Actions rebind uniquely against a fresh full snapshot and pin the current ref generation. Back, keyboard, waits and assertions remain host operations. Target-relative gestures use current geometry rather than recorded screen coordinates. A `remember` step reads an original field value for later restoration; saved originals cannot be overwritten. Native state is retained as unknown when absent; an explicit selected/unselected assertion must be backed by a native fact. Switch values can be checked independently; `selected` is not `checked`.
+
+Plans must end with concrete observations. Conditions support exact native `label` matching separately from label/value `text` searches; unknown condition fields are rejected. Negative assertions reject incomplete, stale or system-occluded snapshots. Export paths additionally require this run to dispatch an export and observe the required success/failure counts. Failure recovery uses a fixed host-owned source restoration operation after observing this run's failed export; neither a model command nor post-exit native replay performs the repair. Recovery state is invalidated during cleanup. Original case support and `drive` limits still apply, including iOS PHPicker visibility limitations. Routing coverage is not device acceptance for all 47 bindings.
+
+`hybrid-trace.json` records the plan, model answers, confidence, handoffs, refreshed targets, native state, actions and checks; raw snapshots remain alongside it. Existing bounded benchmark pilots remain separate, and their prior timing results do not establish generic-controller performance.
+
+The harness uses the local Magpie endpoint `http://127.0.0.1:3425/v1` and `cursor/grok-4.7@500k` by default. Override them with `MAGPIE_BASE_URL`, `MAGPIE_API_KEY`, and `TESTMAP_AGENT_DEVICE_AI_MODEL`. AI mode is exploratory, remains outside PR CI, and writes `agent-trace.json`, `post-snapshot.json`, screenshots, and `result.json` under `build/agent-device/`. A completed model loop is still at most `executed_review_required`; it is not a product pass.
+
+The Android-only `launch-to-about` controller pilot compares Jev and Grok with the same two-phase host, native action-node candidates (with ancestor IDs and sibling labels), native `selected=false` check, and ordered Launch → About → Launch oracle. It compares target selection, not the unrestricted Grok agent. Put `TYPESAFE_AI_API_KEY=...` in a private, gitignored env file, then run:
+
+```bash
+python3 scripts/testmap_compare_launch_about.py --serial emulator-5554 \
+  --env-file build/agent-device/jev-pilot.env --repeats 3
+```
+
+The comparison alternates controller order and writes the plan before running. Each attempt remains a normal testmap record. `report.md`, raw per-attempt results, provider timings, and controller timings live under `build/agent-device/launch-to-about-pilot-<timestamp>/`. Jev calls the [official TypeSafe HTTP API](https://docs.typesafe.ai/api) directly; no AI SDK upgrade is needed. Its Choice must name a current candidate, have a valid distribution, and meet the fixed `confidence >= 0.9` gate. Low confidence, missing state, or an ambiguous target stops the attempt. The threshold is a pilot setting, not a calibrated reliability guarantee. `selected=false` on a navigation button does not establish checkbox checked-state behavior. `npm run testmap:agent-ai:check` exercises the gate and verifies blocked decisions never click, without network/device access.
+
+The optional `hybrid` pilot gives Grok the whole roundtrip goal and initial snapshot. Grok returns a plan of 2–4 navigation steps; Jev chooses a control for each instruction. Only a valid, known, non-`none` Jev choice below `0.9` hands control back to Grok. Handoff includes a newly captured snapshot, current candidates, the plan, completed instructions, and Jev's answer. Grok can choose a current target or stop; its choice must pass the same refreshed-target and native `selected=false` guards. Invalid responses, missing state and provider errors stop the run. The host verifies actual About visitation and return to Launch.
+
+```bash
+python3 scripts/testmap_compare_launch_about.py --serial emulator-5554 \
+  --env-file build/agent-device/jev-pilot.env --arms hybrid --repeats 1
+```
+
+For branch verification, add `--force-handoff-step 1` or `2`. This hybrid-only test fault lowers the **effective** confidence to `0.89` after validating the raw Jev response. The trace preserves the original answer, marks the injected gate answer and records Grok's handoff decision. Injected outcomes are branch tests, not evidence of natural Jev uncertainty. Planner and handoff request timings are included in total provider time; their models, usage, actual click targets and snapshots stay in `pilot-trace.json`.
+
+For the Android pick → edit → export comparison:
+
+```bash
+python3 scripts/testmap_compare_launch_about.py --serial emulator-5554 \
+  --edge pick-to-editor --arms hybrid grok --repeats 3
+```
+
+Both arms receive a fresh Grok whole-task plan. Pure Grok chooses every control; hybrid uses Jev and hands only valid low-confidence choices to Grok. Both use the same bounded click/fill executor, fresh pinned refs, explicit unselected checks, and PNG configuration evidence. For installed builds that omit radio selection, the JPEG-only quality control must be disabled; independent file decoding still requires a PNG signature. An already-selected Content tab or PNG option is skipped. No actions follow export dispatch.
+
+Preparation backs up both watermark DataStores and creates one synthetic image. A globally unique MediaStore timestamp identifies its exact accessibility label in the real system picker; selection does not depend on recency. The controller verifies text field readback, confirmation and exact export counts. An independent oracle requires a fresh app-owned, published PNG, decodes its 960×640 pixels, checks retained source color bands, changed pixels and persisted text. This does not prove the exact rendered text; OCR and visual review supplement it. Only owned test files/exports are removed, and original preferences are restored and checked after each attempt.
+
+Reports and preregistered order/source hashes are under `build/agent-device/pick-to-editor-pilot-<timestamp>/`. Successful-attempt task medians include planning, selection, execution, evidence capture and session lifecycle; setup, external file checks and restoration are separate. Provider time includes the planner and handoffs. Failed or incomplete attempts never count as speed improvements. This compares two bounded planned controllers, not an unrestricted ToolLoopAgent. The existing testmap edge and its `drive` classification stay unchanged; this remains exploratory and outside CI.
+
 ## Start and run
 
 From the repository root, with Python 3:

@@ -21,6 +21,18 @@ Formal execution rejects missing, empty, or `auto` device bindings before starti
 
 Single-edge debug (`跑 pick-to-editor`) is Mode A in `e2e-testmap` and is **not** a merge gate.
 
+## Harness maintenance
+
+For Agent Device runner, controller, or evidence-helper changes, use the local offline check after installing the pinned tooling with `npm ci` (Node.js 22.12+ and Python 3):
+
+```bash
+npm run testmap:agent-ai:check
+```
+
+This checks the AI controller and confidence/state guards, iOS visual-picker provenance, Android/iOS file-evidence ownership, runner command validation, and Python runner contracts. It makes no model requests and drives no devices. It is not a PR CI gate or a substitute for the applicable device evidence.
+
+Replay remains the overall default; opting into AI SDK selects hybrid by default. Provider settings, credentials, direct CLI examples, and the dedicated empty-simulator requirements for iOS `pick-to-editor` are in [the testmap operating guide](../docs/testmap/README.md). Console jobs inherit the console process environment; setting AI mode in a separate `curl` process does not reconfigure an already running console. A completed AI loop still needs independent export-file and cleanup evidence where required, and remains at most `executed_review_required` without owner confirmation.
+
 Vocabulary: expected effect = change description + [`docs/testmap/copy.yaml`](../docs/testmap/copy.yaml) titles. See [CONTEXT.md — Verification](../docs/CONTEXT.md#verification).
 
 Explore → promote (unscripted / `drive: none` edges) is [e2e-walk.md](../docs/agents/e2e-walk.md), not this file.

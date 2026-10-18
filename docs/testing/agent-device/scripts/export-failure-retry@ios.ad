@@ -1,0 +1,6 @@
+context platform=ios
+wait id="sharedComposeExportRetryFailed"
+press id="sharedComposeExportRetryFailed"
+wait text "Processed 1 · Succeeded 1 · Failed 0"
+wait text "Share"
+close
