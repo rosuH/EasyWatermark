@@ -105,8 +105,8 @@
     "input": {
       "kind": "pinch",
       "origin": {
-        "x": 200,
-        "y": 183
+        "x": 92,
+        "y": 269
       },
       "scale": 2.0
     }
@@ -146,7 +146,7 @@
       "target": {
         "kind": "point",
         "x": 92,
-        "y": 245
+        "y": 269
       },
       "doubleTap": true
     }
@@ -211,6 +211,20 @@
     }
   },
   {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewWatermarkTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "absent": "id=\"previewEditText\"",
+      "timeoutMs": 3000
+    }
+  },
+  {
     "command": "gesture",
     "input": {
       "kind": "transform",
@@ -238,6 +252,63 @@
     "command": "wait",
     "input": {
       "durationMs": 650
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"previewSelectionDone\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewViewTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "gesture",
+    "input": {
+      "kind": "pinch",
+      "origin": {
+        "x": 92,
+        "y": 269
+      },
+      "scale": 1.5
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewResetView\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewViewTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "selector",
+        "selector": "id=\"previewResetView\""
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "absent": "id=\"previewResetView\"",
+      "timeoutMs": 5000
     }
   },
   {

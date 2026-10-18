@@ -2848,8 +2848,8 @@ class AndroidClampChecks(unittest.TestCase):
         self.assertEqual(8, len(proof['provider_readbacks']))
         self.assertEqual(8, len(proof['date_queries']))
         mapping = [m for phase in proof['phases'] for m in phase['mapping'] if m['kind'] == 'action']
-        self.assertEqual(list(range(1, 71)), [m['step'] for m in mapping])
-        self.assertEqual([n for n in range(1, 74) if n not in (28, 29, 32)], [m['source_step'] for m in mapping])
+        self.assertEqual(list(range(1, 72)), [m['step'] for m in mapping])
+        self.assertEqual([n for n in range(1, 75) if n not in (28, 29, 32)], [m['source_step'] for m in mapping])
         for phase in proof['phases']:
             self.assertEqual(phase['source_sha256'], hashlib.sha256(Path(phase['source']).read_bytes()).hexdigest())
             self.assertEqual(phase['script_sha256'], hashlib.sha256(Path(phase['script']).read_bytes()).hexdigest())
@@ -2857,7 +2857,11 @@ class AndroidClampChecks(unittest.TestCase):
         for binding in proof['ref_bindings']:
             self.assertEqual(binding['snapshot']['sha256'], hashlib.sha256(Path(binding['snapshot']['path']).read_bytes()).hexdigest())
             self.assertEqual(binding['png_bracket']['sha256'], hashlib.sha256(Path(binding['png_bracket']['png']).read_bytes()).hexdigest())
-        self.assertEqual(68, len([e for e in self.events if e.get('shot')]))
+        self.assertEqual(69, len([e for e in self.events if e.get('shot')]))
+        selection = next(phase for phase in proof['phases'] if phase['phase'] == 'select-watermark')
+        tap = runner.parse_script(Path(selection['source']))[0]
+        self.assertEqual('press', tap['command'])
+        self.assertEqual(proof['gesture']['origin'], tap['point'])
         pan = next(phase for phase in proof['phases'] if phase['phase'] == 'pan')
         gesture = runner.parse_script(Path(pan['source']))[0]
         self.assertEqual(proof['gesture']['origin'], gesture['point'])

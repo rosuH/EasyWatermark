@@ -10,7 +10,8 @@ Research: [official product interaction evidence](https://github.com/rosuH/EasyW
 
 ## Decision
 
-- The first pointer chooses the target. It stays fixed until all pointers lift; adding a second finger or crossing the selection does not retarget. When multiple pointers share the initial native timestamp (including UIKit delivering them in separate events), prefer a watermark hit because those touches have no temporal first pointer.
+- Revision approved by the owner on 2026-10-18 after physical iPhone review: a completed tap selects the watermark group; a blank tap or Done clears selection. Each gesture captures the selection that existed before pointer down. Unselected gestures always pan/zoom the photo, even over watermark pixels. Selected gestures anywhere transform the watermark/group. Adding fingers, landing in gaps, and crossing cells never retarget. This replaces pointer-down glyph arbitration, which was ambiguous for dense patterns.
+- Reset view and Done sit in a fixed, opaque 48 dp toolbar outside the photo; remove the Edit watermark shortcut. Double-tap retains the existing text sheet. Selection outlines identify the repeated group.
 - Tap watermark pixels to select. One-finger drag moves the selected watermark; two fingers resize and rotate it. REPEAT changes the whole pattern, never an individual copy. CLAMP changes the single cell.
 - Blank photo gestures pan/zoom only the viewing surface (1–4×); Reset view restores Fit. View transform and selection chrome do not enter Session, caches, export, or preferences. Photo change resets the view and selection.
 - Double tap a text watermark opens the existing WatermarkTextEditSheet. Its Confirm/Cancel/template behavior is shared with the Content editor. Image watermarks retain their image-content controls.
