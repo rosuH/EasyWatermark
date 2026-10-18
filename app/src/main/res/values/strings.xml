@@ -198,4 +198,6 @@
     <string name="tips_low_resolution_source">Low-resolution photo · %1$d × %2$d</string>
     <string name="preview_reset_view">Reset view</string>
     <string name="preview_selection_done">Done</string>
+    <string name="preview_selection_done_hint">Finish watermark adjustment</string>
+    <string name="preview_reset_view_hint">Restore full view</string>
 </resources>

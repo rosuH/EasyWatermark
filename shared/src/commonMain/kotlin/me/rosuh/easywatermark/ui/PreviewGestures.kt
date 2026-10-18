@@ -1,5 +1,10 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -7,7 +12,7 @@ import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,12 +31,16 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filterNotNull
 import me.rosuh.easywatermark.data.model.*
 import me.rosuh.easywatermark.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.painterResource
+import me.rosuh.easywatermark.ui.theme.*
 import kotlin.math.*
 
 internal data class PreviewInteraction(
@@ -40,6 +49,7 @@ internal data class PreviewInteraction(
     val onConfig: (WatermarkConfigChange) -> Unit,
     val onEditText: () -> Unit,
 )
+internal val PreviewToolbarHeight = 48.dp
 internal val LocalPreviewInteraction = staticCompositionLocalOf<PreviewInteraction?> { null }
 
 internal data class PreviewCellHit(val origin: Offset, val column: Int, val row: Int)
@@ -91,6 +101,7 @@ private data class PreviewDraft(
 }
 
 /** UI-only view/selection/draft state; hosts retain Session and source ownership. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun InteractiveOverlayPreview(
     photo: ImageBitmap,
@@ -104,6 +115,19 @@ internal fun InteractiveOverlayPreview(
         var box by remember { mutableStateOf(IntSize.Zero) }
         var zoom by remember { mutableFloatStateOf(1f) }
         var pan by remember { mutableStateOf(Offset.Zero) }
+        val scope = rememberCoroutineScope()
+        var resetJob by remember { mutableStateOf<Job?>(null) }
+        var resetting by remember { mutableStateOf(false) }
+        val motionPolicy = currentMotionPolicy()
+        val fadeMs = motionDurationMs(motionPolicy, EwmMotionTokens.optionPanelFadeMs)
+        val resetMs = motionDurationMs(motionPolicy, EwmMotionTokens.shellShortMs,
+            reducedScale = 0f)
+        fun interruptReset() { resetJob?.cancel(); resetJob = null; resetting = false }
+        LaunchedEffect(motionPolicy) {
+            if (motionPolicy != MotionPolicy.Full && resetting) {
+                interruptReset(); zoom = 1f; pan = Offset.Zero
+            }
+        }
         var selected by remember { mutableStateOf<PreviewCellHit?>(null) }
         var draft by remember { mutableStateOf<PreviewDraft?>(null) }
         var raster by remember { mutableStateOf<Pair<WaterMark, ImageBitmap>?>(null) }
@@ -171,18 +195,44 @@ internal fun InteractiveOverlayPreview(
         val selectionColor = MaterialTheme.colorScheme.primary
         Column(Modifier.fillMaxSize()) {
             // Keep controls outside the photo and reserve their height across selection changes.
-            Row(Modifier.fillMaxWidth().height(48.dp).background(MaterialTheme.colorScheme.surface),
+            Row(Modifier.fillMaxWidth().height(PreviewToolbarHeight).background(MaterialTheme.colorScheme.surface),
                 horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                if (selected != null) {
-                    TextButton(onClick = { selected = null }, enabled = !dragging && draft == null,
-                        modifier = Modifier.testTag("previewSelectionDone")) {
-                        Text(stringResource(Res.string.preview_selection_done))
+                Box(Modifier.size(48.dp)) {
+                    androidx.compose.animation.AnimatedVisibility(selected != null, enter = fadeIn(tween(fadeMs)), exit = fadeOut(tween(fadeMs))) {
+                        val label = stringResource(Res.string.preview_selection_done)
+                        TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text(stringResource(Res.string.preview_selection_done_hint)) } }, state = rememberTooltipState()) {
+                            IconButton(onClick = { selected = null }, enabled = selected != null && !dragging && draft == null,
+                                modifier = Modifier.size(48.dp).testTag("previewSelectionDone")) {
+                                Icon(painterResource(Res.drawable.ic_preview_done), label, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
                     }
                 }
-                if (zoom != 1f || pan != Offset.Zero) {
-                    TextButton(onClick = { zoom = 1f; pan = Offset.Zero }, enabled = !dragging,
-                        modifier = Modifier.testTag("previewResetView")) {
-                        Text(stringResource(Res.string.preview_reset_view))
+                Box(Modifier.size(48.dp)) {
+                    androidx.compose.animation.AnimatedVisibility(zoom != 1f || pan != Offset.Zero || resetting,
+                        enter = fadeIn(tween(fadeMs)), exit = fadeOut(tween(fadeMs))) {
+                        val label = stringResource(Res.string.preview_reset_view)
+                        TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text(stringResource(Res.string.preview_reset_view_hint)) } }, state = rememberTooltipState()) {
+                            IconButton(onClick = {
+                                val fromZoom = zoom
+                                val fromPan = pan
+                                resetting = true
+                                resetJob = scope.launch {
+                                    try {
+                                        animate(0f, 1f, animationSpec = tween(resetMs, easing = FastOutSlowInEasing)) { value, _ ->
+                                            zoom = fromZoom + (1f - fromZoom) * value
+                                            pan = fromPan * (1f - value)
+                                        }
+                                        zoom = 1f; pan = Offset.Zero
+                                    } finally { resetting = false }
+                                }
+                            }, enabled = !dragging && !resetting,
+                                modifier = Modifier.size(48.dp).testTag("previewResetView")) {
+                                Icon(painterResource(Res.drawable.ic_preview_fit), label, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
                     }
                 }
             }
@@ -218,6 +268,7 @@ internal fun InteractiveOverlayPreview(
                                 val event = awaitPointerEvent()
                                 if (event.type != PointerEventType.Scroll || dragging) continue
                                 val change = event.changes.firstOrNull() ?: continue
+                                interruptReset()
                                 val fit = computeFittedImageRect(size.width.toFloat(), size.height.toFloat(), photo.width.toFloat(), photo.height.toFloat()) ?: continue
                                 val center = Offset(size.width / 2f, size.height / 2f)
                                 val next = (zoom * exp(-change.scrollDelta.y * .08f)).coerceIn(1f, 4f)
@@ -228,9 +279,9 @@ internal fun InteractiveOverlayPreview(
                         }
                     }
                     .pointerInput(interaction.identity, photo.width, photo.height) {
-                        var previousTap: Pair<Long, Offset>? = null
                         awaitEachGesture {
                             val firstDown = awaitFirstDown(requireUnconsumed = false)
+                            interruptReset()
                             if ((draft?.stage ?: 0) > 0) { firstDown.consume(); return@awaitEachGesture }
                             val fit = computeFittedImageRect(size.width.toFloat(), size.height.toFloat(), photo.width.toFloat(), photo.height.toFloat()) ?: return@awaitEachGesture
                             val boxSize = Size(size.width.toFloat(), size.height.toFloat())
@@ -247,11 +298,15 @@ internal fun InteractiveOverlayPreview(
                                 // Transparent gap is photo space; keep a bounded margin for small text.
                                 return candidate?.takeIf { startOverlay.alpha > .01f }?.takeIf {
                                     val local = point - it.origin
-                                    val radius = (12.dp.toPx() * photo.width / fit.width / zoom).coerceAtMost(24f)
-                                    (-2..2).any { dx -> (-2..2).any { dy ->
-                                        val x = (local.x + dx * radius / 2).toInt()
-                                        val y = (local.y + dy * radius / 2).toInt()
-                                        x in 0 until pixels.width && y in 0 until pixels.height && pixels[x, y].alpha > .05f
+                                    // Check the whole visible touch margin: sparse samples miss thin glyphs.
+                                    val radius = 12.dp.toPx() * photo.width / fit.width / zoom
+                                    val xs = ceil(local.x - radius).toInt().coerceAtLeast(0)..
+                                        floor(local.x + radius).toInt().coerceAtMost(pixels.width - 1)
+                                    val ys = ceil(local.y - radius).toInt().coerceAtLeast(0)..
+                                        floor(local.y + radius).toInt().coerceAtMost(pixels.height - 1)
+                                    ys.any { y -> xs.any { x ->
+                                        val dx = x - local.x; val dy = y - local.y
+                                        dx * dx + dy * dy <= radius * radius && pixels[x, y].alpha > .05f
                                     } }
                                 }
                             }
@@ -278,7 +333,7 @@ internal fun InteractiveOverlayPreview(
                                     val added = event.changes.firstOrNull { it.pressed && !it.previousPressed }
                                     if (added != null) addedPointerDelayMs = added.uptimeMillis - firstDown.uptimeMillis
                                     val pressed = event.changes.count { it.pressed }
-                                    if (pressed > 1) { multi = true; previousTap = null }
+                                    if (pressed > 1) { multi = true }
                                     val deltaPan = event.calculatePan()
                                     val deltaZoom = event.calculateZoom()
                                     val deltaRotation = event.calculateRotation()
@@ -286,7 +341,6 @@ internal fun InteractiveOverlayPreview(
                                         lastPosition = event.changes.first().position
                                         moved = moved || (lastPosition - down.position).getDistance() > viewConfiguration.touchSlop || multi
                                         if (moved) {
-                                            previousTap = null
                                             val target = hit
                                             if (target != null) {
                                                 scale = (scale * deltaZoom).coerceIn(WatermarkConfigRules.MIN_TEXT_SIZE / config.textSize, WatermarkConfigRules.MAX_TEXT_SIZE / config.textSize)
@@ -313,18 +367,16 @@ internal fun InteractiveOverlayPreview(
                                     } else if (!moved && !multi) {
                                         val tapped = hitAt(down.position)
                                         selected = tapped
-                                        val prior = previousTap
-                                        if (tapped != null && prior != null && down.uptimeMillis - prior.first in viewConfiguration.doubleTapMinTimeMillis..viewConfiguration.doubleTapTimeoutMillis &&
-                                            (down.position - prior.second).getDistance() <= viewConfiguration.touchSlop * 2 && config.markMode == WatermarkMode.Text
-                                        ) { previousTap = null; current.onEditText() }
-                                        else previousTap = if (tapped != null) down.uptimeMillis to down.position else null
-                                    } else previousTap = null
-                                } else { draft = null; raster = null; previousTap = null }
+                                        if (hit != null && tapped != null && config.markMode == WatermarkMode.Text) {
+                                            current.onEditText()
+                                        }
+                                    }
+                                } else { draft = null; raster = null }
                             } finally {
                                 dragging = false
                                 gestureBench.finish(mapOf("target" to if (hit == null) "view" else "watermark",
                                     "initialPointers" to initialPointerCount, "addedDelayMs" to addedPointerDelayMs))
-                                if (current.identity != startId || cancelled || draft?.stage == 0) { draft = null; raster = null; previousTap = null }
+                                if (current.identity != startId || cancelled || draft?.stage == 0) { draft = null; raster = null }
                             }
                         }
                     })

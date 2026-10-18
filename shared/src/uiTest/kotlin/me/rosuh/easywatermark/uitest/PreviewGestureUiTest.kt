@@ -54,6 +54,39 @@ class PreviewGestureUiTest {
     }
 
     @Test
+    fun thinGlyphGapSelects_andSelectedTapEditsWithoutDoubleTapDeadline() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Transparent)
+        CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(cell), Size(60f, 30f)) {
+            drawRect(Color.Red, Offset(31f, 16f), Size(2f, 2f))
+        }
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP)
+        var opened = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, { opened++ })) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        // The tap is 1px from a thin glyph, between all 25 points in the old sampler.
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        runOnIdle { assertEquals(0, opened) }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            advanceEventTime(1200)
+            click(Offset(width * .5f, height * .45f))
+        }
+        runOnIdle { assertEquals(1, opened) }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .1f, height * .1f)) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        runOnIdle { assertEquals(1, opened) }
+    }
+
+    @Test
     fun dragLocksFirstTarget_andCommitsOnlyAtRelease() = runComposeUiTest {
         val photo = bitmap(300, 300, Color.White)
         val cell = bitmap(60, 30, Color.Red)
@@ -215,7 +248,7 @@ class PreviewGestureUiTest {
         runOnIdle { gate.complete(Unit) }
         waitForIdle()
         onNodeWithTag("previewGestureSurface").performTouchInput {
-            doubleClick(Offset(width * .5f, height * .45f))
+            click(Offset(width * .5f, height * .45f))
         }
         waitUntil { opened == 1 }
     }
@@ -310,6 +343,90 @@ class PreviewGestureUiTest {
         runOnIdle { config = config.copy(tileMode = WatermarkTileMode.CLAMP) }
         onNodeWithTag("previewViewTarget").assertExists()
         onNodeWithTag("previewSelectionDone").assertDoesNotExist()
+    }
+
+    @Test
+    fun switchingPhotosKeepsThumbnailAndLiveViewportIdentical() = runComposeUiTest {
+        var photo by mutableStateOf(bitmap(300, 300, Color.White))
+        var identity by mutableStateOf("square")
+        var chrome by mutableStateOf(OverlayPreviewChrome.WaitThumb)
+        val cell = bitmap(60, 30, Color.Red)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(identity, WaterMark.default, {}, {})) {
+                    LiveOverlayPreview(chrome, photo,
+                        overlayCellFrom(cell, WaterMark.default, 0f, 0f, photo.width),
+                        waitThumb = { modifier ->
+                            androidx.compose.foundation.Image(photo, null, modifier.testTag("waitingPhoto"),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+                        },
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        for ((name, dimensions) in listOf("square" to (300 to 300), "portrait" to (200 to 400), "landscape" to (400 to 200))) {
+            runOnIdle {
+                identity = name
+                photo = bitmap(dimensions.first, dimensions.second, Color.White)
+                chrome = OverlayPreviewChrome.WaitThumb
+            }
+            val waiting = onNodeWithTag("waitingPhoto").fetchSemanticsNode().boundsInRoot
+            runOnIdle { chrome = OverlayPreviewChrome.LiveLayers }
+            val live = onNodeWithTag("previewGestureSurface").fetchSemanticsNode().boundsInRoot
+            assertEquals(live, waiting, "$name thumbnail and live photo must fit into the same viewport")
+        }
+    }
+
+    @Test
+    fun resetAnimationCanBeInterrupted_andDoneKeepsPhotoView() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config,
+                    { error("view controls must not change config") }, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> error("view controls must not change offset") },
+                        renderGestureCell = { cell })
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .2f, height * .2f))
+            down(1, Offset(width * .8f, height * .8f))
+            moveTo(0, Offset(width * .05f, height * .05f))
+            moveTo(1, Offset(width * .95f, height * .95f))
+            up(0); up(1)
+        }
+        mainClock.autoAdvance = false
+        onNodeWithTag("previewResetView").performClick()
+        mainClock.advanceTimeBy(80)
+        onNodeWithTag("previewResetView").assertIsNotEnabled()
+        onNodeWithTag("previewGestureSurface").performTouchInput { down(Offset(width * .1f, height * .1f)); up() }
+        mainClock.advanceTimeBy(400)
+        onNodeWithTag("previewResetView").assertIsEnabled()
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        mainClock.advanceTimeBy(240)
+        onNodeWithTag("previewSelectionDone").performClick()
+        mainClock.advanceTimeBy(240)
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewResetView").assertIsDisplayed()
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        // Reset keeps the selection and never changes watermark config or Session offsets.
+        onNodeWithTag("previewResetView").performClick()
+        mainClock.advanceTimeBy(600)
+        onNodeWithTag("previewResetView").assertDoesNotExist()
+        mainClock.autoAdvance = true
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        val done = onNodeWithTag("previewSelectionDone").assertIsDisplayed()
+        done.assertWidthIsEqualTo(48.dp)
+        done.assertHeightIsEqualTo(48.dp)
+        done.performClick()
+        onNodeWithTag("previewViewTarget").assertExists()
     }
 
     @Test

@@ -138,9 +138,37 @@
         "kind": "point",
         "x": 75,
         "y": 713
-      },
-      "count": 2,
-      "intervalMs": 120
+      }
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "selector": "id=\"previewWatermarkTarget\"",
+      "timeoutMs": 15000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "absent": "id=\"watermarkTextEditField\"",
+      "timeoutMs": 3000
+    }
+  },
+  {
+    "command": "wait",
+    "input": {
+      "durationMs": 1200
+    }
+  },
+  {
+    "command": "press",
+    "input": {
+      "target": {
+        "kind": "point",
+        "x": 75,
+        "y": 713
+      }
     }
   },
   {
@@ -340,7 +368,7 @@
   {
     "command": "wait",
     "input": {
-      "selector": "id=\"sharedComposeExportCounts\" label=\"Processed 1 \u00b7 Succeeded 1 \u00b7 Failed 0\" visible",
+      "selector": "id=\"sharedComposeExportCounts\" label=\"Processed 1 · Succeeded 1 · Failed 0\" visible",
       "timeoutMs": 90000
     }
   },

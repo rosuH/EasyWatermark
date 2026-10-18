@@ -711,7 +711,7 @@
     },
     {
       "id": "editor-preview-gestures",
-      "title": "缩放查看、双击编辑、变换水印并导出",
+      "title": "缩放查看、点选后单击编辑、变换水印并导出",
       "edges": [
         "editor-preview-gestures"
       ],
@@ -729,7 +729,7 @@
         "android": "docs/testing/agent-device/scripts/editor-preview-gestures@android.json",
         "ios": "docs/testing/agent-device/scripts/editor-preview-gestures@ios.json"
       },
-      "honesty": "Pinned Android 35 1080px and iPhone 17 Pro 402pt coordinates were inspected on native screenshots. A completed tap selects the repeated group before transform; selected transform starts independently of glyph hits. Done exits selection, then a pinch operates the photo and Reset view restores Fit. Controls sit outside the photo. Single-watermark movement is covered by editor-clamp-drag and the independent native recording. Android timed repeated taps and iOS native doubleTap use OS-valid timing. Setup is seam; native gestures, existing text sheet and pipeline export are real. Actual PNG bytes are archived before precise cleanup. Execution is not visual acceptance or Human Confirm."
+      "honesty": "Pinned Android 35 1080px and iPhone 17 Pro 402pt coordinates were inspected on native screenshots. A completed tap selects the repeated group before transform; selected transform starts independently of glyph hits. Done exits selection, then a pinch operates the photo and Reset view restores Fit. Controls sit outside the photo. Single-watermark movement is covered by editor-clamp-drag and the independent native recording. Both platforms select with one tap, wait 1200 ms, then open the existing text sheet with a single tap. Setup is seam; native gestures, existing text sheet and pipeline export are real. Actual PNG bytes are archived before precise cleanup. Execution is not visual acceptance or Human Confirm."
     }
   ]
 }

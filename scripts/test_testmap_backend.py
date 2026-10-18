@@ -24,6 +24,14 @@ import testmap_setup as setup
 
 
 class BackendChecks(unittest.TestCase):
+    def test_clamp_pan_selects_a_real_glyph_pixel_when_bbox_center_is_empty(self):
+        from testmap_steps import clamp_pan
+        before = {"bbox": [550, 350, 650, 450], "fit": [0, 0, 1000, 600],
+                  "white": [4, 60, 996, 540], "_mask": {(598, 400), (602, 400)}}
+        pan = clamp_pan(before)
+        self.assertEqual({"x": 598, "y": 400}, pan["origin"])
+        self.assertEqual({"x": 120, "y": 60}, pan["delta"])
+
     def test_registered_batch_export_captures_before_private_restore(self):
         state = {"phase": "active"}
         spec = {"edge_id": "editor-preview-gestures"}

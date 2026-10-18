@@ -80,7 +80,7 @@ def clamp_pixels(path: Path, rect: dict, fixture: Path) -> dict:
 
 
 def clamp_pan(before: dict) -> dict:
-    """An interior of the visible glyph bbox is strictly inside its raster cell."""
+    """Start on a visible glyph pixel; bbox centers can land between letters."""
     x0, y0, x1, y1 = before["bbox"]
     left, top, fw, fh = before["fit"]
     if x0 < left + fw * .48 or y0 < top + fh * .48 or min(x1 - x0, y1 - y0) < 48:
@@ -88,7 +88,9 @@ def clamp_pan(before: dict) -> dict:
     dx, dy = round(fw * .12), round(fh * .10)
     if min(dx, dy) < 24 or x1 + dx >= before["white"][2] - 4 or y1 + dy >= before["white"][3] - 4:
         raise ValueError("CLAMP lacks safe room for the whole gesture")
-    return {"kind": "pan", "origin": {"x": round((x0 + x1) / 2), "y": round((y0 + y1) / 2)},
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    px, py = min(before["_mask"], key=lambda p: ((p[0] - cx) ** 2 + (p[1] - cy) ** 2, p[1], p[0]))
+    return {"kind": "pan", "origin": {"x": px, "y": py},
             "delta": {"x": dx, "y": dy}, "durationMs": 600, "pointerCount": 1}
 
 
