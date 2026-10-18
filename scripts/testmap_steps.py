@@ -14,9 +14,9 @@ def require_clamp_pixels():
     try:
         from PIL import Image
     except ImportError as exc:
-        raise ValueError("CLAMP pixels require: python3 -m pip install -r tools/testmap/requirements.txt") from exc
+        raise ValueError("CLAMP pixels require: python3 -m pip install -r tests/testmap/requirements.txt") from exc
     if Image.__version__ != "12.3.0":
-        raise ValueError("CLAMP pixels require Pillow 12.3.0: python3 -m pip install -r tools/testmap/requirements.txt")
+        raise ValueError("CLAMP pixels require Pillow 12.3.0: python3 -m pip install -r tests/testmap/requirements.txt")
     return Image
 
 
