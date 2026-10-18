@@ -7,7 +7,7 @@ The Python console serves `dist/index.html`. Node is needed only when changing t
 Use Node 22.12+ (Node 24 recommended) and the pinned pnpm version in `package.json`.
 
 ```sh
-cd tools/testmap/web
+cd tests/testmap/web
 pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm lint

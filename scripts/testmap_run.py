@@ -270,7 +270,7 @@ TASK_SPECS: dict[str, dict] = {
         "e2e_scenario": E2E_EXPORT_SCENARIO,
         "setup": "home",
         "cmd": ["npm", "run", "android:journey", "--", "--no-cache"],
-        "cwd": "tools/testmap/runner",
+        "cwd": "tests/testmap/runner",
     },
     E2E_LARGE_IMAGE_TASK_ID: {
         "label": "Android large image preview: diagnose Canvas crash",
@@ -282,7 +282,7 @@ TASK_SPECS: dict[str, dict] = {
         "e2e_scenario": E2E_LARGE_IMAGE_SCENARIO,
         "setup": "home",
         "cmd": ["npm", "run", "android:journey", "--", "--no-cache"],
-        "cwd": "tools/testmap/runner",
+        "cwd": "tests/testmap/runner",
     },
 }
 

@@ -16,7 +16,7 @@ scripts/e2e-select.sh origin/master...HEAD
 scripts/e2e-verify.sh --change 'Describe the change' --range origin/master...HEAD --run --android-device '<authorized-serial>' --ios-device '<authorized-udid>'
 ```
 
-Open the local console at `http://127.0.0.1:8931`. The console serves the built client from `tools/testmap/web/dist/index.html`; running it does not require Node. See the [web client guide](../../tools/testmap/web/README.md) to change or build the client. The web source, dependencies, lockfile, and build output stay inside that directory; project data stays here.
+Open the local console at `http://127.0.0.1:8931`. The console serves the built client from `tests/testmap/web/dist/index.html`; running it does not require Node. See the [web client guide](../../tests/testmap/web/README.md) to change or build the client. The web source, dependencies, lockfile, and build output stay inside that directory; project data stays here.
 
 The CLI is the only runner. The web client can select tasks, start a CLI run, stop it, and display its records. Looking at a page must not start a test or boot a device. There is no queue-pause control. Stop is complete only when the recorded process and task state say it is complete.
 
