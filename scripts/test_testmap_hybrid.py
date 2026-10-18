@@ -160,7 +160,13 @@ class HybridContracts(unittest.TestCase):
             spec = {"builder": "agent-device", "edge_id": "pick-to-editor", "setup": "home",
                     "agent_platform": "ios", "udid": "owned-ios", "agent_device_output": td,
                     "cmd": ["node", "testmap_agent_device_ai.mjs", "--controller", "hybrid"]}
-            self.assertFalse(tr._owns_pick_export_setup(spec))
+            self.assertTrue(tr._owns_pick_export_setup(spec))
+            for overrides in ({}, {"TESTMAP_IOS_OWNED_DEVICE": "  "}, {"TESTMAP_AGENT_DEVICE_SKIP_SETUP": "1", "TESTMAP_IOS_OWNED_DEVICE": "/owned/device.json"}):
+                with mock.patch.dict(os.environ, overrides), mock.patch.object(tr, "apply_setup") as seed, mock.patch.object(owned, "prepare") as prepare:
+                    with self.assertRaisesRegex(ValueError, "TESTMAP_IOS_OWNED_DEVICE"):
+                        tr._apply_agent_setup({**spec, "setup": "editor"}, None)
+                    seed.assert_not_called()
+                    prepare.assert_not_called()
             state = {"platform": "ios", "folder": str(Path(td) / "pick-export"),
                      "state_path": str(Path(td) / "prepare.json"), "marker_text": "owned text",
                      "source": {"picker_photo_label": "owned synthetic photo"}}
@@ -195,6 +201,26 @@ class HybridContracts(unittest.TestCase):
             self.assertEqual(json.loads((folder / "result.json").read_text())["status"], "failed")
 
 
+    def test_owned_cleanup_failure_is_not_lost_on_stop_or_spawn_failure(self):
+        import io
+        import testmap_run as tr
+        import testmap_pick_export_evidence as owned
+        for stop in (True, False):
+            with self.subTest(stop=stop), tempfile.TemporaryDirectory() as td:
+                spec = {"builder": "agent-device", "edge_id": "pick-to-editor", "agent_platform": "android",
+                        "agent_device_output": td, "cmd": ["node", "testmap_agent_device_ai.mjs", "--controller", "hybrid"]}
+                state = {"_pick_export_owned": True, "folder": str(Path(td) / "pick-export")}
+                log = io.StringIO()
+                with mock.patch.object(tr, "maybe_prepare_ios_runner"), mock.patch.object(tr, "_apply_agent_setup", return_value=state), mock.patch.object(
+                        owned, "restore", return_value={"success": False, "report_path": "restore-failure.json"}), mock.patch.object(
+                        tr.subprocess, "Popen", side_effect=OSError("spawn failed")), mock.patch.object(tr, "ingest_agent_device_result", return_value={}), mock.patch.object(
+                        tr, "release_agent_session") as release:
+                    with self.assertRaisesRegex(tr.SetupRestoreError, "restore-failure.json"):
+                        tr.run_task(spec, log, should_stop=lambda: stop)
+                    release.assert_called_once()
+                self.assertIn("restore-failure.json", log.getvalue())
+
+
     def test_agent_device_ai_mode_is_explicit_and_pinned(self):
         with mock.patch.dict(
             os.environ, {"TESTMAP_AGENT_DEVICE_MODE": "ai-sdk"}, clear=False
@@ -217,6 +243,40 @@ class HybridContracts(unittest.TestCase):
         del missing_device[serial_index : serial_index + 2]
         with self.assertRaises(ValueError):
             assert_cmd_legal(missing_device)
+
+
+    def test_pinned_cli_resolves_local_install_without_npm_path(self):
+        import testmap_agent_device as agent
+        with tempfile.TemporaryDirectory() as td, mock.patch.dict(os.environ, {"PATH": "/usr/bin:/bin"}, clear=True), mock.patch.object(agent, "REPO_ROOT", Path(td)):
+            local = Path(td) / "node_modules/.bin/agent-device"
+            local.parent.mkdir(parents=True)
+            local.write_text("#!/bin/sh\necho 0.21.2\n")
+            local.chmod(0o755)
+            self.assertEqual(agent.ensure_pinned_agent_device(), str(local))
+            with mock.patch.dict(os.environ, {"AGENT_DEVICE_BIN": "/explicit/agent-device"}):
+                self.assertEqual(agent.agent_device_bin(), "/explicit/agent-device")
+            local.unlink()
+            with mock.patch.object(agent.shutil, "which", return_value="/global/agent-device"):
+                self.assertEqual(agent.agent_device_bin(), "/global/agent-device")
+
+
+    def test_compare_only_requires_jev_credentials_for_jev_arms(self):
+        import testmap_compare_launch_about as compare
+        for arms, key in ((["grok"], ""), (["hybrid"], "inherited-key"), (["jev", "grok"], "")):
+            with self.subTest(arms=arms), tempfile.TemporaryDirectory() as td, mock.patch.dict(os.environ, {"TYPESAFE_AI_API_KEY": key}, clear=True):
+                root = Path(td)
+                (root / "scripts").symlink_to(SCRIPTS, target_is_directory=True)
+                argv = ["compare", "--serial", "offline", "--repeats", "1", "--env-file", str(root / "missing.env"), "--arms", *arms]
+                with mock.patch.object(compare, "ROOT", root), mock.patch.object(sys, "argv", argv), mock.patch.object(compare, "run_attempt", return_value=(0, "", False)) as run, mock.patch.object(compare, "read_attempt", return_value={"success": True, "arm": arms[0]}):
+                    if arms == ["jev", "grok"]:
+                        with self.assertRaises(SystemExit) as error:
+                            compare.main()
+                        self.assertEqual(error.exception.code, 2)
+                        run.assert_not_called()
+                    else:
+                        self.assertEqual(compare.main(), 0)
+                        self.assertEqual(run.call_count, 1)
+                        self.assertEqual(run.call_args.args[1].get("TYPESAFE_AI_API_KEY"), key)
 
 
     def test_agent_device_mode_rejects_unknown_value(self):

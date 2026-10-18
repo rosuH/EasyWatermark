@@ -31,7 +31,7 @@ let scenarioNumber = 0;
 
 async function scenario({ steps = [action("click"), observation()], plans, platform = "android", native = {},
   decide = (controls) => choice(controls), scene, choose, recoverSource, caseContract = contract,
-  onAction } = {}, verify) {
+  onAction, signal } = {}, verify) {
   const outputDir = path.join(output, String(++scenarioNumber));
   await mkdir(outputDir);
   const state = { phase: 0, captures: 0, events: [], actions: [], choices: [], waits: [], plans: [], last: null,
@@ -91,7 +91,7 @@ async function scenario({ steps = [action("click"), observation()], plans, platf
     },
   };
   const run = () => runHybrid({ client, modules, model: { modelId: "offline-grok" }, outputDir,
-    signal: AbortSignal.timeout(1000), goal: "Offline contract check", contract: caseContract,
+    signal: signal || AbortSignal.timeout(1000), goal: "Offline contract check", contract: caseContract,
     appId: platform === "ios" ? "me.rosuh.easywatermark.ios" : "me.rosuh.easywatermark.debug", platform,
     recoverSource: recoverSource ? () => recoverSource(state) : undefined });
   try { await verify(run, state); }
@@ -481,6 +481,67 @@ try {
     assert.deepEqual(state.actions.map(({ method, args }) => [method, args.text]), [["fill", "new"]]);
   }));
 
+  for (const ambiguous of [false, true]) {
+    await check(`fill readback rejects ${ambiguous ? "ambiguous field identity" : "an unrelated matching input"}`, () => scenario({
+      steps: [action("fill", { text: "new" }), observation({ identifier: "target" })],
+      scene: (state) => [node({ type: "TextField", value: "old" }),
+        ...(!ambiguous || state.phase ? [node({ index: 2, ref: "other", type: "TextField",
+          identifier: ambiguous ? "target" : "other", value: "new" })] : [])],
+    }, async (run, state) => {
+      await assert.rejects(run, /filled value did not read back/);
+      assert.equal(state.actions.length, 1);
+      assert.equal(state.last.nodes[0].value, "old");
+    }));
+  }
+
+  for (const mode of ["replaced", "unbounded", "stable", "identified"]) {
+    await check(`fill readback identity: ${mode}`, () => scenario({
+      steps: [action("fill", { text: "new" }), observation({ text: "new" })],
+      scene: (state) => [node({ index: state.phase ? 2 : 1, type: "TextField", label: "Watermark",
+        identifier: mode === "identified" ? "target" : undefined, value: state.phase ? "new" : "old",
+        rect: mode === "unbounded" ? undefined : {
+          x: state.phase && mode !== "stable" ? 120 : 10, y: 20, width: 100, height: 40 } })],
+    }, async (run, state) => {
+      if (["replaced", "unbounded"].includes(mode)) await assert.rejects(run, /filled value did not read back/);
+      else assert.equal((await run()).pilot.success, true);
+      assert.equal(state.actions.length, 1);
+    }));
+  }
+
+  await check("label-backed input readback rebinds uniquely by unchanged bounds after refs/order change", () => scenario({
+    platform: "ios",
+    steps: [action("fill", { text: "new" }), observation({ identifier: "target", text: "new" })],
+    scene: (state) => {
+      const fields = [10, 120].map((x, i) => node({ index: i + 1, ref: `field${i}`, type: "TextView",
+        label: state.phase && i === 0 ? "new" : "old", rect: { x, y: 20, width: 100, height: 40 } }));
+      return state.phase ? fields.reverse() : fields;
+    },
+  }, async (run, state) => {
+    assert.equal((await run()).pilot.success, true);
+    assert.equal(state.actions.length, 1);
+    assert.equal(state.last.nodes.find((n) => n.rect.x === 10).label, "new");
+  }));
+
+  for (const name of ["click", "longPress", "fill", "scroll", "swipe", "pan", "pinch", "set-value", "visual-click"]) {
+    await check(`abort during final refresh blocks ${name}`, async () => {
+      const controller = new AbortController();
+      await scenario({
+        signal: controller.signal,
+        steps: [action(name === "visual-click" ? "click" : name,
+          { text: "new", direction: "down", scale: 1.2, ratio: 0.5 }), observation()],
+        scene: (state) => {
+          if (state.captures === 3) controller.abort();
+          return [node({ type: "TextField", editable: true, hittable: true, value: "old",
+            rect: { x: 10, y: 100, width: 200, height: 100 },
+            ...(name === "visual-click" ? { visual: true, imageHash: "unchanged" } : {}) })];
+        },
+      }, async (run, state) => {
+        await assert.rejects(run, { name: "AbortError" });
+        assert.equal(state.actions.length, 0);
+      });
+    });
+  }
+
   await check("external input value change aborts before mutation", () => scenario({
     steps: [action("fill", { text: "new" }), observation({ identifier: "target", value: "new" })],
     scene: (state) => [node({ type: "TextField", role: "textfield", value: state.captures >= 3 ? "external" : "original" })],
@@ -637,6 +698,21 @@ try {
     }));
   }
 
+  for (const actual of [1, 3]) {
+    await check(`iOS three-image reference export ${actual === 3 ? "completes" : "rejects an intermediate one-image count"}`, () => scenario({
+      platform: "ios",
+      caseContract: { edgeId: "export-save-success", verify: "export-one",
+        script: 'wait "Processed 3 · Succeeded 3 · Failed 0"' },
+      steps: [action("click"), observation({ identifier: "sharedComposeExportCounts", text: `Succeeded ${actual} Failed 0` })],
+      scene: (state) => [node({ identifier: "sharedComposeExportPrimary", label: "Export to album" }),
+        ...(state.phase ? [countsNode(`Succeeded ${actual} Failed 0`)] : [])],
+    }, async (run, state) => {
+      if (actual === 3) assert.equal((await run()).pilot.success, true);
+      else await assert.rejects(run, /required export count was never observed/);
+      assert.equal(state.actions.length, 1);
+    }));
+  }
+
   await check("initial success counts cannot complete export without this run's export dispatch", () => scenario({
     caseContract: { ...contract, verify: "export-one" },
     scene: () => [node(), countsNode("Succeeded 1 Failed 0"), { index: 3, identifier: "done" }],
@@ -768,6 +844,23 @@ try {
     assert.equal(result.pilot.steps[1].checked, true);
     assert.equal(result.pilot.exportObserved, true);
   }));
+
+  await check("abort during recovery refresh blocks host source mutation", async () => {
+    const controller = new AbortController();
+    await scenario({
+      signal: controller.signal, caseContract: recoveryContract,
+      steps: [action("click"), action("restore-source"), observation()],
+      scene: (state) => {
+        if (state.captures === 5) controller.abort();
+        return recoveryScene(state);
+      },
+      recoverSource: (state) => { state.events.push("recover"); },
+    }, async (run, state) => {
+      await assert.rejects(run, { name: "AbortError" });
+      assert.equal(state.events.includes("recover"), false);
+      assert.equal(state.actions.length, 1);
+    });
+  });
 
   for (const duplicate of [false, true]) {
     await check(`recovery guard blocks ${duplicate ? "second restore" : "restore without failure"}`, () => scenario({

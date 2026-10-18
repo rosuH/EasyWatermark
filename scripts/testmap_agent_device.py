@@ -7,7 +7,7 @@ the execution payload, keyed 1:1 by original edge id. It is not a second map.
 Drive labels in map.yaml stay real|seam|none. Walking a system picker, PHPicker,
 share sheet, or FileDialog does not rewrite drive from seam/none to real.
 
-Pinned CLI: agent-device 0.21.2 via AGENT_DEVICE_BIN or PATH. Never npx @latest.
+Pinned CLI: agent-device 0.21.2 via AGENT_DEVICE_BIN, local npm install, or PATH. Never npx @latest.
 Android: --serial. iOS: --udid. Session: testmap-<edge>. Desktop is out of scope.
 
 Status layers (never collapse to replay 0):
@@ -301,6 +301,9 @@ def agent_device_bin() -> str:
                 "AGENT_DEVICE_BIN must be the agent-device binary, not npx @latest"
             )
         return env
+    local = REPO_ROOT / "node_modules" / ".bin" / "agent-device"
+    if local.is_file():
+        return str(local)
     found = shutil.which("agent-device")
     if found:
         return found
@@ -469,10 +472,9 @@ def case_ai_goal(case: dict) -> str:
     title = str(case.get("title") or case.get("id") or "Testmap path").strip()
     goal = f"完成 EasyWatermark Testmap 路径「{title}」。"
     verify = str(case.get("verify") or "")
-    expected_exports = {"export-one": "1", "export-two": "2"}.get(verify)
-    if expected_exports:
+    if verify in {"export-one", "export-two"}:
         goal += (
-            f"如果路径包含导出，只有界面明确显示成功 {expected_exports} 项且失败 0 项时才结束；"
+            "如果路径包含导出，只有界面明确显示所有图像均导出成功且失败 0 项时才结束；"
             "不要以点击按钮代替结果验证。"
         )
     else:

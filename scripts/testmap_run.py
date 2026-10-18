@@ -1850,13 +1850,18 @@ def _is_normal_hybrid(spec: dict) -> bool:
 def _owns_pick_export_setup(spec: dict) -> bool:
     platform = spec.get("agent_platform") or spec.get("needs_device")
     return (_is_normal_hybrid(spec) and spec.get("edge_id") == "pick-to-editor"
-            and (platform == "android" or platform == "ios" and bool(os.environ.get("TESTMAP_IOS_OWNED_DEVICE"))))
+            and platform in {"android", "ios"})
 
 
 def _apply_agent_setup(spec: dict, logf, should_stop=None) -> dict | None:
     """Harness preconditions for Agent Device. Skip dry-run and unknown setup keys."""
     if os.environ.get("TESTMAP_AGENT_DEVICE_DRY") == "1":
         return None
+    if (_owns_pick_export_setup(spec)
+            and (spec.get("agent_platform") or spec.get("needs_device")) == "ios"
+            and (not (os.environ.get("TESTMAP_IOS_OWNED_DEVICE") or "").strip()
+                 or os.environ.get("TESTMAP_AGENT_DEVICE_SKIP_SETUP") == "1")):
+        raise ValueError("iOS hybrid pick-to-editor requires TESTMAP_IOS_OWNED_DEVICE and owned setup")
     if os.environ.get("TESTMAP_AGENT_DEVICE_SKIP_SETUP") == "1":
         return None
     setup = spec.get("setup")
@@ -2022,7 +2027,10 @@ def _finish_agent_setup(spec, state, code, logf, should_stop=None):
                 logf.write(f"registered export capture failed: {exc}\n")
                 logf.flush()
     finally:
-        cleanup = _restore_agent_setup(state, logf)
+        if state and (state.get("_pick_export_owned") or state.get("_ai_recovery_state_path")):
+            cleanup = _restore_agent_setup(state, logf, raise_on_failure=False)
+        else:
+            cleanup = _restore_agent_setup(state, logf)
         if spec.get("font_export") and state:
             proof = spec["font_export"]
             proof["private_restored"] = state.get("phase") == "restored"
@@ -2057,7 +2065,7 @@ def _finish_agent_setup(spec, state, code, logf, should_stop=None):
     return code
 
 
-def _restore_agent_setup(state: dict | None, logf) -> dict | None:
+def _restore_agent_setup(state: dict | None, logf, *, raise_on_failure: bool = True) -> dict | None:
     if not state:
         return
     try:
@@ -2066,7 +2074,10 @@ def _restore_agent_setup(state: dict | None, logf) -> dict | None:
                 from testmap_ios_pick_export_evidence import restore
             else:
                 from testmap_pick_export_evidence import restore
-            return restore(state, Path(state["folder"]).parent)
+            cleanup = restore(state, Path(state["folder"]).parent)
+            if raise_on_failure and cleanup.get("success") is not True:
+                raise SetupRestoreError(f"Owned pick/export restore failed: {cleanup}")
+            return cleanup
         try:
             if state.get("_ai_recovery_state_path"):
                 path = Path(state["_ai_recovery_state_path"])
@@ -2101,7 +2112,7 @@ def _restore_agent_setup(state: dict | None, logf) -> dict | None:
         if logf is not None:
             logf.write(f"setup restore failed: {exc}\n")
             logf.flush()
-        if state.get("_pick_export_owned") or state.get("_ai_recovery_state_path"):
+        if not raise_on_failure and (state.get("_pick_export_owned") or state.get("_ai_recovery_state_path")):
             return {"success": False, "error": str(exc)}
         raise SetupRestoreError(f"setup restore failed: {exc}") from exc
 

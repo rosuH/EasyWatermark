@@ -89,12 +89,14 @@ def main():
     if args.force_handoff_step and args.arms != ["hybrid"]:
         parser.error("--force-handoff-step requires --arms hybrid")
     env = os.environ.copy()
-    # Read data, never source shell code or print credentials.
-    for line in args.env_file.read_text().splitlines():
-        if line.startswith("TYPESAFE_AI_API_KEY="):
-            env["TYPESAFE_AI_API_KEY"] = line.split("=", 1)[1].strip().strip("\"'")
-    if not env.get("TYPESAFE_AI_API_KEY"):
-        parser.error(f"fill TYPESAFE_AI_API_KEY in {args.env_file}")
+    if any(arm in {"jev", "hybrid"} for arm in args.arms):
+        # Read data, never source shell code or print credentials.
+        if not env.get("TYPESAFE_AI_API_KEY") and args.env_file.is_file():
+            for line in args.env_file.read_text().splitlines():
+                if line.startswith("TYPESAFE_AI_API_KEY="):
+                    env["TYPESAFE_AI_API_KEY"] = line.split("=", 1)[1].strip().strip("\"'")
+        if not env.get("TYPESAFE_AI_API_KEY"):
+            parser.error(f"fill TYPESAFE_AI_API_KEY in {args.env_file} or the environment")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     output = ROOT / "build/agent-device" / f"{args.edge}-pilot-{stamp}"
     output.mkdir(parents=True)

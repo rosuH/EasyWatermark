@@ -171,6 +171,9 @@ export async function runHybrid({ client, modules, model, outputDir, signal, goa
     await writeFile(path.join(outputDir, "pilot-trace.json"), data); // Existing runner evidence/lifecycle boundary.
   };
   const fixture = { photoLabel: process.env.TESTMAP_PICK_EXPORT_PHOTO_LABEL, text: process.env.TESTMAP_PICK_EXPORT_TEXT };
+  const referenceCounts = [...(contract.script || "").matchAll(/\bSucceeded\s+([1-9]\d*)\s*·?\s*Failed\s+0(?!\d)/gi)];
+  const expectedExports = fixture.text && contract.edgeId === "pick-to-editor" ? 1
+    : Number(referenceCounts.at(-1)?.[1] || { "export-one": 1, "export-two": 2 }[contract.verify] || 0);
   const planningContract = { ...contract,
     script: contract.script?.trim().startsWith("[") ? JSON.parse(contract.script) : contract.script };
   const picker = platform === "ios" && contract.edgeId === "pick-to-editor" && process.env.TESTMAP_IOS_PICKER_STATE
@@ -183,8 +186,8 @@ export async function runHybrid({ client, modules, model, outputDir, signal, goa
     if (picker) snapshot = await picker.capture(snapshot);
     visibleNodes(snapshot);
     await writeFile(path.join(outputDir, `${name}.json`), JSON.stringify(snapshot, null, 2) + "\n");
-    const count = { "export-one": 1, "export-two": 2 }[contract.verify];
-    if (count && trace.exportDispatches > 0 && countObserved(snapshot, count)) trace.exportObserved = true;
+    signal.throwIfAborted();
+    if (expectedExports && trace.exportDispatches > 0 && countObserved(snapshot, expectedExports)) trace.exportObserved = true;
     return snapshot;
   };
   const observe = async (step, filename) => {
@@ -219,7 +222,7 @@ export async function runHybrid({ client, modules, model, outputDir, signal, goa
       const answer = await grokCall({ modules, model, signal, record, name: "plan", schema: planSchema, maxOutputTokens: 8192,
       ...(picker && current.visualImageHash ? { images: picker.imagesFor(current) } : {}),
       description: "Keep an overview of the whole prepared Testmap route. Return ONLY the next 2-12 executable steps, ending with a concrete check. Set complete=false if more route obligations remain, true only for the final batch. Jev selects targets from your semantic instructions; no refs or absolute coordinates. Preserve reference order, intermediate observations, repeated exports, negative/state checks and restoration across batches. Host owns open/close/install/settings. Conditions in a group are OR; groups are AND. Optional only for incidental clickable overlays. Gestures are target-relative. Failure recovery order: observe 0 succeeded/1 failed, restore-source, select Retry, observe 1 succeeded/0 failed. Do not stop after an early export if the source requires more steps.",
-      state: { goal, contract: planningContract, fixture, appId, platform,
+      state: { goal, contract: planningContract, expectedExports, fixture, appId, platform,
         scene: visibleNodes(current).filter((n) => n.identifier || n.label || n.value).map((n) => ({
           identifier: n.identifier, label: n.label, value: n.value, type: n.type, selected: n.selected, enabled: n.enabled, editable: n.editable, focused: n.focused, visual: n.visual })),
         iosStateNotes: platform === "ios" ? "iOS native snapshots omit editable/focused and often selected. Missing means UNKNOWN. A native TextView can be filled and read back by exact identifier/value without an editable=true assertion. Do not assert editable, focused or selected, or request selection:unselected/selected, unless the actual current node explicitly supplies that flag. For PNG with unknown native selection, click the PNG option without a selection assertion; it is an idempotent format choice, and the host independently checks the exported PNG. Prefer stable identifier/value/text checks. Never infer a missing native state from a control type or screenshot." : undefined,
@@ -370,8 +373,18 @@ export async function runHybrid({ client, modules, model, outputDir, signal, goa
               !/share|分享/i.test(target.label || "")) trace.exportDispatches++;
         }
         current = await capture(`hybrid-after-${index + 1}`);
-        if (step.action === "fill" && !visibleNodes(current).some((n) => n.ref && isInput(n) &&
-            normalize(n.value !== undefined ? n.value : n.label) === normalize(step.text))) throw new Error("filled value did not read back");
+        if (step.action === "fill") {
+          // Text and its accessibility label may change; rebind before comparing either.
+          matches = hybridCandidates(current, "fill").filter((n) => n.bundleId === target.bundleId && n.type === target.type &&
+            n.identifier === target.identifier && n.ancestorIdentifier === target.ancestorIdentifier);
+          if (!target.identifier || matches.length > 1) {
+            matches = matches.filter((n) => n.rect && target.rect?.width > 0 && target.rect?.height > 0 &&
+              ["x", "y", "width", "height"].every((k) => Number.isFinite(target.rect[k]) && target.rect[k] === n.rect[k]));
+          }
+          if (matches.length !== 1 || normalize(matches[0].value !== undefined ? matches[0].value : matches[0].label) !== normalize(step.text)) {
+            throw new Error("filled value did not read back");
+          }
+        }
         await client.capture.screenshot({ path: path.join(outputDir, `hybrid-step-${index + 1}.png`) });
       }
       if (step.checks && !step.checked) {
