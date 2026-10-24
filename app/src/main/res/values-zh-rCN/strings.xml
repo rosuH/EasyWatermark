@@ -186,4 +186,5 @@
     <string name="preview_reset_view">重置视图</string>
     <string name="preview_selection_done">完成</string>
     <string name="preview_selection_done_hint">完成水印调整</string>
+    <string name="font_android_legacy_system">这个 Android 版本仅列出基本的系统字族。仍然可以导入。</string>
 </resources>
