@@ -1,5 +1,7 @@
 import Foundation
 import Photos
+import StoreKit
+import UIKit
 
 // C5.4 (S4d-29): export helpers for the watermarked PNG produced by `WatermarkWorkflow`.
 //
@@ -45,6 +47,42 @@ enum ImageExport {
         try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetCreationRequest.forAsset()
             request.addResource(with: .photo, data: data, options: nil)
+        }
+        AppStoreReviewCoordinator.recordSuccessfulSaveAndRequestReviewIfEligible()
+    }
+}
+
+/// Strictly offline in-app review prompt coordinator using UserDefaults counters.
+/// Prompts only on the 2nd and 8th successful Photos save, and skips all UI test / capture modes.
+enum AppStoreReviewCoordinator {
+    private static let saveCountKey = "ewm.ios.successfulPhotosSaveCount"
+    private static let lastPromptedCountKey = "ewm.ios.lastReviewPromptSaveCount"
+    private static let promptMilestones: Set<Int> = [2, 8]
+    private static let testLaunchFlags: Set<String> = [
+        "-uiTestFixtureImage",
+        "-storeSeedScene",
+        "-storeCaptureHooks",
+        "-sharedComposeWitnesses",
+    ]
+
+    static func recordSuccessfulSaveAndRequestReviewIfEligible(
+        defaults: UserDefaults = .standard,
+        arguments: [String] = ProcessInfo.processInfo.arguments
+    ) {
+        guard arguments.allSatisfy({ !testLaunchFlags.contains($0) }) else { return }
+        let nextCount = defaults.integer(forKey: saveCountKey) + 1
+        defaults.set(nextCount, forKey: saveCountKey)
+        guard promptMilestones.contains(nextCount),
+              defaults.integer(forKey: lastPromptedCountKey) < nextCount
+        else { return }
+        defaults.set(nextCount, forKey: lastPromptedCountKey)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive })
+            else { return }
+            AppStore.requestReview(in: scene)
         }
     }
 }

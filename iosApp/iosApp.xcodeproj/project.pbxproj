@@ -61,6 +61,7 @@
 		EW00000000000000000000B0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EW00000000000000000000B4 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		EW00000000000000000000B5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		EW00000000000000000000B6 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		EW00000000000000000000C0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -157,6 +158,7 @@
 			children = (
 				EW00000000000000000000B4 /* zh-Hans */,
 				EW00000000000000000000B5 /* zh-Hant */,
+				EW00000000000000000000B6 /* ja */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -227,6 +229,7 @@
 				Base,
 				"zh-Hans",
 				"zh-Hant",
+				ja,
 			);
 			mainGroup = EW0000000000000000000010;
 			productRefGroup = EW0000000000000000000012 /* Products */;
@@ -374,7 +377,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMPRESS_PNG_FILES = NO;
-				CURRENT_PROJECT_VERSION = 30004;
+				CURRENT_PROJECT_VERSION = 30005;
 				DEVELOPMENT_TEAM = 85MZB3GP6S;
 				ENABLE_PREVIEWS = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
@@ -391,7 +394,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.0.4;
+				MARKETING_VERSION = 3.0.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
@@ -412,7 +415,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMPRESS_PNG_FILES = NO;
-				CURRENT_PROJECT_VERSION = 30004;
+				CURRENT_PROJECT_VERSION = 30005;
 				DEVELOPMENT_TEAM = 85MZB3GP6S;
 				ENABLE_PREVIEWS = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
@@ -429,7 +432,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.0.4;
+				MARKETING_VERSION = 3.0.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
@@ -448,11 +451,11 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30004;
+				CURRENT_PROJECT_VERSION = 30005;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 3.0.4;
+				MARKETING_VERSION = 3.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -468,11 +471,11 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 30004;
+				CURRENT_PROJECT_VERSION = 30005;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 3.0.4;
+				MARKETING_VERSION = 3.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = me.rosuh.easywatermark.iosUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

@@ -1,0 +1,5 @@
+/* Japanese — match App Store ja locale */
+"CFBundleDisplayName" = "簡単透かし";
+"CFBundleName" = "簡単透かし";
+"NSPhotoLibraryUsageDescription" = "選択した写真のプレビューを素早く表示するために使用します。すべての処理はこの端末内で完結し、通信・アップロード・解析は一切行いません。";
+"NSPhotoLibraryAddUsageDescription" = "透かしを入れた写真を写真ライブラリに保存します。";
