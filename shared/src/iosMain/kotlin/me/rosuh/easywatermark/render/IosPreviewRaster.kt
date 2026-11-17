@@ -106,14 +106,14 @@ internal object IosPreviewRaster {
     }
 
     /**
-     * Overlay cell only (ADR-0033). Does not bake [background]. Editor main preview must not
-     * call [renderWatermarked].
+     * Overlay cell raster + logical dimensions (ADR-0033). Does not bake [background]. Editor main
+     * preview must not call [renderWatermarked].
      */
-    fun composeCell(
+    fun composeCellRaster(
         waterMark: WaterMark,
         imageWidth: Int,
         fontFamily: FontFamily? = FontFamily.Default,
-    ): ImageBitmap {
+    ): RasteredWatermarkCell {
         val icon = if (waterMark.markMode == WatermarkMode.Image) {
             IosWatermarkIconCache.decoded(waterMark.iconUri, ICON_MAX_EDGE_PX)
         } else {
@@ -124,7 +124,7 @@ internal object IosPreviewRaster {
         } else {
             null
         }
-        return CommonWatermarkPipeline.composeCell(
+        return CommonWatermarkPipeline.composeCellRaster(
             imageWidth = imageWidth.coerceAtLeast(1),
             config = waterMark,
             env = IosTextRasterEnv.textRasterEnv(),
@@ -132,6 +132,16 @@ internal object IosPreviewRaster {
             fontFamily = family,
         )
     }
+
+    /**
+     * Overlay cell only (ADR-0033). Does not bake [background]. Editor main preview must not
+     * call [renderWatermarked].
+     */
+    fun composeCell(
+        waterMark: WaterMark,
+        imageWidth: Int,
+        fontFamily: FontFamily? = FontFamily.Default,
+    ): ImageBitmap = composeCellRaster(waterMark, imageWidth, fontFamily).bitmap
 
     /**
      * Picker/source previews are URL-first. ImageIO covers JPEG/PNG/HEIF and applies orientation

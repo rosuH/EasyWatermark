@@ -92,6 +92,7 @@ import me.rosuh.easywatermark.render.PreviewKey
 import me.rosuh.easywatermark.render.PreviewPurpose
 import me.rosuh.easywatermark.render.PreviewSourceReuseProbe
 import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
+import me.rosuh.easywatermark.render.RasteredWatermarkCell
 import me.rosuh.easywatermark.render.WatermarkIconCache
 import me.rosuh.easywatermark.render.neighborIndices
 import me.rosuh.easywatermark.ui.DraftRenderConflator
@@ -584,7 +585,7 @@ fun launchDesktopWindow() = application {
         return msg
     }
 
-    suspend fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap {
+    suspend fun composeDesktopOverlayCellRaster(wm: WaterMark, imageWidth: Int): RasteredWatermarkCell {
         val icon = decodeDesktopIcon(wm)
         PreviewSourceReuseProbe.recordCompose()
         val family = if (wm.markMode == WatermarkMode.Text) {
@@ -595,7 +596,7 @@ fun launchDesktopWindow() = application {
         } else {
             null
         }
-        return CommonWatermarkPipeline.composeCell(
+        return CommonWatermarkPipeline.composeCellRaster(
             imageWidth = imageWidth.coerceAtLeast(1),
             config = wm,
             env = DesktopWatermarkTextRenderer.textRasterEnv(),
@@ -603,6 +604,9 @@ fun launchDesktopWindow() = application {
             fontFamily = family,
         )
     }
+
+    suspend fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap =
+        composeDesktopOverlayCellRaster(wm, imageWidth).bitmap
 
     /**
      * In-memory editor preview: Source reuse + overlay cell. No DataStore first() on this path.
@@ -663,15 +667,15 @@ fun launchDesktopWindow() = application {
             } ?: error("Source decode returned null")
             bench.mark("source")
             val cell = withContext(Dispatchers.Default) {
-                composeDesktopOverlayCell(wm, source.width)
+                composeDesktopOverlayCellRaster(wm, source.width)
             }
             bench.mark("compose")
             val overlay = overlayCellFrom(
-                cell = cell,
+                raster = cell,
                 config = wm,
                 offsetX = ox,
                 offsetY = oy,
-                builtForWidth = if (isText) source.width else cell.width,
+                builtForWidth = if (isText) source.width else cell.logicalWidth,
             )
             if (
                 !OverlayPreviewPolicy.canPublishLivePhoto(
@@ -1337,8 +1341,9 @@ fun launchDesktopWindow() = application {
                                         paintConflator.submit(DesktopPreviewPaint(gen = offsetPreviewGeneration, isDraft = false, overrideOffset = null))
                                     }
                                 },
-                                renderGestureCell = { config ->
-                                    withContext(Dispatchers.Default) { composeDesktopOverlayCell(config, photo!!.width) }
+                                renderGestureCell = null,
+                                renderGestureCellRaster = { config ->
+                                    withContext(Dispatchers.Default) { composeDesktopOverlayCellRaster(config, photo!!.width) }
                                 },
                                 chrome = chrome,
                                 photo = if (chrome == OverlayPreviewChrome.LiveLayers) photo else null,

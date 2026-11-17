@@ -7,9 +7,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.graphics.FilterQuality
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -167,5 +175,261 @@ class WatermarkIconCellRasterTest {
     fun alpha_is_clamped_to_unit_range() {
         assertEquals(centreAlpha(1f), centreAlpha(2f), "alpha>1f must clamp to 1f")
         assertEquals(centreAlpha(0f), centreAlpha(-1f), "alpha<0f must clamp to 0f")
+    }
+
+    @Test
+    fun exact_5407x8109_oversized_icon_cell_caps_backing_bitmap_and_preserves_logical_dims() {
+        val icon = syntheticIcon(511, 511)
+        val raster = WatermarkCellComposer.composeIconCellRaster(
+            icon = icon,
+            degree = 315f,
+            hGapPercent = 114,
+            vGapPercent = 221,
+            scaleRatio = 49f / 14f,
+        )
+        assertEquals(5407, raster.logicalWidth)
+        assertEquals(8109, raster.logicalHeight)
+        assertTrue(
+            raster.bitmap.width <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX &&
+                raster.bitmap.height <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            "backing bitmap must cap at ${WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX}, " +
+                "got ${raster.bitmap.width}x${raster.bitmap.height}",
+        )
+        assertEquals(
+            WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            maxOf(raster.bitmap.width, raster.bitmap.height),
+        )
+        val px = raster.bitmap.toPixelMap()
+        assertTrue(
+            px[raster.bitmap.width / 2, raster.bitmap.height / 2].alpha > 0f,
+            "oversized icon cell must still render centered non-transparent pixels",
+        )
+        assertEquals(Color.Transparent, px[0, 0], "gap corner must remain transparent")
+    }
+
+    @Test
+    fun extreme_gap_and_scale_icon_cell_caps_backing_bitmap_and_preserves_logical_dims() {
+        val icon = syntheticIcon(511, 511)
+        val scaleRatio = 100f / 14f
+        val diagonal = WatermarkGeometry.diagonal(511f, 511f)
+        val expectedLogicalW = (WatermarkGeometry.horizontalGap(diagonal, 500).toDouble() * scaleRatio.toDouble())
+            .toFloat().toInt()
+        val expectedLogicalH = (WatermarkGeometry.verticalGap(diagonal, 500).toDouble() * scaleRatio.toDouble())
+            .toFloat().toInt()
+
+        val raster = WatermarkCellComposer.composeIconCellRaster(
+            icon = icon,
+            degree = 0f,
+            hGapPercent = 500,
+            vGapPercent = 500,
+            scaleRatio = scaleRatio,
+        )
+        assertEquals(expectedLogicalW, raster.logicalWidth)
+        assertEquals(expectedLogicalH, raster.logicalHeight)
+        assertTrue(raster.logicalWidth > WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX)
+        assertTrue(raster.logicalHeight > WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX)
+        assertTrue(
+            raster.bitmap.width <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX &&
+                raster.bitmap.height <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            "extreme backing bitmap must cap at ${WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX}, " +
+                "got ${raster.bitmap.width}x${raster.bitmap.height}",
+        )
+        val px = raster.bitmap.toPixelMap()
+        assertTrue(
+            px[raster.bitmap.width / 2, raster.bitmap.height / 2].alpha > 0f,
+            "extreme oversized icon cell must render centered non-transparent pixels",
+        )
+        assertEquals(Color.Transparent, px[0, 0], "gap corner must remain transparent")
+    }
+
+    @Test
+    fun sparse_gap_icon_cell_keeps_sharp_draw_box_and_aligns_center() {
+        val icon = syntheticIcon(256, 256)
+        val degree = 315f
+        val hGap = 400
+        val vGap = 400
+        val scaleRatio = 2f
+        val raster = WatermarkCellComposer.composeIconCellRaster(
+            icon = icon,
+            degree = degree,
+            hGapPercent = hGap,
+            vGapPercent = vGap,
+            scaleRatio = scaleRatio,
+        )
+
+        assertTrue(
+            raster.logicalWidth > 3000 && raster.logicalHeight > 3000,
+            "sparse-gap icon fixture must exceed 3000 logically (was ${raster.logicalWidth}x${raster.logicalHeight})",
+        )
+        assertTrue(
+            raster.drawWidth <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX &&
+                raster.drawHeight <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            "rotated icon content box must fit inside 2048 (was ${raster.drawWidth}x${raster.drawHeight})",
+        )
+        assertEquals(
+            raster.drawWidth,
+            raster.bitmap.width,
+            "sparse-gap icon must raster 1:1 without downscaling",
+        )
+        assertEquals(
+            raster.drawHeight,
+            raster.bitmap.height,
+            "sparse-gap icon must raster 1:1 without downscaling",
+        )
+        assertTrue(raster.bitmap.width < raster.logicalWidth)
+        assertTrue(raster.bitmap.height < raster.logicalHeight)
+        assertEquals(Color.Transparent, raster.bitmap.toPixelMap()[0, 0], "4 px safety margin must keep corner transparent")
+
+        val bg = ImageBitmap(raster.logicalWidth, raster.logicalHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(bg),
+            size = Size(raster.logicalWidth.toFloat(), raster.logicalHeight.toFloat()),
+        ) {
+            drawRect(Color.Black)
+        }
+        val composed = WatermarkCellComposer.composeOverBackground(
+            background = bg,
+            cell = raster.bitmap,
+            tileMode = WatermarkTileMode.REPEAT,
+            offsetX = 0f,
+            offsetY = 0f,
+            alpha = 1f,
+            tileWidth = raster.logicalWidth,
+            tileHeight = raster.logicalHeight,
+            drawWidth = raster.drawWidth,
+            drawHeight = raster.drawHeight,
+        )
+
+        val scaledW = (icon.width * scaleRatio).toInt()
+        val scaledH = (icon.height * scaleRatio).toInt()
+        val scaledIcon = ImageBitmap(scaledW, scaledH, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(scaledIcon),
+            size = Size(scaledW.toFloat(), scaledH.toFloat()),
+        ) {
+            drawImage(
+                image = icon,
+                srcOffset = IntOffset.Zero,
+                srcSize = IntSize(icon.width, icon.height),
+                dstOffset = IntOffset.Zero,
+                dstSize = IntSize(scaledW, scaledH),
+                filterQuality = FilterQuality.None,
+            )
+        }
+        val manualCell = ImageBitmap(raster.logicalWidth, raster.logicalHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(manualCell),
+            size = Size(raster.logicalWidth.toFloat(), raster.logicalHeight.toFloat()),
+        ) {
+            rotate(degrees = degree, pivot = Offset(raster.logicalWidth / 2f, raster.logicalHeight / 2f)) {
+                drawImage(
+                    image = scaledIcon,
+                    topLeft = Offset(
+                        (raster.logicalWidth - scaledW) / 2f,
+                        (raster.logicalHeight - scaledH) / 2f,
+                    ),
+                )
+            }
+        }
+        val manual = ImageBitmap(raster.logicalWidth, raster.logicalHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(manual),
+            size = Size(raster.logicalWidth.toFloat(), raster.logicalHeight.toFloat()),
+        ) {
+            drawImage(bg, topLeft = Offset.Zero)
+            drawImage(manualCell, topLeft = Offset.Zero)
+        }
+
+        val compPx = composed.toPixelMap()
+        val manPx = manual.toPixelMap()
+        assertEquals(Color.Black, compPx[0, 0], "outer gap corner must remain background")
+        val cx = raster.logicalWidth / 2
+        val cy = raster.logicalHeight / 2
+        assertTrue(compPx[cx, cy].blue > 0.9f || compPx[cx, cy].red > 0.9f, "centered icon must render at tile center")
+
+        var compInk = 0
+        var manInk = 0
+        var compSumX = 0.0
+        var compSumY = 0.0
+        var manSumX = 0.0
+        var manSumY = 0.0
+        var compRedCount = 0
+        var manRedCount = 0
+        var compRedSumX = 0.0
+        var compRedSumY = 0.0
+        var manRedSumX = 0.0
+        var manRedSumY = 0.0
+        var compMinX = Int.MAX_VALUE
+        var compMaxX = -1
+        var compMinY = Int.MAX_VALUE
+        var compMaxY = -1
+        var manMinX = Int.MAX_VALUE
+        var manMaxX = -1
+        var manMinY = Int.MAX_VALUE
+        var manMaxY = -1
+        var maxDelta = 0f
+        for (y in 0 until raster.logicalHeight) {
+            for (x in 0 until raster.logicalWidth) {
+                val cc = compPx[x, y]
+                val mc = manPx[x, y]
+                maxDelta = max(maxDelta, max(abs(cc.red - mc.red), abs(cc.blue - mc.blue)))
+                if (cc.red > 0.05f || cc.blue > 0.05f) {
+                    compInk++
+                    compSumX += x
+                    compSumY += y
+                    compMinX = min(compMinX, x)
+                    compMaxX = max(compMaxX, x)
+                    compMinY = min(compMinY, y)
+                    compMaxY = max(compMaxY, y)
+                    if (cc.red > 0.5f && cc.blue < 0.2f) {
+                        compRedCount++
+                        compRedSumX += x
+                        compRedSumY += y
+                    }
+                }
+                if (mc.red > 0.05f || mc.blue > 0.05f) {
+                    manInk++
+                    manSumX += x
+                    manSumY += y
+                    manMinX = min(manMinX, x)
+                    manMaxX = max(manMaxX, x)
+                    manMinY = min(manMinY, y)
+                    manMaxY = max(manMaxY, y)
+                    if (mc.red > 0.5f && mc.blue < 0.2f) {
+                        manRedCount++
+                        manRedSumX += x
+                        manRedSumY += y
+                    }
+                }
+            }
+        }
+        assertTrue(compInk > 0 && manInk > 0 && compRedCount > 0 && manRedCount > 0)
+        assertTrue(
+            abs(compSumX / compInk - manSumX / manInk) < 0.25 &&
+                abs(compSumY / compInk - manSumY / manInk) < 0.25,
+            "icon centroid must align identically at center",
+        )
+        assertTrue(
+            abs(compRedSumX / compRedCount - manRedSumX / manRedCount) < 0.25 &&
+                abs(compRedSumY / compRedCount - manRedSumY / manRedCount) < 0.25,
+            "rotated red quadrant centroid must align identically at center",
+        )
+        assertTrue(
+            abs(compMinX - manMinX) <= 1 && abs(compMaxX - manMaxX) <= 1 &&
+                abs(compMinY - manMinY) <= 1 && abs(compMaxY - manMaxY) <= 1,
+            "icon bounding box must match un-capped render",
+        )
+        assertTrue(
+            maxDelta <= 0.02f,
+            "1:1 drawWidth icon pixels must match un-capped manual draw without downscale blur (maxDelta=$maxDelta)",
+        )
     }
 }

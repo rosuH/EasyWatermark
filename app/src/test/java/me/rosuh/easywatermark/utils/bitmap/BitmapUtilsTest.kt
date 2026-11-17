@@ -3,6 +3,7 @@ package me.rosuh.easywatermark.utils.bitmap
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.RenderNode
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayInputStream
@@ -10,6 +11,7 @@ import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -254,6 +256,52 @@ class BitmapUtilsTest {
     @Test(expected = IllegalArgumentException::class)
     fun previewSampleSize_rejectsNegativePaneHeight() {
         calculateInSampleSize(49861, 1350, 1012, -1)
+    }
+
+    @Test
+    fun previewSampleSize_capsExceedingCanvasSafeBounds() {
+        assertEquals(2, calculateInSampleSize(6000, 6000, 3500, 3500))
+        assertEquals(1, calculateInSampleSize(4096, 4096, 4096, 4096))
+        assertEquals(2, calculateInSampleSize(4097, 4097, 4097, 4097))
+        assertEquals(64, calculateInSampleSize(1080, 200_000, 1080, 100_000))
+    }
+
+    @Test
+    fun clampBitmapForCanvas_clampsRgbaF16AndOversizedBitmapForRecordingCanvas() {
+        val small = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+        assertSame(small, clampBitmapForCanvas(small))
+        small.recycle()
+
+        val wideGamutOversized = Bitmap.createBitmap(4000, 4000, Bitmap.Config.RGBA_F16)
+        assertTrue(wideGamutOversized.allocationByteCount.toLong() > MAX_CANVAS_SAFE_BITMAP_BYTES)
+        val clampedWide = clampBitmapForCanvas(wideGamutOversized)
+        assertTrue(wideGamutOversized.isRecycled)
+        assertEquals(Bitmap.Config.ARGB_8888, clampedWide.config)
+        assertTrue(clampedWide.width <= MAX_CANVAS_SAFE_EDGE_PX)
+        assertTrue(clampedWide.height <= MAX_CANVAS_SAFE_EDGE_PX)
+        assertTrue(clampedWide.allocationByteCount.toLong() <= MAX_CANVAS_SAFE_BITMAP_BYTES)
+        assertDrawableOnRecordingCanvas("test-f16", clampedWide)
+        clampedWide.recycle()
+
+        val oversized = Bitmap.createBitmap(4500, 6000, Bitmap.Config.ARGB_8888)
+        val clampedOversized = clampBitmapForCanvas(oversized)
+        assertTrue(oversized.isRecycled)
+        assertTrue(clampedOversized.width <= MAX_CANVAS_SAFE_EDGE_PX)
+        assertTrue(clampedOversized.height <= MAX_CANVAS_SAFE_EDGE_PX)
+        assertTrue(clampedOversized.allocationByteCount.toLong() <= MAX_CANVAS_SAFE_BITMAP_BYTES)
+        assertDrawableOnRecordingCanvas("test-oversized", clampedOversized)
+        clampedOversized.recycle()
+    }
+
+    private fun assertDrawableOnRecordingCanvas(name: String, bitmap: Bitmap) {
+        val node = RenderNode(name)
+        val canvas = node.beginRecording(1080, 1920)
+        try {
+            canvas.drawBitmap(bitmap, 0f, 0f, null)
+        } finally {
+            node.endRecording()
+            node.discardDisplayList()
+        }
     }
 
     @Test

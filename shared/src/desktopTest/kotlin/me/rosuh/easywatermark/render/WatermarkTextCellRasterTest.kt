@@ -1,9 +1,27 @@
 package me.rosuh.easywatermark.render
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.ImageBitmapConfig
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
+import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -193,5 +211,247 @@ class WatermarkTextCellRasterTest {
         var nonBlank = 0
         for (y in 0 until px.height) for (x in 0 until px.width) if (px[x, y].alpha > 0) nonBlank++
         assertTrue(nonBlank > 0, "bundled CJK text must render visible pixels on the JVM host")
+    }
+
+    @Test
+    fun oversized_multiline_text_cell_caps_backing_bitmap_and_preserves_logical_dims() {
+        val content = WatermarkTextContent(
+            text = "OVERSIZED WATERMARK CELL\nSECOND LONG LINE FOR BOUNDS",
+            style = TextStyle(fontSize = 180.sp),
+            color = Color.White,
+        )
+        val measurer = androidx.compose.ui.text.TextMeasurer(
+            env.fontFamilyResolver,
+            env.density,
+            env.layoutDirection,
+        )
+        val initial = measurer.measure(
+            androidx.compose.ui.text.AnnotatedString(content.text),
+            style = content.style,
+        )
+        val measured = if (initial.lineCount > 1) {
+            measurer.measure(
+                androidx.compose.ui.text.AnnotatedString(content.text),
+                style = content.style.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+            )
+        } else {
+            initial
+        }
+        val degree = 315f
+        val fixW = WatermarkGeometry.rotatedCellWidth(
+            measured.size.width.toFloat().coerceAtLeast(1f),
+            measured.size.height.toFloat().coerceAtLeast(1f),
+            degree,
+        )
+        val fixH = WatermarkGeometry.rotatedCellHeight(
+            measured.size.width.toFloat().coerceAtLeast(1f),
+            measured.size.height.toFloat().coerceAtLeast(1f),
+            degree,
+        )
+        val expectedLogicalW = WatermarkGeometry.horizontalGap(fixW.toInt(), 500)
+        val expectedLogicalH = WatermarkGeometry.verticalGap(fixH.toInt(), 500)
+
+        val raster = WatermarkCellComposer.composeTextCellRaster(
+            env = env,
+            content = content,
+            degree = degree,
+            hGapPercent = 500,
+            vGapPercent = 500,
+        )
+        assertTrue(
+            expectedLogicalW > WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX &&
+                expectedLogicalH > WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            "fixture must exercise oversized text cell (was ${expectedLogicalW}x$expectedLogicalH)",
+        )
+        assertEquals(expectedLogicalW, raster.logicalWidth)
+        assertEquals(expectedLogicalH, raster.logicalHeight)
+        assertTrue(
+            raster.bitmap.width <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX &&
+                raster.bitmap.height <= WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            "backing bitmap must cap at ${WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX}, " +
+                "got ${raster.bitmap.width}x${raster.bitmap.height}",
+        )
+        val px = raster.bitmap.toPixelMap()
+        var nonTransparent = 0
+        for (y in 0 until px.height) {
+            for (x in 0 until px.width) {
+                if (px[x, y].alpha > 0f) nonTransparent++
+            }
+        }
+        assertTrue(nonTransparent > 0, "oversized text cell must render visible pixels")
+        assertEquals(Color.Transparent, px[0, 0], "gap corner must remain transparent")
+    }
+
+    @Test
+    fun sparse_gap_high_res_text_cell_keeps_sharp_draw_box_and_aligns_center() {
+        val imageWidth = 4000
+        val fontPx = WatermarkGeometry.fontPx(textSize = 24f, imageWidth = imageWidth)
+        val content = WatermarkTextContent(
+            text = "EASY WATERMARK",
+            style = TextStyle(fontSize = fontPx.sp),
+            color = Color.White,
+        )
+        val degree = 315f
+        val hGap = 400
+        val vGap = 400
+        val raster = WatermarkCellComposer.composeTextCellRaster(
+            env = env,
+            content = content,
+            degree = degree,
+            hGapPercent = hGap,
+            vGapPercent = vGap,
+        )
+
+        assertTrue(
+            raster.logicalWidth > WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX &&
+                raster.logicalHeight > WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            "sparse-gap 12MP fixture must exceed 2048 logically (was ${raster.logicalWidth}x${raster.logicalHeight})",
+        )
+        assertTrue(
+            raster.drawWidth < WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX &&
+                raster.drawHeight < WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX,
+            "content draw box must fit below 2048 (was ${raster.drawWidth}x${raster.drawHeight})",
+        )
+        assertEquals(
+            raster.drawWidth,
+            raster.bitmap.width,
+            "sparse-gap text glyphs must raster 1:1 without downscaling",
+        )
+        assertEquals(
+            raster.drawHeight,
+            raster.bitmap.height,
+            "sparse-gap text glyphs must raster 1:1 without downscaling",
+        )
+        assertTrue(raster.bitmap.width < raster.logicalWidth)
+        assertTrue(raster.bitmap.height < raster.logicalHeight)
+
+        val cellPx = raster.bitmap.toPixelMap()
+        assertEquals(Color.Transparent, cellPx[0, 0], "4 px safety margin must keep corner transparent")
+
+        val bg = ImageBitmap(raster.logicalWidth, raster.logicalHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(bg),
+            size = Size(raster.logicalWidth.toFloat(), raster.logicalHeight.toFloat()),
+        ) {
+            drawRect(Color.Black)
+        }
+        val composed = WatermarkCellComposer.composeOverBackground(
+            background = bg,
+            cell = raster.bitmap,
+            tileMode = WatermarkTileMode.REPEAT,
+            offsetX = 0f,
+            offsetY = 0f,
+            alpha = 1f,
+            tileWidth = raster.logicalWidth,
+            tileHeight = raster.logicalHeight,
+            drawWidth = raster.drawWidth,
+            drawHeight = raster.drawHeight,
+        )
+
+        val measurer = TextMeasurer(env.fontFamilyResolver, env.density, env.layoutDirection)
+        val initial = measurer.measure(AnnotatedString(content.text), style = content.style)
+        val layout = if (initial.lineCount > 1) {
+            measurer.measure(
+                AnnotatedString(content.text),
+                style = content.style.copy(textAlign = TextAlign.Center),
+            )
+        } else {
+            initial
+        }
+        val textW = layout.size.width.toFloat().coerceAtLeast(1f)
+        val textH = layout.size.height.toFloat().coerceAtLeast(1f)
+        val manualCell = ImageBitmap(raster.logicalWidth, raster.logicalHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = env.density,
+            layoutDirection = env.layoutDirection,
+            canvas = Canvas(manualCell),
+            size = Size(raster.logicalWidth.toFloat(), raster.logicalHeight.toFloat()),
+        ) {
+            rotate(degrees = degree, pivot = Offset(raster.logicalWidth / 2f, raster.logicalHeight / 2f)) {
+                translate(
+                    left = (raster.logicalWidth - textW) / 2f,
+                    top = (raster.logicalHeight - textH) / 2f,
+                ) {
+                    drawIntoCanvas { canvas ->
+                        layout.multiParagraph.paint(
+                            canvas = canvas,
+                            color = content.color,
+                            drawStyle = content.style.drawStyle,
+                        )
+                    }
+                }
+            }
+        }
+        val manual = ImageBitmap(raster.logicalWidth, raster.logicalHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(manual),
+            size = Size(raster.logicalWidth.toFloat(), raster.logicalHeight.toFloat()),
+        ) {
+            drawImage(bg, topLeft = Offset.Zero)
+            drawImage(manualCell, topLeft = Offset.Zero)
+        }
+
+        val compPx = composed.toPixelMap()
+        val manPx = manual.toPixelMap()
+        assertEquals(Color.Black, compPx[0, 0], "outer gap corner must remain background")
+        var compInk = 0
+        var manInk = 0
+        var compSumX = 0.0
+        var compSumY = 0.0
+        var manSumX = 0.0
+        var manSumY = 0.0
+        var compMinX = Int.MAX_VALUE
+        var compMaxX = -1
+        var compMinY = Int.MAX_VALUE
+        var compMaxY = -1
+        var manMinX = Int.MAX_VALUE
+        var manMaxX = -1
+        var manMinY = Int.MAX_VALUE
+        var manMaxY = -1
+        var maxDelta = 0f
+        for (y in 0 until raster.logicalHeight) {
+            for (x in 0 until raster.logicalWidth) {
+                val cc = compPx[x, y]
+                val mc = manPx[x, y]
+                maxDelta = max(maxDelta, abs(cc.red - mc.red))
+                if (cc.red > 0.05f) {
+                    compInk++
+                    compSumX += x
+                    compSumY += y
+                    compMinX = min(compMinX, x)
+                    compMaxX = max(compMaxX, x)
+                    compMinY = min(compMinY, y)
+                    compMaxY = max(compMaxY, y)
+                }
+                if (mc.red > 0.05f) {
+                    manInk++
+                    manSumX += x
+                    manSumY += y
+                    manMinX = min(manMinX, x)
+                    manMaxX = max(manMaxX, x)
+                    manMinY = min(manMinY, y)
+                    manMaxY = max(manMaxY, y)
+                }
+            }
+        }
+        assertTrue(compInk > 0 && manInk > 0, "both composed and manual renders must draw text")
+        assertTrue(
+            abs(compSumX / compInk - manSumX / manInk) < 0.25 &&
+                abs(compSumY / compInk - manSumY / manInk) < 0.25,
+            "glyph centroid must align identically at center",
+        )
+        assertTrue(
+            abs(compMinX - manMinX) <= 1 && abs(compMaxX - manMaxX) <= 1 &&
+                abs(compMinY - manMinY) <= 1 && abs(compMaxY - manMaxY) <= 1,
+            "glyph bounding box must match un-capped render",
+        )
+        assertTrue(
+            maxDelta <= 0.02f,
+            "1:1 drawWidth glyph pixels must match un-capped manual draw without downscale blur (maxDelta=$maxDelta)",
+        )
     }
 }

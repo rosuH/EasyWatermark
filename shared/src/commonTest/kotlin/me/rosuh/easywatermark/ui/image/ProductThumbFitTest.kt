@@ -27,4 +27,15 @@ class ProductThumbFitTest {
         assertEquals(1, ProductThumbFit.inSampleSizeForCrop(100, 80, 128))
         assertEquals(1, ProductThumbFit.inSampleSizeForCrop(128, 128, 128))
     }
+
+    @Test
+    fun inSampleSizeForCrop_capsLongEdgeAndHandlesLimits() {
+        assertEquals(16, ProductThumbFit.inSampleSizeForCrop(49_861, 1_350, 128))
+        assertEquals(64, ProductThumbFit.inSampleSizeForCrop(1_080, 200_000, 256))
+        assertEquals(1 shl 19, ProductThumbFit.inSampleSizeForCrop(Int.MAX_VALUE, 256, 256))
+        assertEquals(1 shl 30, ProductThumbFit.inSampleSizeForCrop(Int.MAX_VALUE, 256, 256, maxLongEdgePx = 1))
+        assertEquals(1 shl 30, ProductThumbFit.inSampleSizeForCrop(Int.MAX_VALUE, Int.MAX_VALUE, 1))
+        assertEquals(1, ProductThumbFit.inSampleSizeForCrop(0, 100, 128))
+        assertEquals(1, ProductThumbFit.inSampleSizeForCrop(100, -1, 128))
+    }
 }

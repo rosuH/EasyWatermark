@@ -513,18 +513,18 @@ private fun WaterMarkCanvas(
                     } else {
                         null
                     }
-                    AndroidCommonRaster.composeCell(context, req.wm, base.width, icon, family)
+                    AndroidCommonRaster.composeCellRaster(context, req.wm, base.width, icon, family)
                 }
             } catch (_: Throwable) {
                 overlay = null
                 null
             } ?: return@paint
             val liveOverlay = overlayCellFrom(
-                cell = cell,
+                raster = cell,
                 config = req.wm,
                 offsetX = req.ox,
                 offsetY = req.oy,
-                builtForWidth = if (textMode) base.width else cell.width,
+                builtForWidth = if (textMode) base.width else cell.logicalWidth,
             )
             if (req.token != paintToken) return@paint
             if (
@@ -631,7 +631,8 @@ private fun WaterMarkCanvas(
                 overlay = overlay?.withOffset(x, y)
                 submitCommittedOverlayPaint(x, y)
             },
-            renderGestureCell = { config ->
+            renderGestureCell = null,
+            renderGestureCellRaster = { config ->
                 withContext(Dispatchers.Default) {
                     val family = if (config.markMode == WatermarkMode.Text) {
                         when (val resolved = fontAccess.resolve(config.fontRef)) {
@@ -639,7 +640,7 @@ private fun WaterMarkCanvas(
                             is FontResolution.Failure -> error(resolved.reason)
                         }
                     } else null
-                    AndroidCommonRaster.composeCell(context, config, photo!!.width, decodeAndroidIcon(config), family)
+                    AndroidCommonRaster.composeCellRaster(context, config, photo!!.width, decodeAndroidIcon(config), family)
                 }
             },
         )

@@ -6,9 +6,13 @@ import android.content.Context
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Matrix.ScaleToFit
+import android.graphics.Paint
+import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.ImageView
@@ -21,8 +25,11 @@ import java.io.FileNotFoundException
 import java.io.InputStream
 import java.lang.ref.SoftReference
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 private const val TAG = "BitmapUtils"
+internal const val MAX_CANVAS_SAFE_BITMAP_BYTES: Long = 64L * 1024L * 1024L
+internal const val MAX_CANVAS_SAFE_EDGE_PX: Int = 4096
 
 private data class ExifTransform(val orientation: Int) {
     val swapsDimensions: Boolean get() = orientation in 5..8
@@ -193,7 +200,70 @@ fun decodePreviewSourceBypassingCache(
 ): Result<BitmapCache.BitmapValue> {
     me.rosuh.easywatermark.render.PreviewSourceReuseProbe.recordSourceDecode()
     me.rosuh.easywatermark.render.PreviewSourceReuseProbe.recordContentResolverOpen()
-    return decodeSampledBitmapFromResourceSync(resolver, uri, reqWidth, reqHeight)
+    val result = decodeSampledBitmapFromResourceSync(resolver, uri, reqWidth, reqHeight)
+    val value = result.data
+    if (!result.isSuccess() || value == null) {
+        return result
+    }
+    val clamped = clampBitmapForCanvas(value.bitmap)
+    return if (clamped === value.bitmap) {
+        result
+    } else {
+        Result.success(BitmapCache.BitmapValue(clamped, value.inSample))
+    }
+}
+
+internal fun clampBitmapForCanvas(
+    bitmap: Bitmap,
+    maxEdgePx: Int = MAX_CANVAS_SAFE_EDGE_PX,
+    maxBytes: Long = MAX_CANVAS_SAFE_BITMAP_BYTES,
+): Bitmap {
+    if (bitmap.isRecycled) return bitmap
+    val safeMaxEdge = maxEdgePx.coerceAtLeast(1)
+    val safeMaxBytes = maxBytes.coerceAtLeast(4L)
+    if (bitmap.width <= safeMaxEdge &&
+        bitmap.height <= safeMaxEdge &&
+        bitmap.allocationByteCount.toLong() <= safeMaxBytes
+    ) {
+        return bitmap
+    }
+    val edgeScale = safeMaxEdge.toDouble() / maxOf(bitmap.width, bitmap.height).coerceAtLeast(1).toDouble()
+    val byteScale = sqrt(
+        safeMaxBytes.toDouble() / (bitmap.width.toLong() * bitmap.height.toLong() * 4L).coerceAtLeast(1L).toDouble(),
+    )
+    val scale = minOf(1.0, edgeScale, byteScale)
+    var targetW = (bitmap.width * scale).roundToInt().coerceIn(1, safeMaxEdge)
+    var targetH = (bitmap.height * scale).roundToInt().coerceIn(1, safeMaxEdge)
+    if (targetW.toLong() * targetH.toLong() * 4L > safeMaxBytes) {
+        val ratio = sqrt(safeMaxBytes.toDouble() / (targetW.toLong() * targetH.toLong() * 4L).toDouble())
+        targetW = (targetW * ratio).toInt().coerceIn(1, safeMaxEdge)
+        targetH = (targetH * ratio).toInt().coerceIn(1, safeMaxEdge)
+    }
+    val source = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+        bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: return bitmap
+    } else {
+        bitmap
+    }
+    val scaled = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+    try {
+        Canvas(scaled).drawBitmap(
+            source,
+            null,
+            Rect(0, 0, targetW, targetH),
+            Paint(Paint.FILTER_BITMAP_FLAG),
+        )
+    } catch (t: Throwable) {
+        if (!scaled.isRecycled) scaled.recycle()
+        if (source !== bitmap && !source.isRecycled) source.recycle()
+        throw t
+    }
+    if (source !== bitmap && !source.isRecycled) {
+        source.recycle()
+    }
+    if (scaled !== bitmap && !bitmap.isRecycled) {
+        bitmap.recycle()
+    }
+    return scaled
 }
 
 fun decodeSampledBitmapFromResourceSync(
@@ -260,8 +330,24 @@ fun calculateInSampleSize(
     val halfWidth = width / 2
     // FIT_CENTER needs either dimension to cover the pane, not both. Keeping the
     // short edge for a panorama can leave a full-size bitmap on the UI Canvas.
-    while (halfHeight / inSampleSize >= reqHeight || halfWidth / inSampleSize >= reqWidth) {
+    while ((halfHeight / inSampleSize >= reqHeight || halfWidth / inSampleSize >= reqWidth) &&
+        inSampleSize < (1 shl 30)
+    ) {
         inSampleSize *= 2
+    }
+
+    if (width > 0 && height > 0) {
+        while (inSampleSize < (1 shl 30)) {
+            val sampledW = width / inSampleSize
+            val sampledH = height / inSampleSize
+            val exceedsCanvasBounds = sampledW > MAX_CANVAS_SAFE_EDGE_PX ||
+                sampledH > MAX_CANVAS_SAFE_EDGE_PX ||
+                sampledW.toLong() * sampledH.toLong() * 4L > MAX_CANVAS_SAFE_BITMAP_BYTES
+            if (!exceedsCanvasBounds) {
+                break
+            }
+            inSampleSize *= 2
+        }
     }
 
     return inSampleSize

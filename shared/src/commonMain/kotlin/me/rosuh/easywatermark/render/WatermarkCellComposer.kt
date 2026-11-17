@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextMeasurer
@@ -20,6 +21,34 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import kotlin.math.roundToInt
+
+/**
+ * Offscreen raster for a single watermark cell plus its un-capped logical dimensions (px) and
+ * centered content draw box ([drawWidth] × [drawHeight]).
+ *
+ * Oversized cells keep [bitmap] bounded (≤ [WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX]) so
+ * Android `RecordingCanvas` never receives >100 MiB bitmaps, while [logicalWidth] × [logicalHeight]
+ * preserve exact tiling pitch and hit-testing geometry. When gap margins push logical dims past
+ * [WatermarkCellComposer.MAX_CELL_RASTER_EDGE_PX], [drawWidth] × [drawHeight] keep rasterization
+ * tight to the centered rotated content box so glyphs/icons avoid unnecessary downscale blur.
+ */
+data class RasteredWatermarkCell(
+    val bitmap: ImageBitmap,
+    val logicalWidth: Int = bitmap.width,
+    val logicalHeight: Int = bitmap.height,
+    val drawWidth: Int = logicalWidth,
+    val drawHeight: Int = logicalHeight,
+) {
+    init {
+        require(logicalWidth >= 1 && logicalHeight >= 1) {
+            "RasteredWatermarkCell logical dims must be >= 1 (got ${logicalWidth}x$logicalHeight)"
+        }
+        require(drawWidth in 1..logicalWidth && drawHeight in 1..logicalHeight) {
+            "RasteredWatermarkCell draw dims must be in 1..logical (got ${drawWidth}x$drawHeight vs ${logicalWidth}x$logicalHeight)"
+        }
+    }
+}
 
 /**
  * CommonMain offscreen watermark **cell** primitives (Compose Multiplatform graphics).
@@ -33,15 +62,78 @@ import me.rosuh.easywatermark.data.model.WatermarkTileMode
 object WatermarkCellComposer {
 
     /**
- * Compose one rotated, gap-spaced watermark cell into an offscreen [ImageBitmap].
- *
- * @param contentWidth width of the content box (e.g. measured text / scaled icon), px
- * @param contentHeight height of the content box, px
- * @param degree rotation in degrees (matches `WaterMark.degree`)
- * @param hGapPercent horizontal gap percent (0 -> adjacent, 100 -> 2x); matches `WaterMark.hGap`
- * @param vGapPercent vertical gap percent; matches `WaterMark.vGap`
- * @param contentColor fill of the content rect (placeholder until the text/icon raster lands)
- * @param backgroundColor cell background (transparent by default, like the production cell)
+     * Hard per-axis backing bitmap cap: 2048×2048 ARGB_8888 = 16 MiB, well below Android's
+     * 100 MiB `RecordingCanvas` bitmap limit and common `GL_MAX_TEXTURE_SIZE` (4096).
+     */
+    const val MAX_CELL_RASTER_EDGE_PX: Int = 2048
+
+    private const val MAX_LOGICAL_CELL_EDGE_PX: Int = 1 shl 24
+    private const val CONTENT_BOX_SAFETY_PAD_PX: Int = 8 // 4 px transparent margin per side
+
+    private fun boundedLogicalGap(basePx: Float, gapPercent: Int): Int {
+        val safeGap = gapPercent.coerceAtLeast(0)
+        val safeBase = if (basePx.isFinite() && basePx >= 1f) basePx else 1f
+        return if (safeBase <= 1_000_000f && safeGap <= 10_000) {
+            WatermarkGeometry.horizontalGap(safeBase.toInt(), safeGap)
+                .coerceIn(1, MAX_LOGICAL_CELL_EDGE_PX)
+        } else {
+            (safeBase.toDouble() * ((safeGap.toDouble() / 100.0) + 1.0))
+                .toLong()
+                .coerceIn(1L, MAX_LOGICAL_CELL_EDGE_PX.toLong())
+                .toInt()
+        }
+    }
+
+    internal fun centeredContentBoxDimension(contentSpanPx: Float, logicalDim: Int): Int {
+        val safeLogical = logicalDim.coerceAtLeast(1)
+        val safeSpan = if (contentSpanPx.isFinite()) contentSpanPx.coerceAtLeast(1f) else safeLogical.toFloat()
+        val raw = (kotlin.math.ceil(safeSpan.toDouble()).toLong() + CONTENT_BOX_SAFETY_PAD_PX)
+            .coerceIn(1L, safeLogical.toLong())
+            .toInt()
+        // Match parity with logicalDim so (logicalDim - drawDim) / 2 is an exact integer (zero 0.5 px blur).
+        return if ((safeLogical - raw) % 2 != 0 && raw < safeLogical) raw + 1 else raw
+    }
+
+    private fun tightDrawDimensionsFor(
+        contentSpanW: Float,
+        contentSpanH: Float,
+        logicalWidth: Int,
+        logicalHeight: Int,
+        backgroundColor: Color,
+    ): Pair<Int, Int> =
+        if (backgroundColor == Color.Transparent &&
+            (logicalWidth > MAX_CELL_RASTER_EDGE_PX || logicalHeight > MAX_CELL_RASTER_EDGE_PX)
+        ) {
+            centeredContentBoxDimension(contentSpanW, logicalWidth) to
+                centeredContentBoxDimension(contentSpanH, logicalHeight)
+        } else {
+            logicalWidth to logicalHeight
+        }
+
+    internal fun rasterDimensionsFor(
+        logicalWidth: Int,
+        logicalHeight: Int,
+        maxEdgePx: Int = MAX_CELL_RASTER_EDGE_PX,
+    ): Pair<Int, Int> {
+        val safeW = logicalWidth.coerceAtLeast(1)
+        val safeH = logicalHeight.coerceAtLeast(1)
+        val safeMax = maxEdgePx.coerceAtLeast(1)
+        if (safeW <= safeMax && safeH <= safeMax) return safeW to safeH
+        val scale = safeMax.toDouble() / maxOf(safeW, safeH).toDouble()
+        return (safeW * scale).roundToInt().coerceIn(1, safeMax) to
+            (safeH * scale).roundToInt().coerceIn(1, safeMax)
+    }
+
+    /**
+     * Compose one rotated, gap-spaced watermark cell into an offscreen [ImageBitmap].
+     *
+     * @param contentWidth width of the content box (e.g. measured text / scaled icon), px
+     * @param contentHeight height of the content box, px
+     * @param degree rotation in degrees (matches `WaterMark.degree`)
+     * @param hGapPercent horizontal gap percent (0 -> adjacent, 100 -> 2x); matches `WaterMark.hGap`
+     * @param vGapPercent vertical gap percent; matches `WaterMark.vGap`
+     * @param contentColor fill of the content rect (placeholder until the text/icon raster lands)
+     * @param backgroundColor cell background (transparent by default, like the production cell)
      */
     fun composeRotatedCell(
         contentWidth: Int,
@@ -51,37 +143,85 @@ object WatermarkCellComposer {
         vGapPercent: Int = 0,
         contentColor: Color = Color.White,
         backgroundColor: Color = Color.Transparent,
-    ): ImageBitmap {
+    ): ImageBitmap = composeRotatedCellRaster(
+        contentWidth = contentWidth,
+        contentHeight = contentHeight,
+        degree = degree,
+        hGapPercent = hGapPercent,
+        vGapPercent = vGapPercent,
+        contentColor = contentColor,
+        backgroundColor = backgroundColor,
+    ).bitmap
+
+    /**
+     * Compose one rotated, gap-spaced watermark cell into a bounded [RasteredWatermarkCell].
+     */
+    fun composeRotatedCellRaster(
+        contentWidth: Int,
+        contentHeight: Int,
+        degree: Float,
+        hGapPercent: Int = 0,
+        vGapPercent: Int = 0,
+        contentColor: Color = Color.White,
+        backgroundColor: Color = Color.Transparent,
+    ): RasteredWatermarkCell {
         val cw = contentWidth.coerceAtLeast(1).toFloat()
         val ch = contentHeight.coerceAtLeast(1).toFloat()
 
         // SAME sizing math as WatermarkRenderer (Android): rotated-AABB then gap expansion.
         val fixWidth = WatermarkGeometry.rotatedCellWidth(cw, ch, degree)
         val fixHeight = WatermarkGeometry.rotatedCellHeight(cw, ch, degree)
-        val finalWidth = WatermarkGeometry.horizontalGap(fixWidth.toInt(), hGapPercent).coerceAtLeast(1)
-        val finalHeight = WatermarkGeometry.verticalGap(fixHeight.toInt(), vGapPercent).coerceAtLeast(1)
+        val finalWidth = boundedLogicalGap(fixWidth, hGapPercent)
+        val finalHeight = boundedLogicalGap(fixHeight, vGapPercent)
+        val (drawWidth, drawHeight) = tightDrawDimensionsFor(
+            contentSpanW = fixWidth,
+            contentSpanH = fixHeight,
+            logicalWidth = finalWidth,
+            logicalHeight = finalHeight,
+            backgroundColor = backgroundColor,
+        )
+        val (rasterWidth, rasterHeight) = rasterDimensionsFor(drawWidth, drawHeight)
 
-        val bitmap = ImageBitmap(finalWidth, finalHeight, ImageBitmapConfig.Argb8888)
+        val bitmap = ImageBitmap(rasterWidth, rasterHeight, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(
             density = Density(1f),
             layoutDirection = LayoutDirection.Ltr,
             canvas = Canvas(bitmap),
-            size = Size(finalWidth.toFloat(), finalHeight.toFloat()),
+            size = Size(rasterWidth.toFloat(), rasterHeight.toFloat()),
         ) {
             if (backgroundColor != Color.Transparent) {
                 drawRect(color = backgroundColor)
             }
-            // Rotate about the cell centre; mirrors `canvas.rotate(degree, finalW/2, finalH/2)`.
-            rotate(degrees = degree, pivot = Offset(finalWidth / 2f, finalHeight / 2f)) {
-                // Content box centred in the cell (placeholder; text/icon raster is the next slice).
-                drawRect(
-                    color = contentColor,
-                    topLeft = Offset((finalWidth - cw) / 2f, (finalHeight - ch) / 2f),
-                    size = Size(cw, ch),
-                )
+            val drawRotatedContent: DrawScope.() -> Unit = {
+                // Rotate about the draw-box centre; mirrors `canvas.rotate(degree, finalW/2, finalH/2)`.
+                rotate(degrees = degree, pivot = Offset(drawWidth / 2f, drawHeight / 2f)) {
+                    // Content box centred in the draw box (placeholder; text/icon raster is the next slice).
+                    drawRect(
+                        color = contentColor,
+                        topLeft = Offset((drawWidth - cw) / 2f, (drawHeight - ch) / 2f),
+                        size = Size(cw, ch),
+                    )
+                }
+            }
+            if (rasterWidth == drawWidth && rasterHeight == drawHeight) {
+                drawRotatedContent()
+            } else {
+                scale(
+                    scaleX = rasterWidth.toFloat() / drawWidth.toFloat(),
+                    scaleY = rasterHeight.toFloat() / drawHeight.toFloat(),
+                    pivot = Offset.Zero,
+                ) {
+                    drawRotatedContent()
+                }
             }
         }
-        return bitmap
+        return RasteredWatermarkCell(
+            bitmap = bitmap,
+            logicalWidth = finalWidth,
+            logicalHeight = finalHeight,
+            drawWidth = drawWidth,
+            drawHeight = drawHeight,
+        )
     }
 
     /**
@@ -130,7 +270,26 @@ object WatermarkCellComposer {
         hGapPercent: Int = 0,
         vGapPercent: Int = 0,
         backgroundColor: Color = Color.Transparent,
-    ): ImageBitmap {
+    ): ImageBitmap = composeTextCellRaster(
+        env = env,
+        content = content,
+        degree = degree,
+        hGapPercent = hGapPercent,
+        vGapPercent = vGapPercent,
+        backgroundColor = backgroundColor,
+    ).bitmap
+
+    /**
+     * Compose ONE rotated, gap-spaced watermark **text** cell into a bounded [RasteredWatermarkCell].
+     */
+    fun composeTextCellRaster(
+        env: TextRasterEnv,
+        content: WatermarkTextContent,
+        degree: Float,
+        hGapPercent: Int = 0,
+        vGapPercent: Int = 0,
+        backgroundColor: Color = Color.Transparent,
+    ): RasteredWatermarkCell {
         require(content.text.isNotEmpty()) { "composeTextCell requires non-empty text" }
         // CMP Skiko ParagraphBuilder.makeSkTextStyle keeps a process-wide WeakKeysCache.
         // Two Dispatchers.Default workers (iOS progressive import + overlay) race
@@ -148,7 +307,7 @@ object WatermarkCellComposer {
         hGapPercent: Int,
         vGapPercent: Int,
         backgroundColor: Color,
-    ): ImageBitmap {
+    ): RasteredWatermarkCell {
         // 1) Measure the text box (same path as the Android WatermarkTextMeasurer, S3b).
         // NB positional args: the commonMain TextMeasurer constructor parameters are the
         // `default*` overridable form (defaultFontFamilyResolver / defaultDensity /
@@ -184,52 +343,79 @@ object WatermarkCellComposer {
         // 2) Cell size: rotated-AABB + gap (identical math to WatermarkRenderer.buildTextShader).
         val fixWidth = WatermarkGeometry.rotatedCellWidth(textWidth, textHeight, degree)
         val fixHeight = WatermarkGeometry.rotatedCellHeight(textWidth, textHeight, degree)
-        val finalWidth = WatermarkGeometry.horizontalGap(fixWidth.toInt(), hGapPercent).coerceAtLeast(1)
-        val finalHeight = WatermarkGeometry.verticalGap(fixHeight.toInt(), vGapPercent).coerceAtLeast(1)
+        val finalWidth = boundedLogicalGap(fixWidth, hGapPercent)
+        val finalHeight = boundedLogicalGap(fixHeight, vGapPercent)
+        val (drawWidth, drawHeight) = tightDrawDimensionsFor(
+            contentSpanW = fixWidth,
+            contentSpanH = fixHeight,
+            logicalWidth = finalWidth,
+            logicalHeight = finalHeight,
+            backgroundColor = backgroundColor,
+        )
+        val (rasterWidth, rasterHeight) = rasterDimensionsFor(drawWidth, drawHeight)
 
-        // 3) Offscreen raster: rotate about the cell centre, then paint the text centred.
-        val bitmap = ImageBitmap(finalWidth, finalHeight, ImageBitmapConfig.Argb8888)
+        // 3) Offscreen raster: rotate about the draw-box centre, then paint the text centred.
+        val bitmap = ImageBitmap(rasterWidth, rasterHeight, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(
             density = env.density,
             layoutDirection = env.layoutDirection,
             canvas = Canvas(bitmap),
-            size = Size(finalWidth.toFloat(), finalHeight.toFloat()),
+            size = Size(rasterWidth.toFloat(), rasterHeight.toFloat()),
         ) {
             if (backgroundColor != Color.Transparent) {
                 drawRect(color = backgroundColor)
             }
-            // Mirrors `canvas.rotate(degree, finalW/2, finalH/2)` then
-            // `canvas.translate(finalW/2, (finalH - lineHeight) / 2)` from the Android renderer
-            // (whose TextPaint is CENTER-aligned). Here we rotate about the cell centre, then
-            // centre the measured TEXT BOX inside the cell by translating its top-left to
-            // ((finalWidth - textWidth)/2, (finalHeight - textHeight)/2). MultiParagraph.paint draws
-            // from the canvas origin (top-left of the text box), so this box-centring — NOT a
-            // translate to finalWidth/2 — is what places the text correctly; translating to
-            // finalWidth/2 would paint the paragraph starting at the cell centre and clip the right
-            // half for degree=0/no-gap (where finalWidth == textWidth). Using the DrawScope transform
-            // stack (rotate -> translate -> drawIntoCanvas) keeps the platform canvas balanced,
-            // instead of hand-managing canvas.save/restore.
-            rotate(degrees = degree, pivot = Offset(finalWidth / 2f, finalHeight / 2f)) {
-                translate(
-                    left = (finalWidth - textWidth) / 2f,
-                    top = (finalHeight - textHeight) / 2f,
-                ) {
-                    // drawIntoCanvas reaches the underlying commonMain Canvas; multiParagraph.paint
-                    // paints the laid-out text from the (now box-centred) canvas origin. The layout was
-                    // measured with TextAlign.Center, so each line is also centred WITHIN the
-                    // box — matching the Android CENTER TextPaint for multiline.
-                    drawIntoCanvas { canvas ->
-                        // Pass the measured drawStyle so Fill/Stroke is honored (null/Fill render alike).
-                        layout.multiParagraph.paint(
-                            canvas = canvas,
-                            color = content.color,
-                            drawStyle = content.style.drawStyle,
-                        )
+            val drawTextBlock: DrawScope.() -> Unit = {
+                // Mirrors `canvas.rotate(degree, finalW/2, finalH/2)` then
+                // `canvas.translate(finalW/2, (finalH - lineHeight) / 2)` from the Android renderer
+                // (whose TextPaint is CENTER-aligned). Here we rotate about the draw-box centre, then
+                // centre the measured TEXT BOX inside the draw box by translating its top-left to
+                // ((drawWidth - textWidth)/2, (drawHeight - textHeight)/2). MultiParagraph.paint draws
+                // from the canvas origin (top-left of the text box), so this box-centring — NOT a
+                // translate to drawWidth/2 — is what places the text correctly; translating to
+                // drawWidth/2 would paint the paragraph starting at the cell centre and clip the right
+                // half for degree=0/no-gap (where drawWidth == textWidth). Using the DrawScope transform
+                // stack (rotate -> translate -> drawIntoCanvas) keeps the platform canvas balanced,
+                // instead of hand-managing canvas.save/restore.
+                rotate(degrees = degree, pivot = Offset(drawWidth / 2f, drawHeight / 2f)) {
+                    translate(
+                        left = (drawWidth - textWidth) / 2f,
+                        top = (drawHeight - textHeight) / 2f,
+                    ) {
+                        // drawIntoCanvas reaches the underlying commonMain Canvas; multiParagraph.paint
+                        // paints the laid-out text from the (now box-centred) canvas origin. The layout was
+                        // measured with TextAlign.Center, so each line is also centred WITHIN the
+                        // box — matching the Android CENTER TextPaint for multiline.
+                        drawIntoCanvas { canvas ->
+                            // Pass the measured drawStyle so Fill/Stroke is honored (null/Fill render alike).
+                            layout.multiParagraph.paint(
+                                canvas = canvas,
+                                color = content.color,
+                                drawStyle = content.style.drawStyle,
+                            )
+                        }
                     }
                 }
             }
+            if (rasterWidth == drawWidth && rasterHeight == drawHeight) {
+                drawTextBlock()
+            } else {
+                scale(
+                    scaleX = rasterWidth.toFloat() / drawWidth.toFloat(),
+                    scaleY = rasterHeight.toFloat() / drawHeight.toFloat(),
+                    pivot = Offset.Zero,
+                ) {
+                    drawTextBlock()
+                }
+            }
         }
-        return bitmap
+        return RasteredWatermarkCell(
+            bitmap = bitmap,
+            logicalWidth = finalWidth,
+            logicalHeight = finalHeight,
+            drawWidth = drawWidth,
+            drawHeight = drawHeight,
+        )
     }
 
     /** Android `buildIconShader` derives the icon scale from `config.textSize / 14f` (14 ⇒ 1×). */
@@ -308,88 +494,191 @@ object WatermarkCellComposer {
         vGapPercent: Int = 0,
         scaleRatio: Float = 1f,
         alpha: Float = 1f,
-    ): ImageBitmap {
+    ): ImageBitmap = composeIconCellRaster(
+        icon = icon,
+        degree = degree,
+        hGapPercent = hGapPercent,
+        vGapPercent = vGapPercent,
+        scaleRatio = scaleRatio,
+        alpha = alpha,
+    ).bitmap
+
+    private fun scaleIconNearest(icon: ImageBitmap, targetWidth: Int, targetHeight: Int): ImageBitmap {
+        if (targetWidth == icon.width && targetHeight == icon.height) return icon
+        val tmp = ImageBitmap(targetWidth, targetHeight, ImageBitmapConfig.Argb8888)
+        CanvasDrawScope().draw(
+            density = Density(1f),
+            layoutDirection = LayoutDirection.Ltr,
+            canvas = Canvas(tmp),
+            size = Size(targetWidth.toFloat(), targetHeight.toFloat()),
+        ) {
+            drawImage(
+                image = icon,
+                srcOffset = IntOffset.Zero,
+                srcSize = IntSize(icon.width, icon.height),
+                dstOffset = IntOffset.Zero,
+                dstSize = IntSize(targetWidth, targetHeight),
+                filterQuality = FilterQuality.None,
+            )
+        }
+        return tmp
+    }
+
+    /**
+     * Compose ONE rotated, gap-spaced watermark **icon/image** cell into a bounded
+     * [RasteredWatermarkCell].
+     */
+    fun composeIconCellRaster(
+        icon: ImageBitmap,
+        degree: Float,
+        hGapPercent: Int = 0,
+        vGapPercent: Int = 0,
+        scaleRatio: Float = 1f,
+        alpha: Float = 1f,
+    ): RasteredWatermarkCell {
         val rawWidth = icon.width.coerceAtLeast(1).toFloat()
         val rawHeight = icon.height.coerceAtLeast(1).toFloat()
-        val safeScale = if (scaleRatio > 0f) scaleRatio else 1f
+        val safeScale = if (scaleRatio.isFinite() && scaleRatio > 0f) scaleRatio else 1f
         val safeAlpha = alpha.coerceIn(0f, 1f)
 
         // SAME math as WatermarkRenderer.buildIconShader: square base cell sized by the content
         // diagonal (arg order mirrors Android; `diagonal` is symmetric), then gap expansion.
         val maxSize = WatermarkGeometry.diagonal(rawHeight, rawWidth)
-        val finalWidth = WatermarkGeometry.horizontalGap(maxSize, hGapPercent)
-        val finalHeight = WatermarkGeometry.verticalGap(maxSize, vGapPercent)
+        val finalWidth = boundedLogicalGap(maxSize.toFloat(), hGapPercent)
+        val finalHeight = boundedLogicalGap(maxSize.toFloat(), vGapPercent)
 
         // Float cell extent (un-truncated) drives pivot + placement, following Android's
-        // `finalWidth * scaleRatio` placement math. The bitmap is allocated at the integer truncation
-        // of it (a bitmap is integer-sized — Android's `targetBitmap` is `(finalWidth*scaleRatio).toInt()` too).
-        val cellWidth = finalWidth * safeScale
-        val cellHeight = finalHeight * safeScale
-        val targetWidth = cellWidth.toInt().coerceAtLeast(1)
-        val targetHeight = cellHeight.toInt().coerceAtLeast(1)
-        val scaledWidth = (rawWidth * safeScale).toInt().coerceAtLeast(1)
-        val scaledHeight = (rawHeight * safeScale).toInt().coerceAtLeast(1)
+        // `finalWidth * scaleRatio` placement math. The logical cell is the integer truncation
+        // of it (Android's `targetBitmap` is `(finalWidth*scaleRatio).toInt()` too).
+        val cellWidth = (finalWidth.toDouble() * safeScale.toDouble())
+            .coerceAtMost(MAX_LOGICAL_CELL_EDGE_PX.toDouble())
+            .toFloat()
+        val cellHeight = (finalHeight.toDouble() * safeScale.toDouble())
+            .coerceAtMost(MAX_LOGICAL_CELL_EDGE_PX.toDouble())
+            .toFloat()
+        val logicalWidth = cellWidth.toInt().coerceAtLeast(1)
+        val logicalHeight = cellHeight.toInt().coerceAtLeast(1)
 
-        // Follow Android's TWO-STEP shape: (1) pre-scale the source to scaledWidth×scaledHeight with
-        // nearest sampling (the `Bitmap.createScaledBitmap(..., filter=false)` analogue), then (2) draw
-        // that pre-scaled image 1:1 at a FLOAT top-left under the FLOAT-pivot rotation (the
-        // `canvas.drawBitmap(scaled, x, y, paint)` analogue — a point draw, NOT a src→dst rect map).
-        // The earlier dst-rect draw added a half-texel sampling offset that shifted interior boundary
-        // pixels of non-uniform rotated icons ( `icon_rot_315`, 16/1936 px); the point draw
-        // REDUCES that (to ~5/1936) by fixing placement, but does NOT eliminate it — the point-draw
-        // overload has no `filterQuality`, so the rotation is not guaranteed nearest like Android's
-        // bare-paint `drawBitmap`. commonMain has no float-placement + nearest-filter overload, so this
-        // is not byte-identical to the native Android oracle (accepted under ADR-0018).
-        val scaledImage: ImageBitmap =
-            if (scaledWidth == icon.width && scaledHeight == icon.height) {
-                icon
-            } else {
-                val tmp = ImageBitmap(scaledWidth, scaledHeight, ImageBitmapConfig.Argb8888)
-                CanvasDrawScope().draw(
-                    density = Density(1f),
-                    layoutDirection = LayoutDirection.Ltr,
-                    canvas = Canvas(tmp),
-                    size = Size(scaledWidth.toFloat(), scaledHeight.toFloat()),
-                ) {
+        if (logicalWidth <= MAX_CELL_RASTER_EDGE_PX && logicalHeight <= MAX_CELL_RASTER_EDGE_PX) {
+            val scaledWidth = (rawWidth * safeScale).toInt().coerceAtLeast(1)
+            val scaledHeight = (rawHeight * safeScale).toInt().coerceAtLeast(1)
+
+            // Follow Android's TWO-STEP shape: (1) pre-scale the source to scaledWidth×scaledHeight with
+            // nearest sampling (the `Bitmap.createScaledBitmap(..., filter=false)` analogue), then (2) draw
+            // that pre-scaled image 1:1 at a FLOAT top-left under the FLOAT-pivot rotation (the
+            // `canvas.drawBitmap(scaled, x, y, paint)` analogue — a point draw, NOT a src→dst rect map).
+            val scaledImage = scaleIconNearest(icon, scaledWidth, scaledHeight)
+
+            val bitmap = ImageBitmap(logicalWidth, logicalHeight, ImageBitmapConfig.Argb8888)
+            CanvasDrawScope().draw(
+                density = Density(1f),
+                layoutDirection = LayoutDirection.Ltr,
+                canvas = Canvas(bitmap),
+                size = Size(logicalWidth.toFloat(), logicalHeight.toFloat()),
+            ) {
+                rotate(degrees = degree, pivot = Offset(cellWidth / 2f, cellHeight / 2f)) {
                     drawImage(
-                        image = icon,
-                        srcOffset = IntOffset.Zero,
-                        srcSize = IntSize(icon.width, icon.height),
-                        dstOffset = IntOffset.Zero,
-                        dstSize = IntSize(scaledWidth, scaledHeight),
-                        filterQuality = FilterQuality.None,
+                        image = scaledImage,
+                        topLeft = Offset(
+                            (cellWidth - scaledWidth) / 2f,
+                            (cellHeight - scaledHeight) / 2f,
+                        ),
+                        alpha = safeAlpha,
                     )
                 }
-                tmp
             }
+            return RasteredWatermarkCell(
+                bitmap = bitmap,
+                logicalWidth = logicalWidth,
+                logicalHeight = logicalHeight,
+            )
+        }
 
-        val bitmap = ImageBitmap(targetWidth, targetHeight, ImageBitmapConfig.Argb8888)
+        val scaledW = (rawWidth.toDouble() * safeScale.toDouble())
+            .coerceAtMost(MAX_LOGICAL_CELL_EDGE_PX.toDouble())
+            .toFloat()
+        val scaledH = (rawHeight.toDouble() * safeScale.toDouble())
+            .coerceAtMost(MAX_LOGICAL_CELL_EDGE_PX.toDouble())
+            .toFloat()
+        val rotW = WatermarkGeometry.rotatedCellWidth(scaledW, scaledH, degree)
+        val rotH = WatermarkGeometry.rotatedCellHeight(scaledW, scaledH, degree)
+        val drawWidth = centeredContentBoxDimension(rotW, logicalWidth)
+        val drawHeight = centeredContentBoxDimension(rotH, logicalHeight)
+        val (rasterWidth, rasterHeight) = rasterDimensionsFor(drawWidth, drawHeight)
+
+        if (rasterWidth == drawWidth && rasterHeight == drawHeight) {
+            val scaledIntW = scaledW.toInt().coerceAtLeast(1)
+            val scaledIntH = scaledH.toInt().coerceAtLeast(1)
+            val scaledImage = scaleIconNearest(icon, scaledIntW, scaledIntH)
+            val bitmap = ImageBitmap(drawWidth, drawHeight, ImageBitmapConfig.Argb8888)
+            CanvasDrawScope().draw(
+                density = Density(1f),
+                layoutDirection = LayoutDirection.Ltr,
+                canvas = Canvas(bitmap),
+                size = Size(drawWidth.toFloat(), drawHeight.toFloat()),
+            ) {
+                rotate(degrees = degree, pivot = Offset(drawWidth / 2f, drawHeight / 2f)) {
+                    drawImage(
+                        image = scaledImage,
+                        topLeft = Offset(
+                            (drawWidth - scaledIntW) / 2f,
+                            (drawHeight - scaledIntH) / 2f,
+                        ),
+                        alpha = safeAlpha,
+                    )
+                }
+            }
+            return RasteredWatermarkCell(
+                bitmap = bitmap,
+                logicalWidth = logicalWidth,
+                logicalHeight = logicalHeight,
+                drawWidth = drawWidth,
+                drawHeight = drawHeight,
+            )
+        }
+
+        val sx = rasterWidth.toFloat() / drawWidth.toFloat()
+        val sy = rasterHeight.toFloat() / drawHeight.toFloat()
+        val preScale = safeScale.toDouble() * minOf(sx, sy).toDouble()
+        val preW = (rawWidth.toDouble() * preScale).roundToInt().coerceIn(1, MAX_CELL_RASTER_EDGE_PX)
+        val preH = (rawHeight.toDouble() * preScale).roundToInt().coerceIn(1, MAX_CELL_RASTER_EDGE_PX)
+        val scaledImage = scaleIconNearest(icon, preW, preH)
+
+        val bitmap = ImageBitmap(rasterWidth, rasterHeight, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(
             density = Density(1f),
             layoutDirection = LayoutDirection.Ltr,
             canvas = Canvas(bitmap),
-            size = Size(targetWidth.toFloat(), targetHeight.toFloat()),
+            size = Size(rasterWidth.toFloat(), rasterHeight.toFloat()),
         ) {
-            // Follows Android's placement math `canvas.rotate(degree, finalW*scaleRatio/2,
-            // finalH*scaleRatio/2)` then `drawBitmap(scaled, (finalW*scaleRatio - scaled.w)/2f, …)`:
-            // rotate about the FLOAT cell centre, then draw the pre-scaled image at the FLOAT top-left
-            // (point draw — the drawImage(topLeft) overload, the drawBitmap(bmp,x,y) analogue). NOTE:
-            // this overload has no filterQuality, so the rotation sampling is not guaranteed nearest —
-            // hence not byte-identical to Android's bare-paint drawBitmap for rotated non-uniform icons.
-            rotate(degrees = degree, pivot = Offset(cellWidth / 2f, cellHeight / 2f)) {
-                drawImage(
-                    image = scaledImage,
-                    topLeft = Offset(
-                        (cellWidth - scaledWidth) / 2f,
-                        (cellHeight - scaledHeight) / 2f,
-                    ),
-                    // Watermark opacity: Android draws with Paint.alpha = WaterMark.alpha (0..255);
-                    // the normalized equivalent feeds drawImage's alpha.
-                    alpha = safeAlpha,
-                )
+            scale(scaleX = sx, scaleY = sy, pivot = Offset.Zero) {
+                rotate(degrees = degree, pivot = Offset(drawWidth / 2f, drawHeight / 2f)) {
+                    translate(
+                        left = (drawWidth - scaledW) / 2f,
+                        top = (drawHeight - scaledH) / 2f,
+                    ) {
+                        scale(
+                            scaleX = scaledW / scaledImage.width.toFloat(),
+                            scaleY = scaledH / scaledImage.height.toFloat(),
+                            pivot = Offset.Zero,
+                        ) {
+                            drawImage(
+                                image = scaledImage,
+                                topLeft = Offset.Zero,
+                                alpha = safeAlpha,
+                            )
+                        }
+                    }
+                }
             }
         }
-        return bitmap
+        return RasteredWatermarkCell(
+            bitmap = bitmap,
+            logicalWidth = logicalWidth,
+            logicalHeight = logicalHeight,
+            drawWidth = drawWidth,
+            drawHeight = drawHeight,
+        )
     }
 
     /**
@@ -436,6 +725,10 @@ object WatermarkCellComposer {
         offsetX: Float = 0f,
         offsetY: Float = 0f,
         alpha: Float = 1f,
+        tileWidth: Int = cell.width,
+        tileHeight: Int = cell.height,
+        drawWidth: Int = tileWidth,
+        drawHeight: Int = tileHeight,
     ): ImageBitmap {
         // Narrow, explicit contract: REPEAT/CLAMP only. MIRROR/DECAL are not product-exposed and the
         // origin-stepped draw loop here does NOT reproduce their BitmapShader sampling — reject them up
@@ -459,6 +752,10 @@ object WatermarkCellComposer {
                 offsetX = offsetX,
                 offsetY = offsetY,
                 alpha = alpha,
+                tileWidth = tileWidth,
+                tileHeight = tileHeight,
+                drawWidth = drawWidth,
+                drawHeight = drawHeight,
             )
         }
         return out
@@ -478,23 +775,54 @@ fun DrawScope.drawWatermarkTiles(
     offsetX: Float = 0f,
     offsetY: Float = 0f,
     alpha: Float = 1f,
+    tileWidth: Int = cell.width,
+    tileHeight: Int = cell.height,
+    drawWidth: Int = tileWidth,
+    drawHeight: Int = tileHeight,
 ) {
     require(tileMode == WatermarkTileMode.REPEAT || tileMode == WatermarkTileMode.CLAMP) {
         "drawWatermarkTiles supports only REPEAT and CLAMP; $tileMode needs a separate design/gate " +
             "(its BitmapShader sampling is not reproduced by this draw loop)"
     }
-    val cellWidth = cell.width.coerceAtLeast(1)
-    val cellHeight = cell.height.coerceAtLeast(1)
+    val bmpW = cell.width.coerceAtLeast(1)
+    val bmpH = cell.height.coerceAtLeast(1)
+    val cellWidth = tileWidth.coerceAtLeast(1)
+    val cellHeight = tileHeight.coerceAtLeast(1)
+    val safeDrawW = drawWidth.coerceIn(1, cellWidth)
+    val safeDrawH = drawHeight.coerceIn(1, cellHeight)
+    val padX = (cellWidth - safeDrawW) / 2f
+    val padY = (cellHeight - safeDrawH) / 2f
     val safeAlpha = alpha.coerceIn(0f, 1f)
     val bgWidth = destWidth.coerceAtLeast(1f)
     val bgHeight = destHeight.coerceAtLeast(1f)
-    when (tileMode) {
-        WatermarkTileMode.CLAMP -> {
+    fun drawTileAt(left: Float, top: Float) {
+        val drawLeft = left + padX
+        val drawTop = top + padY
+        if (safeDrawW == bmpW && safeDrawH == bmpH) {
             drawImage(
                 image = cell,
-                topLeft = Offset(offsetX * bgWidth, offsetY * bgHeight),
+                topLeft = Offset(drawLeft, drawTop),
                 alpha = safeAlpha,
             )
+        } else {
+            translate(left = drawLeft, top = drawTop) {
+                scale(
+                    scaleX = safeDrawW.toFloat() / bmpW.toFloat(),
+                    scaleY = safeDrawH.toFloat() / bmpH.toFloat(),
+                    pivot = Offset.Zero,
+                ) {
+                    drawImage(
+                        image = cell,
+                        topLeft = Offset.Zero,
+                        alpha = safeAlpha,
+                    )
+                }
+            }
+        }
+    }
+    when (tileMode) {
+        WatermarkTileMode.CLAMP -> {
+            drawTileAt(offsetX * bgWidth, offsetY * bgHeight)
         }
         WatermarkTileMode.REPEAT -> {
             val phaseX = ((offsetX * bgWidth) % cellWidth + cellWidth) % cellWidth
@@ -503,11 +831,7 @@ fun DrawScope.drawWatermarkTiles(
             while (y < bgHeight) {
                 var x = if (phaseX == 0f) 0f else phaseX - cellWidth
                 while (x < bgWidth) {
-                    drawImage(
-                        image = cell,
-                        topLeft = Offset(x.toFloat(), y.toFloat()),
-                        alpha = safeAlpha,
-                    )
+                    drawTileAt(x, y)
                     x += cellWidth
                 }
                 y += cellHeight

@@ -79,6 +79,31 @@ object AndroidCommonRaster {
     }
 
     /**
+     * Overlay cell raster + logical dimensions (ADR-0033). Off-main. Export still uses [composeToBitmap].
+     */
+    fun composeCellRaster(
+        context: Context,
+        config: WaterMark,
+        imageWidth: Int,
+        icon: Bitmap? = null,
+        fontFamily: FontFamily? = null,
+    ): RasteredWatermarkCell {
+        val env = textRasterEnv(context)
+        val iconIb = icon?.asImageBitmap()
+        if (config.markMode == WatermarkMode.Image) {
+            require(iconIb != null) { "AndroidCommonRaster.composeCellRaster: Image mode requires icon bitmap" }
+        }
+        PreviewSourceReuseProbe.recordCompose()
+        return CommonWatermarkPipeline.composeCellRaster(
+            imageWidth = imageWidth.coerceAtLeast(1),
+            config = config,
+            env = env,
+            icon = iconIb,
+            fontFamily = fontFamily,
+        )
+    }
+
+    /**
      * Overlay cell only (ADR-0033). Off-main. Export still uses [composeToBitmap].
      */
     fun composeCell(
@@ -87,21 +112,8 @@ object AndroidCommonRaster {
         imageWidth: Int,
         icon: Bitmap? = null,
         fontFamily: FontFamily? = null,
-    ): androidx.compose.ui.graphics.ImageBitmap {
-        val env = textRasterEnv(context)
-        val iconIb = icon?.asImageBitmap()
-        if (config.markMode == WatermarkMode.Image) {
-            require(iconIb != null) { "AndroidCommonRaster.composeCell: Image mode requires icon bitmap" }
-        }
-        PreviewSourceReuseProbe.recordCompose()
-        return CommonWatermarkPipeline.composeCell(
-            imageWidth = imageWidth.coerceAtLeast(1),
-            config = config,
-            env = env,
-            icon = iconIb,
-            fontFamily = fontFamily,
-        )
-    }
+    ): androidx.compose.ui.graphics.ImageBitmap =
+        composeCellRaster(context, config, imageWidth, icon, fontFamily).bitmap
 
     /**
  * Image-space cell width/height for CLAMP hit-testing under common preview.
@@ -115,7 +127,7 @@ object AndroidCommonRaster {
     ): Pair<Int, Int> {
         val env = textRasterEnv(context)
         val cell = when (config.markMode) {
-            WatermarkMode.Text -> CommonWatermarkPipeline.composeTextCell(
+            WatermarkMode.Text -> CommonWatermarkPipeline.composeTextCellRaster(
                 imageWidth = imageInfo.width.coerceAtLeast(1),
                 config = config,
                 env = env,
@@ -123,9 +135,9 @@ object AndroidCommonRaster {
             WatermarkMode.Image -> {
                 val iconIb = icon?.asImageBitmap()
                     ?: error("AndroidCommonRaster.cellSizePx: Image mode requires icon bitmap")
-                CommonWatermarkPipeline.composeIconCell(config, iconIb)
+                CommonWatermarkPipeline.composeIconCellRaster(config, iconIb)
             }
         }
-        return cell.width to cell.height
+        return cell.logicalWidth to cell.logicalHeight
     }
 }
