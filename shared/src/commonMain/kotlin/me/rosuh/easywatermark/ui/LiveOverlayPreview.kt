@@ -18,12 +18,15 @@ import androidx.compose.ui.layout.ContentScale
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.render.OverlayPreviewChrome
+import me.rosuh.easywatermark.render.RasteredWatermarkCell
 import me.rosuh.easywatermark.render.drawWatermarkTiles
 import kotlin.math.min
 
 /**
  * One watermark cell plus REPEAT/CLAMP placement for the editor overlay (ADR-0033).
  * [builtForWidth] is the preview-resolution photo width the cell was rastered for.
+ * [logicalWidth] / [logicalHeight] track the un-capped cell pitch when [cell] omits gap margins
+ * or is downscaled; [drawWidth] / [drawHeight] track the centered content box represented by [cell].
  */
 data class OverlayCell(
     val cell: ImageBitmap,
@@ -33,6 +36,10 @@ data class OverlayCell(
     val alpha: Float,
     val builtForWidth: Int,
     val renderedConfig: WaterMark? = null,
+    val logicalWidth: Int = cell.width,
+    val logicalHeight: Int = cell.height,
+    val drawWidth: Int = logicalWidth,
+    val drawHeight: Int = logicalHeight,
 )
 
 fun OverlayCell.withOffset(offsetX: Float, offsetY: Float): OverlayCell =
@@ -44,8 +51,22 @@ fun overlayCellFrom(
     offsetX: Float,
     offsetY: Float,
     builtForWidth: Int,
+): OverlayCell = overlayCellFrom(
+    raster = RasteredWatermarkCell(cell),
+    config = config,
+    offsetX = offsetX,
+    offsetY = offsetY,
+    builtForWidth = builtForWidth,
+)
+
+fun overlayCellFrom(
+    raster: RasteredWatermarkCell,
+    config: WaterMark,
+    offsetX: Float,
+    offsetY: Float,
+    builtForWidth: Int,
 ): OverlayCell = OverlayCell(
-    cell = cell,
+    cell = raster.bitmap,
     tileMode = when (config.tileMode) {
         WatermarkTileMode.CLAMP -> WatermarkTileMode.CLAMP
         else -> WatermarkTileMode.REPEAT
@@ -55,6 +76,10 @@ fun overlayCellFrom(
     alpha = (config.alpha.coerceIn(0, 255)) / 255f,
     builtForWidth = builtForWidth,
     renderedConfig = config,
+    logicalWidth = raster.logicalWidth,
+    logicalHeight = raster.logicalHeight,
+    drawWidth = raster.drawWidth,
+    drawHeight = raster.drawHeight,
 )
 
 /**
@@ -74,7 +99,7 @@ fun overlayCellDisplaySize(
         boxH = boxHeight,
     ) ?: return 0f to 0f
     val scale = dest.width / photo.width.coerceAtLeast(1)
-    return overlay.cell.width * scale to overlay.cell.height * scale
+    return overlay.logicalWidth * scale to overlay.logicalHeight * scale
 }
 
 /**
@@ -111,6 +136,10 @@ internal fun DrawScope.drawLiveOverlayLayer(
                     offsetX = overlay.offsetX,
                     offsetY = overlay.offsetY,
                     alpha = overlay.alpha,
+                    tileWidth = overlay.logicalWidth,
+                    tileHeight = overlay.logicalHeight,
+                    drawWidth = overlay.drawWidth,
+                    drawHeight = overlay.drawHeight,
                 )
             }
         }
@@ -149,9 +178,14 @@ fun LiveOverlayPreview(
     contentDescription: String? = "Watermark preview",
     onOffsetCommit: ((Float, Float) -> Unit)? = null,
     renderGestureCell: (suspend (WaterMark) -> ImageBitmap)? = null,
+    renderGestureCellRaster: (suspend (WaterMark) -> RasteredWatermarkCell)? = null,
 ) {
     val interaction = LocalPreviewInteraction.current
-    val interactive = interaction != null && onOffsetCommit != null && renderGestureCell != null
+    val effectiveRenderRaster: (suspend (WaterMark) -> RasteredWatermarkCell)? =
+        renderGestureCellRaster ?: renderGestureCell?.let { fn ->
+            { wm: WaterMark -> RasteredWatermarkCell(fn(wm)) }
+        }
+    val interactive = interaction != null && onOffsetCommit != null && effectiveRenderRaster != null
     // Wait thumbs and live layers must use the same Fit viewport during photo switches.
     val waitingModifier = if (interactive) modifier.padding(top = PreviewToolbarHeight) else modifier
     when (chrome) {
@@ -168,9 +202,9 @@ fun LiveOverlayPreview(
                 Box(waitingModifier)
                 return
             }
-            if (interaction != null && onOffsetCommit != null && renderGestureCell != null) {
+            if (interaction != null && onOffsetCommit != null && effectiveRenderRaster != null) {
                 Box(modifier) {
-                    InteractiveOverlayPreview(photo, overlay, interaction, onOffsetCommit, renderGestureCell, contentDescription)
+                    InteractiveOverlayPreview(photo, overlay, interaction, onOffsetCommit, effectiveRenderRaster, contentDescription)
                 }
                 return
             }

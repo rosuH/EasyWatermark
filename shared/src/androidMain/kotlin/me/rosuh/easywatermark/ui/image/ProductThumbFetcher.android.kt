@@ -4,6 +4,9 @@ import android.content.ContentUris
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -15,6 +18,10 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.request.Options
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
+
+private const val MAX_THUMB_BITMAP_BYTES: Long = 64L * 1024L * 1024L
 
 /**
  * Android product UI Fetcher: MediaStore system thumbnail first, subsampled content decode fallback.
@@ -64,7 +71,7 @@ private fun loadThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
             val thumb = context.contentResolver.loadThumbnail(uri, Size(sizePx, sizePx), null)
             if (!thumb.isRecycled) {
                 if (ProductThumbFit.isUsableSquareThumb(thumb.width, thumb.height, sizePx)) {
-                    return thumb
+                    return clampThumbBitmapForCanvas(thumb)
                 }
                 thumb.recycle()
             }
@@ -87,7 +94,7 @@ private fun loadThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
             )
             if (thumb != null && !thumb.isRecycled) {
                 if (ProductThumbFit.isUsableSquareThumb(thumb.width, thumb.height, sizePx)) {
-                    return thumb
+                    return clampThumbBitmapForCanvas(thumb)
                 }
                 thumb.recycle()
             }
@@ -111,9 +118,64 @@ private fun loadThumbBitmap(context: Context, uri: Uri, sizePx: Int): Bitmap? {
                 inSampleSize = sample
                 inPreferredConfig = Bitmap.Config.RGB_565
             }
-            BitmapFactory.decodeStream(stream, null, opts)
+            BitmapFactory.decodeStream(stream, null, opts)?.let(::clampThumbBitmapForCanvas)
         }
     } catch (_: Exception) {
         null
     }
+}
+
+private fun clampThumbBitmapForCanvas(bitmap: Bitmap): Bitmap {
+    if (bitmap.isRecycled) return bitmap
+    val maxEdge = ProductThumbFit.MAX_THUMB_LONG_EDGE_PX
+    if (bitmap.width <= maxEdge &&
+        bitmap.height <= maxEdge &&
+        bitmap.allocationByteCount.toLong() <= MAX_THUMB_BITMAP_BYTES
+    ) {
+        return bitmap
+    }
+    val targetConfig = if (bitmap.config == Bitmap.Config.RGB_565 && !bitmap.hasAlpha()) {
+        Bitmap.Config.RGB_565
+    } else {
+        Bitmap.Config.ARGB_8888
+    }
+    val bpp = if (targetConfig == Bitmap.Config.RGB_565) 2L else 4L
+    val edgeScale = maxEdge.toDouble() / maxOf(bitmap.width, bitmap.height).coerceAtLeast(1).toDouble()
+    val byteScale = sqrt(
+        MAX_THUMB_BITMAP_BYTES.toDouble() /
+            (bitmap.width.toLong() * bitmap.height.toLong() * bpp).coerceAtLeast(1L).toDouble(),
+    )
+    val scale = minOf(1.0, edgeScale, byteScale)
+    var targetW = (bitmap.width * scale).roundToInt().coerceIn(1, maxEdge)
+    var targetH = (bitmap.height * scale).roundToInt().coerceIn(1, maxEdge)
+    if (targetW.toLong() * targetH.toLong() * bpp > MAX_THUMB_BITMAP_BYTES) {
+        val ratio = sqrt(MAX_THUMB_BITMAP_BYTES.toDouble() / (targetW.toLong() * targetH.toLong() * bpp).toDouble())
+        targetW = (targetW * ratio).toInt().coerceIn(1, maxEdge)
+        targetH = (targetH * ratio).toInt().coerceIn(1, maxEdge)
+    }
+    val source = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+        bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: return bitmap
+    } else {
+        bitmap
+    }
+    val scaled = Bitmap.createBitmap(targetW, targetH, targetConfig)
+    try {
+        Canvas(scaled).drawBitmap(
+            source,
+            null,
+            Rect(0, 0, targetW, targetH),
+            Paint(Paint.FILTER_BITMAP_FLAG),
+        )
+    } catch (t: Throwable) {
+        if (!scaled.isRecycled) scaled.recycle()
+        if (source !== bitmap && !source.isRecycled) source.recycle()
+        throw t
+    }
+    if (source !== bitmap && !source.isRecycled) {
+        source.recycle()
+    }
+    if (scaled !== bitmap && !bitmap.isRecycled) {
+        bitmap.recycle()
+    }
+    return scaled
 }

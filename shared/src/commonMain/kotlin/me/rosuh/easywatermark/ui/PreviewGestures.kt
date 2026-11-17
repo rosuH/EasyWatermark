@@ -37,6 +37,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filterNotNull
 import me.rosuh.easywatermark.data.model.*
+import me.rosuh.easywatermark.render.RasteredWatermarkCell
 import me.rosuh.easywatermark.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.painterResource
@@ -89,13 +90,13 @@ private data class PreviewDraft(
     // 0: finger draft, 1: final raster requested, 2: submitted to the existing host.
     val stage: Int = 0,
 ) {
-    fun offset(cell: ImageBitmap): Offset {
+    fun offset(cellWidth: Int, cellHeight: Int): Offset {
         committedOffset?.let { return it }
-        val x = (center.x - (hit.column + .5f) * cell.width) / photoSize.width
-        val y = (center.y - (hit.row + .5f) * cell.height) / photoSize.height
+        val x = (center.x - (hit.column + .5f) * cellWidth) / photoSize.width
+        val y = (center.y - (hit.row + .5f) * cellHeight) / photoSize.height
         return if (repeat) Offset(x, y) else Offset(
-            x.coerceIn(0f, (1f - cell.width.toFloat() / photoSize.width).coerceAtLeast(0f)),
-            y.coerceIn(0f, (1f - cell.height.toFloat() / photoSize.height).coerceAtLeast(0f)),
+            x.coerceIn(0f, (1f - cellWidth.toFloat() / photoSize.width).coerceAtLeast(0f)),
+            y.coerceIn(0f, (1f - cellHeight.toFloat() / photoSize.height).coerceAtLeast(0f)),
         )
     }
 }
@@ -108,7 +109,7 @@ internal fun InteractiveOverlayPreview(
     overlay: OverlayCell,
     interaction: PreviewInteraction,
     onOffsetCommit: (Float, Float) -> Unit,
-    renderCell: suspend (WaterMark) -> ImageBitmap,
+    renderCell: suspend (WaterMark) -> RasteredWatermarkCell,
     contentDescription: String?,
 ) {
     key(interaction.identity) {
@@ -130,7 +131,7 @@ internal fun InteractiveOverlayPreview(
         }
         var selected by remember { mutableStateOf<PreviewCellHit?>(null) }
         var draft by remember { mutableStateOf<PreviewDraft?>(null) }
-        var raster by remember { mutableStateOf<Pair<WaterMark, ImageBitmap>?>(null) }
+        var raster by remember { mutableStateOf<Pair<WaterMark, RasteredWatermarkCell>?>(null) }
         var dragging by remember { mutableStateOf(false) }
         var renderFailed by remember { mutableStateOf(false) }
         val photoSize = IntSize(photo.width, photo.height)
@@ -163,7 +164,7 @@ internal fun InteractiveOverlayPreview(
                 }
                 raster = request.config to cell
                 if (request.stage == 1 && draft == request && current.config == request.baseConfig) {
-                    val offset = request.offset(cell)
+                    val offset = request.offset(cell.logicalWidth, cell.logicalHeight)
                     val config = request.config.copy(
                         repeatOffsetX = if (request.repeat) offset.x else request.config.repeatOffsetX,
                         repeatOffsetY = if (request.repeat) offset.y else request.config.repeatOffsetY,
@@ -182,15 +183,28 @@ internal fun InteractiveOverlayPreview(
             val pending = draft
             if (!dragging && pending?.stage == 2 && (
                 (overlay.renderedConfig == pending.config &&
-                    abs(overlay.offsetX - pending.offset(overlay.cell).x) < .0001f &&
-                    abs(overlay.offsetY - pending.offset(overlay.cell).y) < .0001f) ||
+                    abs(overlay.offsetX - pending.offset(overlay.logicalWidth, overlay.logicalHeight).x) < .0001f &&
+                    abs(overlay.offsetY - pending.offset(overlay.logicalWidth, overlay.logicalHeight).y) < .0001f) ||
                 (current.config != pending.baseConfig && current.config != pending.config)
             )) { draft = null; raster = null }
         }
         val activeDraft = draft?.takeIf { it.photoSize == photoSize }
-        val shownCell = raster?.takeIf { activeDraft != null }?.second ?: overlay.cell
-        val shownOffset = activeDraft?.offset(shownCell) ?: Offset(overlay.offsetX, overlay.offsetY)
-        val shownOverlay = overlay.copy(cell = shownCell, offsetX = shownOffset.x, offsetY = shownOffset.y)
+        val activeRaster = raster?.takeIf { activeDraft != null }?.second
+        val shownCell = activeRaster?.bitmap ?: overlay.cell
+        val shownLogicalW = activeRaster?.logicalWidth ?: overlay.logicalWidth
+        val shownLogicalH = activeRaster?.logicalHeight ?: overlay.logicalHeight
+        val shownDrawW = activeRaster?.drawWidth ?: overlay.drawWidth
+        val shownDrawH = activeRaster?.drawHeight ?: overlay.drawHeight
+        val shownOffset = activeDraft?.offset(shownLogicalW, shownLogicalH) ?: Offset(overlay.offsetX, overlay.offsetY)
+        val shownOverlay = overlay.copy(
+            cell = shownCell,
+            offsetX = shownOffset.x,
+            offsetY = shownOffset.y,
+            logicalWidth = shownLogicalW,
+            logicalHeight = shownLogicalH,
+            drawWidth = shownDrawW,
+            drawHeight = shownDrawH,
+        )
         val fitted = computeFittedImageRect(box.width.toFloat(), box.height.toFloat(), photo.width.toFloat(), photo.height.toFloat())
         val selectionColor = MaterialTheme.colorScheme.primary
         Column(Modifier.fillMaxSize()) {
@@ -255,9 +269,9 @@ internal fun InteractiveOverlayPreview(
                                 // A pattern is one selected object, independent of its copy count.
                                 drawRect(selectionColor, Offset(fit.left, fit.top), Size(fit.width, fit.height), style = Stroke(2f / zoom))
                             }
-                            val topLeft = Offset(fit.left + (origin.x + hit.column * shownCell.width) * sx,
-                                fit.top + (origin.y + hit.row * shownCell.height) * sy)
-                            drawRect(selectionColor, topLeft, Size(shownCell.width * sx, shownCell.height * sy), style = Stroke(2f / zoom))
+                            val topLeft = Offset(fit.left + (origin.x + hit.column * shownLogicalW) * sx,
+                                fit.top + (origin.y + hit.row * shownLogicalH) * sy)
+                            drawRect(selectionColor, topLeft, Size(shownLogicalW * sx, shownLogicalH * sy), style = Stroke(2f / zoom))
                         }
                     }
                 }
@@ -289,8 +303,18 @@ internal fun InteractiveOverlayPreview(
                             val startOverlay = currentOverlay
                             val repeat = startOverlay.tileMode == WatermarkTileMode.REPEAT
                             val origin = Offset(startOverlay.offsetX * photo.width, startOverlay.offsetY * photo.height)
-                            val cellSize = Size(startOverlay.cell.width.toFloat(), startOverlay.cell.height.toFloat())
+                            val cellSize = Size(startOverlay.logicalWidth.toFloat(), startOverlay.logicalHeight.toFloat())
+                            val drawW = startOverlay.drawWidth
+                                .coerceIn(1, startOverlay.logicalWidth.coerceAtLeast(1))
+                                .toFloat()
+                            val drawH = startOverlay.drawHeight
+                                .coerceIn(1, startOverlay.logicalHeight.coerceAtLeast(1))
+                                .toFloat()
+                            val padX = (cellSize.width - drawW) / 2f
+                            val padY = (cellSize.height - drawH) / 2f
                             val pixels = startOverlay.cell.toPixelMap()
+                            val pxScaleX = pixels.width.toFloat() / drawW
+                            val pxScaleY = pixels.height.toFloat() / drawH
                             fun hitAt(position: Offset): PreviewCellHit? {
                                 val normalized = photoPoint(position, boxSize, fit, zoom, pan)
                                 val point = Offset(normalized.x * photo.width, normalized.y * photo.height)
@@ -298,15 +322,25 @@ internal fun InteractiveOverlayPreview(
                                 // Transparent gap is photo space; keep a bounded margin for small text.
                                 return candidate?.takeIf { startOverlay.alpha > .01f }?.takeIf {
                                     val local = point - it.origin
+                                    val localPxX = (local.x - padX) * pxScaleX
+                                    val localPxY = (local.y - padY) * pxScaleY
                                     // Check the whole visible touch margin: sparse samples miss thin glyphs.
                                     val radius = 12.dp.toPx() * photo.width / fit.width / zoom
-                                    val xs = ceil(local.x - radius).toInt().coerceAtLeast(0)..
-                                        floor(local.x + radius).toInt().coerceAtMost(pixels.width - 1)
-                                    val ys = ceil(local.y - radius).toInt().coerceAtLeast(0)..
-                                        floor(local.y + radius).toInt().coerceAtMost(pixels.height - 1)
-                                    ys.any { y -> xs.any { x ->
-                                        val dx = x - local.x; val dy = y - local.y
-                                        dx * dx + dy * dy <= radius * radius && pixels[x, y].alpha > .05f
+                                    val radiusPxX = radius * pxScaleX
+                                    val radiusPxY = radius * pxScaleY
+                                    val xs = ceil(localPxX - radiusPxX).toInt().coerceAtLeast(0)..
+                                        floor(localPxX + radiusPxX).toInt().coerceAtMost(pixels.width - 1)
+                                    val ys = ceil(localPxY - radiusPxY).toInt().coerceAtLeast(0)..
+                                        floor(localPxY + radiusPxY).toInt().coerceAtMost(pixels.height - 1)
+                                    val inDirectBounds =
+                                        localPxX >= 0f && localPxX < pixels.width.toFloat() &&
+                                            localPxY >= 0f && localPxY < pixels.height.toFloat()
+                                    val hitDirectly = inDirectBounds &&
+                                        pixels[localPxX.toInt(), localPxY.toInt()].alpha > .05f
+                                    hitDirectly || ys.any { y -> xs.any { x ->
+                                        val dxPhoto = (x - localPxX) / pxScaleX
+                                        val dyPhoto = (y - localPxY) / pxScaleY
+                                        dxPhoto * dxPhoto + dyPhoto * dyPhoto <= radius * radius && pixels[x, y].alpha > .05f
                                     } }
                                 }
                             }

@@ -6,6 +6,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkConfigRules
 import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 
@@ -63,13 +64,13 @@ object CommonWatermarkPipeline {
         offsetY: Float,
         fontFamily: FontFamily? = null,
     ): ImageBitmap {
-        val cell = when (config.markMode) {
-            WatermarkMode.Text -> composeTextCell(background.width, config, env, fontFamily)
+        val cellRaster = when (config.markMode) {
+            WatermarkMode.Text -> composeTextCellRaster(background.width, config, env, fontFamily)
             WatermarkMode.Image -> {
                 require(icon != null && icon.width > 0 && icon.height > 0) {
                     "CommonWatermarkPipeline: Image mode requires a decoded non-empty icon"
                 }
-                composeIconCell(config, icon)
+                composeIconCellRaster(config, icon)
             }
         }
         val tileMode = when (config.tileMode) {
@@ -78,11 +79,56 @@ object CommonWatermarkPipeline {
         }
         return WatermarkCellComposer.composeOverBackground(
             background = background,
-            cell = cell,
+            cell = cellRaster.bitmap,
             tileMode = tileMode,
             offsetX = if (tileMode == WatermarkTileMode.REPEAT) config.repeatOffsetX else offsetX,
             offsetY = if (tileMode == WatermarkTileMode.REPEAT) config.repeatOffsetY else offsetY,
             alpha = (config.alpha.coerceIn(0, 255)) / 255f,
+            tileWidth = cellRaster.logicalWidth,
+            tileHeight = cellRaster.logicalHeight,
+            drawWidth = cellRaster.drawWidth,
+            drawHeight = cellRaster.drawHeight,
+        )
+    }
+
+    /**
+     * Raster one text cell for [config] with capped backing bitmap and un-capped logical dims.
+     *
+     * @param fontFamily when non-null, set on the cell [TextStyle]; when null, leave family unset so
+     *   the env's default resolver path is used (preserves the pre-C1 default resolver path).
+     */
+    fun composeTextCellRaster(
+        imageWidth: Int,
+        config: WaterMark,
+        env: TextRasterEnv,
+        fontFamily: FontFamily? = null,
+    ): RasteredWatermarkCell {
+        val text = config.text.ifEmpty { " " }
+        val safeTextSize = if (config.textSize.isFinite()) {
+            config.textSize.coerceIn(WatermarkConfigRules.MIN_TEXT_SIZE, 1_000f)
+        } else {
+            WatermarkConfigRules.DEFAULT_TEXT_SIZE
+        }
+        val fontPx = WatermarkGeometry.fontPx(safeTextSize, imageWidth.coerceAtLeast(1))
+            .coerceAtLeast(0.5f)
+        val (weight, fontStyle) = config.textTypeface.toComposeFontStyle()
+        val content = WatermarkTextContent(
+            text = text,
+            style = TextStyle(
+                fontFamily = fontFamily,
+                fontWeight = weight,
+                fontStyle = fontStyle,
+                fontSize = fontPx.sp,
+                drawStyle = config.textStyle.toComposeDrawStyle(),
+            ),
+            color = Color(config.textColor),
+        )
+        return WatermarkCellComposer.composeTextCellRaster(
+            env = env,
+            content = content,
+            degree = config.degree,
+            hGapPercent = config.hGap,
+            vGapPercent = config.vGap,
         )
     }
 
@@ -97,32 +143,10 @@ object CommonWatermarkPipeline {
         config: WaterMark,
         env: TextRasterEnv,
         fontFamily: FontFamily? = null,
-    ): ImageBitmap {
-        val text = config.text.ifEmpty { " " }
-        val fontPx = WatermarkGeometry.fontPx(config.textSize, imageWidth)
-        val (weight, fontStyle) = config.textTypeface.toComposeFontStyle()
-        val content = WatermarkTextContent(
-            text = text,
-            style = TextStyle(
-                fontFamily = fontFamily,
-                fontWeight = weight,
-                fontStyle = fontStyle,
-                fontSize = fontPx.sp,
-                drawStyle = config.textStyle.toComposeDrawStyle(),
-            ),
-            color = Color(config.textColor),
-        )
-        return WatermarkCellComposer.composeTextCell(
-            env = env,
-            content = content,
-            degree = config.degree,
-            hGapPercent = config.hGap,
-            vGapPercent = config.vGap,
-        )
-    }
+    ): ImageBitmap = composeTextCellRaster(imageWidth, config, env, fontFamily).bitmap
 
-    fun composeIconCell(config: WaterMark, icon: ImageBitmap): ImageBitmap =
-        WatermarkCellComposer.composeIconCell(
+    fun composeIconCellRaster(config: WaterMark, icon: ImageBitmap): RasteredWatermarkCell =
+        WatermarkCellComposer.composeIconCellRaster(
             icon = icon,
             degree = config.degree,
             hGapPercent = config.hGap,
@@ -131,6 +155,26 @@ object CommonWatermarkPipeline {
             alpha = 1f, // alpha applied once at composition (iOS rule)
         )
 
+    fun composeIconCell(config: WaterMark, icon: ImageBitmap): ImageBitmap =
+        composeIconCellRaster(config, icon).bitmap
+
+    /** One overlay cell raster + logical dims for the live editor preview (not a baked photo). */
+    fun composeCellRaster(
+        imageWidth: Int,
+        config: WaterMark,
+        env: TextRasterEnv,
+        icon: ImageBitmap? = null,
+        fontFamily: FontFamily? = null,
+    ): RasteredWatermarkCell = when (config.markMode) {
+        WatermarkMode.Text -> composeTextCellRaster(imageWidth, config, env, fontFamily)
+        WatermarkMode.Image -> {
+            require(icon != null && icon.width > 0 && icon.height > 0) {
+                "CommonWatermarkPipeline: Image mode requires a decoded non-empty icon"
+            }
+            composeIconCellRaster(config, icon)
+        }
+    }
+
     /** One overlay cell for the live editor preview (not a baked photo). */
     fun composeCell(
         imageWidth: Int,
@@ -138,13 +182,5 @@ object CommonWatermarkPipeline {
         env: TextRasterEnv,
         icon: ImageBitmap? = null,
         fontFamily: FontFamily? = null,
-    ): ImageBitmap = when (config.markMode) {
-        WatermarkMode.Text -> composeTextCell(imageWidth, config, env, fontFamily)
-        WatermarkMode.Image -> {
-            require(icon != null && icon.width > 0 && icon.height > 0) {
-                "CommonWatermarkPipeline: Image mode requires a decoded non-empty icon"
-            }
-            composeIconCell(config, icon)
-        }
-    }
+    ): ImageBitmap = composeCellRaster(imageWidth, config, env, icon, fontFamily).bitmap
 }

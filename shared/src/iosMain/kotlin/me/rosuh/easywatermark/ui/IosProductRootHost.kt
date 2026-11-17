@@ -66,6 +66,7 @@ import me.rosuh.easywatermark.render.OverlayPreviewChrome
 import me.rosuh.easywatermark.render.OverlayPreviewPolicy
 import me.rosuh.easywatermark.render.PreviewResolutionPolicy
 import me.rosuh.easywatermark.render.PreviewWorkingSetBudget
+import me.rosuh.easywatermark.render.RasteredWatermarkCell
 import me.rosuh.easywatermark.render.neighborIndices
 import me.rosuh.easywatermark.session.AppIntent
 import me.rosuh.easywatermark.session.IosAppServices
@@ -1250,8 +1251,10 @@ class IosProductRootHost(
                                         hostScope.launch { renderPreviewForCurrentSelection(gen = gen) }
                                     }
                                 },
-                                renderGestureCell = { config ->
-                                    composeIosOverlayCell(config, livePhoto!!.width, 0f, 0f).cell
+                                renderGestureCell = null,
+                                renderGestureCellRaster = { config ->
+                                    val o = composeIosOverlayCell(config, livePhoto!!.width, 0f, 0f)
+                                    RasteredWatermarkCell(o.cell, o.logicalWidth, o.logicalHeight, o.drawWidth, o.drawHeight)
                                 },
                                 chrome = chrome,
                                 photo = livePhoto,
@@ -2340,13 +2343,13 @@ class IosProductRootHost(
         } else {
             null
         }
-        val cell = withContext(Dispatchers.Default) { IosPreviewRaster.composeCell(wm, imageWidth, family) }
+        val cell = withContext(Dispatchers.Default) { IosPreviewRaster.composeCellRaster(wm, imageWidth, family) }
         return overlayCellFrom(
-            cell = cell,
+            raster = cell,
             config = wm,
             offsetX = ox,
             offsetY = oy,
-            builtForWidth = if (isText) imageWidth else cell.width,
+            builtForWidth = if (isText) imageWidth else cell.logicalWidth,
         )
     }
 
