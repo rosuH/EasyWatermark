@@ -10,6 +10,11 @@ import me.rosuh.easywatermark.shared.generated.resources.about_title_about
 import me.rosuh.easywatermark.shared.generated.resources.action_pick
 import me.rosuh.easywatermark.shared.generated.resources.action_save
 import me.rosuh.easywatermark.shared.generated.resources.allStringResources
+import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_progress
+import me.rosuh.easywatermark.shared.generated.resources.font_import_summary
+import me.rosuh.easywatermark.shared.generated.resources.font_panel_title
+import me.rosuh.easywatermark.shared.generated.resources.pick_via_system
+import me.rosuh.easywatermark.shared.generated.resources.preview_reset_view
 import me.rosuh.easywatermark.shared.generated.resources.tips_pick_image
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.ResourceCaches
@@ -45,6 +50,11 @@ class ComposeResourcesCatalogTest {
                 assertTrue(pick != "Choose picture", "action_pick should be translated, got: $pick")
                 assertTrue(about.isNotBlank())
                 assertTrue(pick.isNotBlank())
+                assertEquals("更多…", getString(Res.string.pick_via_system))
+                assertEquals("字体", getString(Res.string.font_panel_title))
+                assertEquals("重置视图", getString(Res.string.preview_reset_view))
+                assertEquals("已添加 2 个，重复 1 个，失败 0 个", getString(Res.string.font_import_summary, 2, 1, 0))
+                assertEquals("正在导出 1 / 3", getString(Res.string.dialog_save_export_progress, 1, 3))
             }
         }
     }
