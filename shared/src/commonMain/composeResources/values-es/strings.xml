@@ -78,13 +78,13 @@
     <string name="recovery_title">Modo de recuperación</string>
     <string name="copy_success">Copiado</string>
     <string name="copy_failed">Error al copiar</string>
-    <string name="store_not_found">¿No hay ninguna tienda instalada\?</string>
+    <string name="store_not_found">¿No hay ninguna tienda instalada?</string>
     <string name="recovery_mode_closed">Reiniciar para que surta efecto</string>
     <string name="copy">Copiar registros (logs)</string>
     <string name="turn_off_recovery_mode">Desactivar el modo de recuperación</string>
     <string name="recovery_mode_tips">Se ha entrado en el modo de recuperación debido a múltiples fallos. El envío de la información sobre el dispositivo y el fallo a través de los siguientes métodos puede resolver el problema. Gracias.</string>
-    <string name="tips_use_this_template">¿Utilizar esta plantilla\?</string>
-    <string name="tips_delete_template">¿Borrar la entrada\?</string>
+    <string name="tips_use_this_template">¿Utilizar esta plantilla?</string>
+    <string name="tips_delete_template">¿Borrar la entrada?</string>
     <string name="tips_database_init_error">El inicio de la base de datos ha fallado.</string>
     <string name="title_tile_mode">Modo de baldosas</string>
     <string name="tile_mode_title_repeat">Repetir</string>

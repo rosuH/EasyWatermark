@@ -26,20 +26,20 @@
     <string name="dev_comment">Qualquer tecnologia suficientemente avançada é indistinguível da mágica.</string>
     <string name="dialog_title_exist_confirm">Aviso</string>
     <string name="dialog_cancel_exist_confirm">Cancelar</string>
-    <string name="dialog_content_exist_confirm">Descartar a edição\?</string>
+    <string name="dialog_content_exist_confirm">Descartar a edição?</string>
     <string name="text_paint_fill">Preencher</string>
     <string name="text_paint_stroke">Traço</string>
     <string name="text_typeface_normal">Normal</string>
     <string name="text_typeface_bold">Negrito</string>
     <string name="text_typeface_italic">Itálico</string>
     <string name="text_typeface_bold_italic">Negrito Itálico</string>
-    <string name="store_not_found">Nenhuma loja instalada\?</string>
+    <string name="store_not_found">Nenhuma loja instalada?</string>
     <string name="recovery_mode_tips">Entrou no modo de recuperação devido a várias falhas. Enviar as informações do dispositivo e da falha abaixo por meio dos seguintes métodos pode resolver o problema. Obrigado.</string>
     <string name="tips_list_empty">Parece bem vazio</string>
-    <string name="tips_delete_template">Apagar a entrada\?</string>
+    <string name="tips_delete_template">Apagar a entrada?</string>
     <string name="tile_mode_title_repeat">Repetir</string>
     <string name="tile_mode_title_decal">Único</string>
-    <string name="tips_use_this_template">Usar este modelo\?</string>
+    <string name="tips_use_this_template">Usar este modelo?</string>
     <string name="tips_database_init_error">Falha na inicialização do banco de dados.</string>
     <string name="about_title_about">Sobre</string>
     <string name="about_title_info">Detalhes</string>
@@ -65,7 +65,7 @@
     <string name="tips_compress_ok">Compactada. Clique OK para continuar a exportação.</string>
     <string name="tips_compress_create_uri_failed">Compactada mas falhou ao criar o Uri. Reinicie o App e tente de novo. %1$s</string>
     <string name="tips_tip_title">Falha detectada</string>
-    <string name="msg_crash">Gostaria de relatar este problema\? Isto pode nos ajudar a melhorar o App e não coletará nenhuma informação pessoal.</string>
+    <string name="msg_crash">Gostaria de relatar este problema? Isto pode nos ajudar a melhorar o App e não coletará nenhuma informação pessoal.</string>
     <string name="crash_mail">Enviar um e-mail</string>
     <string name="tip_not_mail_found">Nenhum cliente do e-mail detectado. Alternativamente, pode colar a mensagem do erro na loja de apps ou no GitHub.</string>
     <string name="config_default_water_mark_text">👋 NÃO REDISTRIBUIR</string>
@@ -86,7 +86,7 @@
     <string name="turn_off_recovery_mode">Desligar o modo de recuperação</string>
     <string name="back">Anterior</string>
     <string name="dialog_title_template_edit">Editar modelo</string>
-    <string name="dialog_title_edit_watermark">\"Editar Marca D\'água\"</string>
+    <string name="dialog_title_edit_watermark">"Editar Marca D'água"</string>
     <string name="dialog_title_template_title">Lista de Modelos</string>
     <string name="dialog_button_add_template">Adicionar</string>
     <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->

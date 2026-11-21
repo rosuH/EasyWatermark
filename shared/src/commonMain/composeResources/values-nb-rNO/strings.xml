@@ -35,9 +35,9 @@
     <string name="title_layout">Utforming</string>
     <string name="dialog_title_exist_confirm">Advarsel</string>
     <string name="dialog_cancel_exist_confirm">Avbryt</string>
-    <string name="dialog_content_exist_confirm">Forkast endringer\?</string>
+    <string name="dialog_content_exist_confirm">Forkast endringer?</string>
     <string name="tips_tip_title">Krasj oppdaget</string>
-    <string name="msg_crash">Vil du rapportere krasjet og forbedre programmet\? Dette samler ikke inn noe personvernsinfo.</string>
+    <string name="msg_crash">Vil du rapportere krasjet og forbedre programmet? Dette samler ikke inn noe personvernsinfo.</string>
     <string name="tip_not_mail_found">Ingen e-postklient oppdaget. Alternativt kan du lime inn feilmeldingen i programbutikken, eller på GitHub.</string>
     <string name="dialog_open_in_gallery">Vis i galleri</string>
     <string name="dialog_save_config_format">Format</string>
@@ -67,8 +67,8 @@
     <string name="tips_database_init_error">Kunne ikke starte database.</string>
     <string name="tile_mode_title_decal">Enkel</string>
     <string name="tips_list_empty">Ser ganske tomt ut</string>
-    <string name="tips_use_this_template">Bruk denne malen\?</string>
-    <string name="tips_delete_template">Slett oppføringen\?</string>
+    <string name="tips_use_this_template">Bruk denne malen?</string>
+    <string name="tips_delete_template">Slett oppføringen?</string>
     <string name="action_save">Lagre</string>
     <string name="title_content">Innhold</string>
     <string name="tips_error">Feil</string>

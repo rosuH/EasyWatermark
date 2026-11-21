@@ -39,7 +39,7 @@
     <string name="water_mark_mode_image">Ikon</string>
     <string name="share">Del</string>
     <string name="water_mark_mode_text">Tekst</string>
-    <string name="msg_crash">Vil du senda inn ein rapport om samanbrotet\? Han inneheld ikkje nokre personlege opplysingar og kan hjelpa oss med å betre appen.</string>
+    <string name="msg_crash">Vil du senda inn ein rapport om samanbrotet? Han inneheld ikkje nokre personlege opplysingar og kan hjelpa oss med å betre appen.</string>
     <string name="error_file_not_found">Kunne anten ikkje opne biletet, eller so var det ikkje valt</string>
     <string name="tips_ok">Stadfest</string>
     <string name="tips_cancel_output">Avbryt</string>
@@ -57,7 +57,7 @@
     <string name="dev_comment">Høgt nok utvikla teknologi ser ut som magi.</string>
     <string name="dialog_title_exist_confirm">Varsel</string>
     <string name="dialog_cancel_exist_confirm">Avbryt</string>
-    <string name="dialog_content_exist_confirm">Avvis brigde\?</string>
+    <string name="dialog_content_exist_confirm">Avvis brigde?</string>
     <string name="text_paint_fill">Fyll</string>
     <string name="text_paint_stroke">Strok</string>
     <string name="text_typeface_normal">Vanleg</string>
@@ -83,8 +83,8 @@
     <string name="dialog_title_edit_watermark">Brigd vassmerke</string>
     <string name="dialog_button_add_template">Legg til</string>
     <string name="tips_list_empty">Ser tolleg tomt ut</string>
-    <string name="tips_use_this_template">Nytt denne malen\?</string>
-    <string name="tips_delete_template">Slett oppføringa\?</string>
+    <string name="tips_use_this_template">Nytt denne malen?</string>
+    <string name="tips_delete_template">Slett oppføringa?</string>
     <!-- Form inspector section headers (Expanded/Wide DEMO rhythm) -->
     <string name="inspector_section_mode">Modus</string>
     <string name="inspector_section_tile">Flis</string>
