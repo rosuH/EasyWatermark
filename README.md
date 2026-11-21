@@ -28,7 +28,7 @@
 </p>
 
 <p align="center">
-  <a href="https://apps.apple.com/app/id6806811093"><img src="static/app-store-badge.png" alt="Download on the App Store" height="64"></a>
+  <a href="https://apps.apple.com/app/id6806811093?ppid=63758788-fefa-48c2-90c4-945f1db35855"><img src="static/app-store-badge.png" alt="Download on the App Store" height="64"></a>
   <a href="https://play.google.com/store/apps/details?id=me.rosuh.easywatermark"><img src="static/google-play-badge.png" alt="Get it on Google Play" height="64"></a>
   <a href="https://github.com/rosuH/EasyWatermark/releases"><img src="static/github-release-badge.png" alt="Get it on GitHub" height="64"></a>
 </p>
@@ -70,7 +70,7 @@ Use a developer-run channel:
 
 | Channel | Notes |
 |---|---|
-| [App Store](https://apps.apple.com/app/id6806811093) | iOS |
+| [App Store](https://apps.apple.com/app/id6806811093?ppid=63758788-fefa-48c2-90c4-945f1db35855) | iOS |
 | [Google Play](https://play.google.com/store/apps/details?id=me.rosuh.easywatermark) | Paid edition, same code — supports ongoing development |
 | [GitHub Releases](https://github.com/rosuH/EasyWatermark/releases) | Latest APK + unsigned Desktop (Linux / Windows / macOS arm64) |
 | [F-Droid](https://f-droid.org/packages/me.rosuh.easywatermark/) | Free, reproducible Android build |
