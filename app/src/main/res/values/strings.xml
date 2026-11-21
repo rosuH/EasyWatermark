@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- S-i18n-1 dual-write: Weblate still owns app/res locales until post-master retarget.
-     composeResources is the CMP seed (sync when needed). R.string until Phase 2. -->
+<!-- Hosted Weblate retargeted to shared/src/commonMain/composeResources/ on 2026-11-21 (ADR-0019).
+     EN dual-write is retired; AndroidManifest.xml still references @string/app_name here. -->
 <resources>
     <string name="app_name">Easy Watermark</string>
     <string name="action_pick">Choose picture</string>

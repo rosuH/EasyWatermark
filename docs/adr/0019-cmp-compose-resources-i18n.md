@@ -1,14 +1,14 @@
 # ADR-0019: Compose Multiplatform resources for product UI strings and drawables
 
-**Status:** Accepted (implementation Phases 0–3 landed 2026-07-12; owner authorized Phase 0→3)  
-**Related:** plan `docs/superpowers/plans/2026-07-12-cmp-compose-resources-i18n-plan.md`; Weblate deferral note `docs/superpowers/research/2026-07-12-s-i18n-1-weblate-retarget.md`; AGENTS.md Strings / i18n section  
+**Status:** Accepted (implementation Phases 0–3 landed 2026-07-12; Hosted Weblate retarget completed 2026-11-21)  
+**Related:** plan `docs/superpowers/plans/2026-07-12-cmp-compose-resources-i18n-plan.md`; Weblate retarget record `docs/superpowers/research/2026-07-12-s-i18n-1-weblate-retarget.md`; AGENTS.md Strings / i18n section  
 **Does not supersede:** ADR-0004 / 0018 renderer policies; Android system-only `app/res` for themes/mipmaps/gallery edges
 
 ## Context
 
 Shared CMP product screens (Launch / Editor / About / Recovery / templates / save sheet) live in `:shared` `commonMain`. Historically they avoided JetBrains `composeResources` because of **CMP-9547** (compose multiplatform resources not packaged into the Android APK when using AGP 9 + `com.android.kotlin.multiplatform.library`). Product strings stayed on Android `R.string` + edge bags; off-Android hosts used English hardcodes; logo used expect/actual byte loaders.
 
-Weblate continues to own non-default translations. Owner deferred **Weblate component retarget** until this branch merges to `master`.
+Weblate continues to own non-default translations. Hosted Weblate (`easywatermark/app-strings`) was retargeted to `composeResources` (`cmp-resource`) on 2026-11-21 after syncing accumulated `zh-rCN` translations on `master`.
 
 ## Decision
 
@@ -20,14 +20,14 @@ Weblate continues to own non-default translations. Owner deferred **Weblate comp
    Do **not** dependency-substitute `org.jetbrains.compose.components.*` to `androidx.compose.components` (artifact does not exist).
 3. **Product UI APIs:** commonMain screens read `Res` directly. Do **not** reintroduce product `*Strings` bags for migrated screens.  
    `FuncType.label()` / `FuncType.iconPainter()` are the shared option chrome vocabulary.
-4. **Weblate (until post-`master` retarget):** remains on `app/src/main/res/values-*/strings.xml`. Dual-write default EN keys to both trees; never hand-edit non-default locales. After merge to `master`, retarget Weblate to composeResources CMP format (checklist in research note).
+4. **Weblate (`cmp-resource`):** directly tracks `shared/src/commonMain/composeResources/values-*/strings.xml` (monolingual base `values/strings.xml`, format `cmp-resource`, `language_code_style: android`). Default EN dual-write to `app/src/main/res/values/strings.xml` is retired (`app/res` keeps `app_name` for `AndroidManifest.xml`). Never hand-edit non-default locales. Do not use Android backslash escapes (`\'`, `\?`, `\"`) in `composeResources` XML — CMP renders them literally.
 5. **Out of scope for composeResources:** watermark Noto fonts, Room seed DBs, Android themes/mipmaps, narrow gallery/ColorPicker Android edges still on `R.drawable` until migrated.
 
 ## Consequences
 
-- **Positive:** one product string/icon catalog for Android + Desktop + iOS; system locale picks qualifiers; packaging proven (Phase 0 spike EN + zh-rCN).  
-- **Negative / process:** dual-write until Weblate retarget; incomplete locales (ru/uk/…) stay incomplete (no invented translations).  
-- **Retired rule:** absolute “no compose-resources / CMP-9547 ban” in AGENTS — replaced by packaging rules above.  
+- **Positive:** one product string/icon catalog for Android + Desktop + iOS; system locale picks qualifiers; packaging proven (Phase 0 spike EN + zh-rCN); single Weblate SSOT without dual-write.  
+- **Negative / process:** incomplete locales (ru/uk/…) stay incomplete (no invented translations); residual unused keys in `app/src/main/res/values*/strings.xml` can be trimmed later (`app_name` stays for `AndroidManifest.xml`).  
+- **Retired rule:** absolute “no compose-resources / CMP-9547 ban” in AGENTS — replaced by packaging rules above; post-retarget EN dual-write retired 2026-11-21.  
 - **Not chosen:** moko-resources as default; long-term English bags on Desktop/iOS.
 
 ## Evidence (Phase 0)
@@ -39,7 +39,7 @@ Weblate continues to own non-default translations. Owner deferred **Weblate comp
 
 | Item | Owner |
 |------|--------|
-| Weblate component retarget to composeResources | After merge to `master` |
-| Drop dual-write / shrink `app/res` product strings | After Weblate retarget + Phase 2 residual cleanup |
+| Weblate component retarget to composeResources | Done (2026-11-21, `cmp-resource`) |
+| Drop dual-write / shrink `app/res` product strings | Dual-write retired (2026-11-21); shrinking residual `app/res` keys optional (`app_name` stays) |
 | Gallery-only Android drawables into composeResources | Optional |
 | In-app language switch (`LocalAppLocale`) | Separate plan if product needs it |

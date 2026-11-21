@@ -42,7 +42,7 @@
     <string name="about_title_update_log">Changelog</string>
     <string name="about_title_open_source">Open source licenses</string>
     <string name="error_not_img">Please select an image</string>
-    <string name="error_file_not_found">The image couldn\'t be opened or was not selected</string>
+    <string name="error_file_not_found">The image couldn't be opened or was not selected</string>
     <string name="dialog_export_to_gallery">Export to the album</string>
     <string name="share">Share</string>
     <string name="desktop_save_as">Save As…</string>
@@ -78,7 +78,7 @@
     <string name="about_title_privacy_statement" translatable="false">Privacy Statement</string>
     <string name="about_title_privacy_statement_zh" translatable="false">隐私政策</string>
     <string name="open_source_desc_about_lib" translatable="false">Coil is a fast, lightweight, and modern image loading library for Android and Compose Multiplatform, built with Kotlin Coroutines and Okio.</string>
-    <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android\'s Design Support Library.</string>
+    <string name="open_source_desc_material_components" translatable="false">Material Components for Android (MDC-Android) help developers execute Material Design. Developed by a core team of engineers and UX designers at Google, these components enable a reliable development workflow to build beautiful and functional Android apps.Material Components for Android is a drop-in replacement for Android's Design Support Library.</string>
     <string name="email_subject" translatable="false">[EasyWaterMark] Crash info</string>
     <string name="open_source_desc_phosphor_icons" translatable="false">Phosphor Icons is a flexible icon family for interfaces, diagrams, and presentations. EasyWatermark vendors selected Regular-weight glyphs (MIT License, Copyright (c) 2023 Phosphor Icons) as Compose Multiplatform vector resources. Full notice: THIRD_PARTY_NOTICES.md.</string>
     <!--    -->
@@ -155,8 +155,8 @@
     <string name="recovery_title">Recovery Mode</string>
     <string name="copy_success">Copy success</string>
     <string name="copy_failed">Copy failed</string>
-    <string name="store_not_found">No store is installed\?</string>
-    <string name="recovery_mode_closed">It\'s closed, please try again</string>
+    <string name="store_not_found">No store is installed?</string>
+    <string name="recovery_mode_closed">It's closed, please try again</string>
     <string name="copy">Copy error message</string>
     <string name="recovery_mode_tips">Entered recovery mode due to multiple crashes. Sending the device and crash info below via the following methods may resolve the issue. Thank you.</string>
     <string name="turn_off_recovery_mode">Turn off recovery mode</string>
@@ -173,14 +173,14 @@
     <string name="tile_mode_title_repeat">Repeat</string>
     <string name="tile_mode_title_decal">Single</string>
 
-    <!-- S-i18n-2: labels previously hard-coded EN on edges (default EN only until Weblate retarget). -->
+    <!-- S-i18n-2: labels previously hard-coded EN on edges (Weblate-managed in composeResources). -->
     <string name="recovery_send_email">Send email</string>
     <string name="recovery_send_telegram">Send Telegram</string>
     <string name="recovery_jump_to_store">Jump to Store</string>
     <!-- ADR-0027: honest About labels (wallpaper Android-only; photo all platforms). -->
     <string name="about_follow_wallpaper">Follow wallpaper colors</string>
     <string name="about_follow_photo">Theme editor from photo</string>
-    <!-- Legacy key kept for Weblate until retarget; product UI uses about_follow_*. -->
+    <!-- Legacy key retained for compatibility; product UI uses about_follow_*. -->
     <string name="about_force_dynamic_color">Follow wallpaper colors</string>
     <string name="about_show_bounds">Show Bounds</string>
     <string name="about_prefer_in_app_gallery">Use in-app gallery</string>

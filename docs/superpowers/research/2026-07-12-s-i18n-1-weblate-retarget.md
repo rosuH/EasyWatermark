@@ -1,41 +1,37 @@
-# S-i18n-1 Weblate retarget checklist (owner/ops)
+# S-i18n-1 Weblate retarget record (owner/ops)
 
-**Status:** code catalog migrated (2026-07-12); **Weblate retarget DEFERRED until this work is merged to `master`** (owner 2026-07-12)  
+**Status:** **Completed (2026-11-21)** — `zh-rCN` backlog synced in PR #461 (`775e357a`), Hosted Weblate `easywatermark/app-strings` retargeted to `composeResources` (`cmp-resource`), `app-store-metadata/zh_Hans` review-protected, and EN dual-write retired.  
 **Plan:** `docs/superpowers/plans/2026-07-12-cmp-compose-resources-i18n-plan.md` Phase 1 P1.5  
-**Until then:** Weblate continues to own `app/src/main/res/values-*/strings.xml`. Agents dual-write new default keys into both trees; do **not** retarget Weblate on the feature branch.
 
-## After merge to `master` — new component (or retarget existing)
+## Hosted Weblate configuration (`easywatermark/app-strings`)
 
 | Field | Value |
 |-------|--------|
 | File mask | `shared/src/commonMain/composeResources/values-*/strings.xml` |
 | Monolingual base | `shared/src/commonMain/composeResources/values/strings.xml` |
 | File format | **Compose Multiplatform Resource** (`cmp-resource`, Weblate ≥5.12) |
-| Template for new translations | Empty (or same as base) |
+| Language code style | `android` (`values-zh-rCN`, `values-de-rDE`, etc.) |
 
-Do **not** keep using plain “Android string resources” for this path if Weblate offers the CMP format — escaping differs slightly.
+Do **not** switch back to plain “Android string resources” (`aresource`), and do **not** use Android backslash escapes (`\'`, `\?`, `\"`) in `composeResources` XML — Compose Multiplatform only unescapes `\n`, `\t`, `\uXXXX`, and `\\` at build time and renders `\'`, `\?`, and `\"` literally.
 
-## Dual-write period (until Weblate retarget + Phase 2)
+## Post-retarget workflow (EN dual-write retired)
 
 | Path | Role |
 |------|------|
-| `shared/.../composeResources/values*` | Multiplatform product UI / `Res.string` (seeded copy of catalog) |
-| `app/src/main/res/values*` | **Weblate still points here** until post-`master` retarget; also Android `R.string` / bags until Phase 2 |
+| `shared/src/commonMain/composeResources/values*/strings.xml` | **Sole** product UI string catalog & Hosted Weblate `app-strings` target |
+| `app/src/main/res/values*/strings.xml` | Legacy Android XML retained only for `app_name` (`AndroidManifest.xml`) and historical continuity; no longer tracked by Weblate |
 
-Until Weblate is retargeted after merge to `master`:
+1. New product keys: add to `shared/src/commonMain/composeResources/values/strings.xml` only (no EN dual-write to `app/src/main/res/values/strings.xml`). Use plain XML text (e.g., `'` / `?` / `"` or XML entities if needed, never `\'` / `\?` / `\"`).
+2. Non-default locales: owned by Hosted Weblate under `shared/src/commonMain/composeResources/values-*/strings.xml`; agents must never hand-edit or invent translations.
+3. Store metadata (`easywatermark/app-store-metadata`): `translation_review` is enabled (`commit_policy: 0`) with `zh_Hans` units (`title.txt`, `short_description.txt`, `full_description.txt`) marked `Approved` (`state: 30`) so non-reviewers submit suggestions rather than overwriting native Chinese store copy.
 
-1. New keys: add to **both** default EN files (`composeResources/values` + `app/res/values`).
-2. Non-default locales: Weblate updates **`app/res` only**; agents/scripts **sync** those into `composeResources` when needed (no hand-invented translations).
-3. Agents: never hand-edit non-default locale files in either tree.
-4. After retarget + Phase 2 bag deletion: composeResources becomes sole product source; deprecate product keys under `app/res` as needed.
+## Retarget execution summary (2026-11-21)
 
-## After retarget
-
-1. Pull once; confirm a zh-CN (or other) PR lands under `composeResources/values-zh-rCN/`.
-2. Spot-check placeholders (`%1$s`) and apostrophes (`\'`) still parse.
-3. Mark old Android `app/src/main/res/values-*` component read-only or archive for product UI strings.
+1. Reverted unintended `fastlane/metadata/android/zh-CN/full_description.txt` overwrite and merged PR #458 (`5c61fa13`).
+2. Synced 91 accumulated `zh-rCN` strings + `pick_via_system` from `app/src/main/res/values-zh-rCN/strings.xml` into `composeResources` in PR #461 (`775e357a`).
+3. Retargeted `easywatermark/app-strings` via Weblate API to `cmp-resource` on `composeResources`; verified all 16 locales preserved (`zh_Hans` 190/208, `fuzzy: 0`, `failing: 0`) and reset synthetic format-switch pending flags (`pending_units: 0`).
+4. Cleaned legacy Android `\'`, `\?`, `\"` escapes across 9 `composeResources` locale files (59 strings) with runtime `.cvr` regression coverage across all 16 locales in `ComposeResourcesCatalogTest`.
 
 ## Not done by agents
 
-- Changing hosted Weblate project configuration
 - Bulk inventing missing translations for thin locales (ru/uk stay incomplete as today)

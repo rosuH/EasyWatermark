@@ -78,13 +78,13 @@
     <string name="back">Zurück</string>
     <string name="copy_success">Kopiert</string>
     <string name="copy_failed">Kopieren fehlgeschlagen</string>
-    <string name="store_not_found">Ist kein Store installiert\?</string>
+    <string name="store_not_found">Ist kein Store installiert?</string>
     <string name="recovery_mode_closed">Neustart erforderlich</string>
     <string name="copy">Protokolle kopieren</string>
     <string name="turn_off_recovery_mode">Wiederherstellungsmodus ausschalten</string>
     <string name="recovery_mode_tips">Der Wiederherstellungsmodus wurde aufgrund mehrerer Abstürze aktiviert. Wenn Sie das Gerät und die Absturzinformationen mit den folgenden Methoden senden, kann das Problem möglicherweise behoben werden. Vielen Dank.</string>
-    <string name="tips_use_this_template">Diese Vorlage verwenden\?</string>
-    <string name="tips_delete_template">Den Eintrag löschen\?</string>
+    <string name="tips_use_this_template">Diese Vorlage verwenden?</string>
+    <string name="tips_delete_template">Den Eintrag löschen?</string>
     <string name="tips_database_init_error">Datenbankinitialisierung misslungen.</string>
     <string name="title_tile_mode">Kachel-Modus</string>
     <string name="tile_mode_title_repeat">Wiederholen</string>

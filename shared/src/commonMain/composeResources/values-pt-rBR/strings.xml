@@ -70,7 +70,7 @@
     <string name="pick_via_system">Choose more…</string>
     <string name="tips_input_text_can_not_be_empty">O conteúdo não pode estar vazio</string>
     <string name="dialog_title_template_edit">Editar modelo</string>
-    <string name="dialog_title_edit_watermark">\"Editar Marca D\'água\"</string>
+    <string name="dialog_title_edit_watermark">"Editar Marca D'água"</string>
     <string name="dialog_title_template_title">Lista de Modelos</string>
     <string name="tips_list_empty">Parece bem vazio, né?</string>
     <string name="dialog_button_add_template">Adicionar</string>
