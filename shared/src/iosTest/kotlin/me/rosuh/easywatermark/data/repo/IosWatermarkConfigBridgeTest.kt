@@ -338,4 +338,99 @@ class IosWatermarkConfigBridgeTest {
         val read = b.currentIconBytes()
         assertTrue(read != null && read.contentEquals(bytes), "currentIconBytes must return the persisted icon bytes")
     }
+
+    @Test
+    fun iconPersistence_rotated_device_and_simulator_containers_resolve_read_and_delete() {
+        val payload = byteArrayOf(11, 22, 33, 44, 55, 66, 77)
+        val ownedPath = IosIconPersistence.writeIconBytes(payload)
+        val fileName = ownedPath.substringAfterLast(IosIconPersistence.ICON_FILE_PREFIX)
+        assertTrue(fileName.isNotEmpty(), "generated icon path must include UUID suffix")
+
+        val deviceRotatedPath =
+            "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_$fileName"
+        val simulatorRotatedPath =
+            "/Users/tester/Library/Developer/CoreSimulator/Devices/DEV-1/data/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_$fileName"
+
+        assertEquals(
+            ownedPath,
+            IosIconPersistence.resolveOwnedPath(deviceRotatedPath),
+            "device rotated container path must relocate to current Documents path",
+        )
+        assertEquals(
+            ownedPath,
+            IosIconPersistence.resolveOwnedPath(simulatorRotatedPath),
+            "simulator rotated container path must relocate to current Documents path",
+        )
+        assertTrue(IosIconPersistence.isOwned(deviceRotatedPath))
+        assertTrue(IosIconPersistence.isOwned(simulatorRotatedPath))
+        assertTrue(IosIconPersistence.canReadIcon(MediaRef(deviceRotatedPath)))
+        assertTrue(IosIconPersistence.canReadIcon(MediaRef(simulatorRotatedPath)))
+        assertTrue(IosIconPersistence.readIconBytes(MediaRef(deviceRotatedPath)).contentEquals(payload))
+        assertTrue(IosIconPersistence.readIconBytes(MediaRef(simulatorRotatedPath)).contentEquals(payload))
+
+        // Deleting via rotated container path removes the relocated file in current container.
+        IosIconPersistence.deleteIfOwned(deviceRotatedPath)
+        assertFalse(NSFileManager.defaultManager.fileExistsAtPath(ownedPath))
+        assertFalse(IosIconPersistence.canReadIcon(MediaRef(simulatorRotatedPath)))
+    }
+
+    @Test
+    fun iconPersistence_rotated_container_rejects_traversal_nested_empty_and_foreign() {
+        val ownedPath = IosIconPersistence.writeIconBytes(byteArrayOf(4, 5, 6))
+        try {
+            val rotatedPrefix =
+                "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_"
+            val simPrefix =
+                "/Users/tester/Library/Developer/CoreSimulator/Devices/DEV-1/data/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_"
+
+            val rejected = listOf(
+                rotatedPrefix + "../secret",
+                rotatedPrefix + "x/foreign",
+                rotatedPrefix,
+                rotatedPrefix + "..",
+                rotatedPrefix + ".",
+                rotatedPrefix + "a..b",
+                simPrefix + "../secret",
+                simPrefix + "x/foreign",
+                simPrefix,
+                "/var/mobile/Containers/Data/Application//Documents/watermark_icons/icon_foo",
+                "/var/mobile/Containers/Data/Application/A/B/Documents/watermark_icons/icon_foo",
+                "/var/mobile/Containers/Data/Application/../Documents/watermark_icons/icon_foo",
+                "var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_foo",
+                "/tmp/watermark_icons/icon_foo",
+                "",
+                "   ",
+            )
+            rejected.forEach { candidate ->
+                assertNull(
+                    IosIconPersistence.resolveOwnedPath(candidate),
+                    "resolveOwnedPath must reject '$candidate'",
+                )
+                assertFalse(
+                    IosIconPersistence.isOwned(candidate),
+                    "isOwned must reject '$candidate'",
+                )
+                IosIconPersistence.deleteIfOwned(candidate)
+            }
+            assertTrue(
+                NSFileManager.defaultManager.fileExistsAtPath(ownedPath),
+                "deleteIfOwned on rejected paths must leave real owned icon intact",
+            )
+        } finally {
+            IosIconPersistence.deleteIfOwned(ownedPath)
+        }
+    }
+
+    @Test
+    fun iconPersistence_missing_or_blank_rotated_icon_reports_unreadable_and_throws() {
+        val missingRotated = MediaRef(
+            "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_missing_${NSUUID().UUIDString()}",
+        )
+        assertFalse(IosIconPersistence.canReadIcon(missingRotated))
+        assertFalse(IosIconPersistence.canReadIcon(MediaRef.Empty))
+        assertFalse(IosIconPersistence.canReadIcon(MediaRef("   ")))
+        assertFailsWith<IllegalStateException> {
+            IosIconPersistence.readIconBytes(missingRotated)
+        }
+    }
 }
