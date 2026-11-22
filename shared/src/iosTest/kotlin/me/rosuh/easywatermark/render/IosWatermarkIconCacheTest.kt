@@ -6,18 +6,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.cinterop.ExperimentalForeignApi
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkMode
+import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUUID
 import platform.Foundation.writeToFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -101,9 +104,64 @@ class IosWatermarkIconCacheTest {
         }
     }
 
-    private fun writePng(width: Int, height: Int, color: Color, tag: String): String {
-        val path = NSTemporaryDirectory().trimEnd('/') +
-            "/ewm_${tag}_" + NSUUID().UUIDString() + ".png"
+    @Test
+    fun rotatedContainerIcon_decodesIdenticallyAcrossDeviceAndSimulator() {
+        IosWatermarkIconCache.resetForTests()
+        val bytes = pngBytes(32, 24, Color(0xFFCC4422))
+        val ownedPath = IosIconPersistence.writeIconBytes(bytes)
+        try {
+            val fileName = ownedPath.substringAfterLast(IosIconPersistence.ICON_FILE_PREFIX)
+            val deviceRotated = MediaRef(
+                "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_$fileName",
+            )
+            val simulatorRotated = MediaRef(
+                "/Users/tester/Library/Developer/CoreSimulator/Devices/DEV-1/data/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_$fileName",
+            )
+
+            assertTrue(IosIconPersistence.canReadIcon(deviceRotated))
+            assertTrue(IosIconPersistence.canReadIcon(simulatorRotated))
+
+            val directBmp = IosWatermarkIconCache.decoded(
+                MediaRef(ownedPath),
+                IosPreviewRaster.ICON_MAX_EDGE_PX,
+            )
+            val deviceBmp = IosWatermarkIconCache.decoded(
+                deviceRotated,
+                IosPreviewRaster.ICON_MAX_EDGE_PX,
+            )
+            val simBmp = IosWatermarkIconCache.decoded(
+                simulatorRotated,
+                IosPreviewRaster.ICON_MAX_EDGE_PX,
+            )
+
+            assertEquals(directBmp.width, deviceBmp.width)
+            assertEquals(directBmp.height, deviceBmp.height)
+            assertEquals(directBmp.width, simBmp.width)
+            assertEquals(directBmp.height, simBmp.height)
+            val directPx = directBmp.toPixelMap()
+            val devicePx = deviceBmp.toPixelMap()
+            val simPx = simBmp.toPixelMap()
+            assertEquals(directPx[0, 0], devicePx[0, 0])
+            assertEquals(directPx[0, 0], simPx[0, 0])
+        } finally {
+            IosIconPersistence.deleteIfOwned(ownedPath)
+        }
+    }
+
+    @Test
+    fun missingRotatedContainerIcon_reportsUnreadableAndThrowsFromCache() {
+        IosWatermarkIconCache.resetForTests()
+        val missingRotated = MediaRef(
+            "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_absent_${NSUUID().UUIDString()}",
+        )
+        assertFalse(IosIconPersistence.canReadIcon(missingRotated))
+        assertFalse(IosIconPersistence.canReadIcon(MediaRef.Empty))
+        assertFailsWith<IllegalStateException> {
+            IosWatermarkIconCache.decoded(missingRotated, IosPreviewRaster.ICON_MAX_EDGE_PX)
+        }
+    }
+
+    private fun pngBytes(width: Int, height: Int, color: Color): ByteArray {
         val bmp = ImageBitmap(width, height, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(
             density = Density(1f),
@@ -113,7 +171,13 @@ class IosWatermarkIconCacheTest {
         ) {
             drawRect(color)
         }
-        val bytes = IosWatermarkRenderer.encodePng(bmp)
+        return IosWatermarkRenderer.encodePng(bmp)
+    }
+
+    private fun writePng(width: Int, height: Int, color: Color, tag: String): String {
+        val path = NSTemporaryDirectory().trimEnd('/') +
+            "/ewm_${tag}_" + NSUUID().UUIDString() + ".png"
+        val bytes = pngBytes(width, height, color)
         assertTrue(
             IosByteArrayInterop.toNSData(bytes).writeToFile(path, atomically = true),
             "icon cache test fixture must be written",

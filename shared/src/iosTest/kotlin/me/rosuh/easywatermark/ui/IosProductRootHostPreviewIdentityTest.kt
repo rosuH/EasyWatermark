@@ -33,7 +33,9 @@ import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Result
 import me.rosuh.easywatermark.data.model.UserPreferences
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
+import me.rosuh.easywatermark.data.repo.IosIconPersistence
 import me.rosuh.easywatermark.data.repo.IosUserConfigBridge
 import me.rosuh.easywatermark.data.repo.IosWatermarkConfigBridge
 import me.rosuh.easywatermark.data.repo.UserConfigRepository
@@ -618,4 +620,190 @@ class IosProductRootHostPreviewIdentityTest {
             graph.close()
         }
     }
+
+    @Test
+    fun rotated_container_icon_self_heals_and_publishes_live_layers() =
+        runTest(mainDispatcher.scheduler) {
+            val graph = isolatedGraph()
+            val ownedPath = IosIconPersistence.writeIconBytes(solidPng(Color.Red))
+            try {
+                val fileName = ownedPath.substringAfterLast(IosIconPersistence.ICON_FILE_PREFIX)
+                val rotatedPath =
+                    "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_$fileName"
+                graph.services.waterMarkRepo.updateIcon(MediaRef(rotatedPath))
+                val host = IosProductRootHost(
+                    onPickPhoto = {},
+                    onPickIcon = {},
+                    onShare = {},
+                    onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                    services = graph.services,
+                )
+                try {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                    val gen =
+                        me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(solidPng(Color(0xFF203040))),
+                        append = false,
+                        renderPreview = true,
+                        pickGeneration = gen,
+                    )
+                    graph.trackSessionPaths()
+                    pumpUntil { host.previewIdentityForTests().overlayPresent }
+
+                    assertTrue(
+                        host.previewIdentityForTests().overlayPresent,
+                        "rotated container icon must resolve and publish LiveLayers",
+                    )
+                    val repoWm = graph.services.waterMarkRepo.currentConfig()
+                    val sessionWm = graph.services.session.launchScreenUiStateFlow.value.waterMark
+                    assertEquals(WatermarkMode.Image, repoWm.markMode)
+                    assertEquals(WatermarkMode.Image, sessionWm.markMode)
+                    assertEquals(ownedPath, repoWm.iconUri.value)
+                    assertEquals(ownedPath, sessionWm.iconUri.value)
+                } finally {
+                    host.dispose()
+                }
+            } finally {
+                IosIconPersistence.deleteIfOwned(ownedPath)
+                graph.close()
+            }
+        }
+
+    @Test
+    fun missing_or_corrupted_icon_resets_mode_to_text_and_publishes_live_layers() =
+        runTest(mainDispatcher.scheduler) {
+            val graph = isolatedGraph()
+            val corruptedPath = IosIconPersistence.writeIconBytes(byteArrayOf(0, 1, 2, 3, 4))
+            try {
+                graph.services.waterMarkRepo.updateIcon(MediaRef(corruptedPath))
+                val host = IosProductRootHost(
+                    onPickPhoto = {},
+                    onPickIcon = {},
+                    onShare = {},
+                    onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                    services = graph.services,
+                )
+                try {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                    val gen =
+                        me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(solidPng(Color(0xFF203040))),
+                        append = false,
+                        renderPreview = true,
+                        pickGeneration = gen,
+                    )
+                    graph.trackSessionPaths()
+                    pumpUntil { host.previewIdentityForTests().overlayPresent }
+
+                    assertTrue(
+                        host.previewIdentityForTests().overlayPresent,
+                        "corrupted icon must fall back to Text mode and publish LiveLayers",
+                    )
+                    val repoWm = graph.services.waterMarkRepo.currentConfig()
+                    val sessionWm = graph.services.session.launchScreenUiStateFlow.value.waterMark
+                    assertEquals(WatermarkMode.Text, repoWm.markMode)
+                    assertEquals(WatermarkMode.Text, sessionWm.markMode)
+                } finally {
+                    host.dispose()
+                }
+            } finally {
+                IosIconPersistence.deleteIfOwned(corruptedPath)
+                graph.close()
+            }
+        }
+
+    @Test
+    fun missing_rotated_icon_file_resets_mode_to_text_and_publishes_live_layers() =
+        runTest(mainDispatcher.scheduler) {
+            val graph = isolatedGraph()
+            try {
+                val missingRotatedPath =
+                    "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_missing_${NSUUID().UUIDString()}"
+                graph.services.waterMarkRepo.updateIcon(MediaRef(missingRotatedPath))
+                val host = IosProductRootHost(
+                    onPickPhoto = {},
+                    onPickIcon = {},
+                    onShare = {},
+                    onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                    services = graph.services,
+                )
+                try {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                    val gen =
+                        me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(solidPng(Color(0xFF203040))),
+                        append = false,
+                        renderPreview = true,
+                        pickGeneration = gen,
+                    )
+                    graph.trackSessionPaths()
+                    pumpUntil { host.previewIdentityForTests().overlayPresent }
+
+                    assertTrue(
+                        host.previewIdentityForTests().overlayPresent,
+                        "missing rotated icon must reset to Text mode and publish LiveLayers",
+                    )
+                    val repoWm = graph.services.waterMarkRepo.currentConfig()
+                    val sessionWm = graph.services.session.launchScreenUiStateFlow.value.waterMark
+                    assertEquals(WatermarkMode.Text, repoWm.markMode)
+                    assertEquals(WatermarkMode.Text, sessionWm.markMode)
+                } finally {
+                    host.dispose()
+                }
+            } finally {
+                graph.close()
+            }
+        }
+
+    @Test
+    fun text_mode_with_stale_rotated_icon_uri_never_flips_to_image() =
+        runTest(mainDispatcher.scheduler) {
+            val graph = isolatedGraph()
+            val ownedPath = IosIconPersistence.writeIconBytes(solidPng(Color.Blue))
+            try {
+                val fileName = ownedPath.substringAfterLast(IosIconPersistence.ICON_FILE_PREFIX)
+                val rotatedPath =
+                    "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_$fileName"
+                graph.services.waterMarkRepo.updateIcon(MediaRef(rotatedPath))
+                graph.services.waterMarkRepo.resetModeToText()
+                val host = IosProductRootHost(
+                    onPickPhoto = {},
+                    onPickIcon = {},
+                    onShare = {},
+                    onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                    services = graph.services,
+                )
+                try {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                    val gen =
+                        me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(solidPng(Color(0xFF203040))),
+                        append = false,
+                        renderPreview = true,
+                        pickGeneration = gen,
+                    )
+                    graph.trackSessionPaths()
+                    pumpUntil { host.previewIdentityForTests().overlayPresent }
+
+                    assertTrue(host.previewIdentityForTests().overlayPresent)
+                    assertEquals(
+                        WatermarkMode.Text,
+                        graph.services.waterMarkRepo.currentConfig().markMode,
+                    )
+                    assertEquals(
+                        WatermarkMode.Text,
+                        graph.services.session.launchScreenUiStateFlow.value.waterMark.markMode,
+                    )
+                } finally {
+                    host.dispose()
+                }
+            } finally {
+                IosIconPersistence.deleteIfOwned(ownedPath)
+                graph.close()
+            }
+        }
 }

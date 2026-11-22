@@ -50,6 +50,10 @@ internal object IosIconPersistence {
     /** Helper-owned filename prefix (ownership boundary; a unique `NSUUID` is appended per write). */
     const val ICON_FILE_PREFIX: String = "icon_"
 
+    private const val CONTAINERS_APP_MARKER: String = "/Containers/Data/Application/"
+    private const val ROTATED_DOCUMENTS_SUFFIX: String =
+        "/Documents/$ICON_DIR_NAME/$ICON_FILE_PREFIX"
+
     /** Resolve the app's `NSDocumentDirectory` path (the same pattern as `CreateDataStore.ios.kt`). */
     private fun documentsDirPath(): String {
         val url: NSURL? = NSFileManager.defaultManager.URLForDirectory(
@@ -90,33 +94,91 @@ internal object IosIconPersistence {
     }
 
     /**
- * Read the icon bytes back from a persisted [ref]'s path. Throws [IllegalStateException] if the file is
- * Missing/unreadable (e.g. after cleanup), so callers fail loudly instead of rendering a blank icon.     */
+     * Resolve a persisted helper-owned icon [path] into [currentDocsDir], relocating across iOS
+     * sandbox container UUID rotations while preserving strict filename/traversal boundaries.
+     */
+    internal fun resolveOwnedPath(
+        path: String,
+        currentDocsDir: String = documentsDirPath(),
+    ): String? {
+        if (path.isBlank()) return null
+        val normalizedDocsDir = currentDocsDir.trimEnd('/')
+        if (normalizedDocsDir.isBlank()) return null
+        val currentPrefix = "$normalizedDocsDir/$ICON_DIR_NAME/$ICON_FILE_PREFIX"
+        val fileName = if (path.startsWith(currentPrefix)) {
+            path.removePrefix(currentPrefix)
+        } else {
+            extractRotatedContainerFileName(path) ?: return null
+        }
+        if (!isValidOwnedFileName(fileName)) return null
+        return "$currentPrefix$fileName"
+    }
+
+    private fun extractRotatedContainerFileName(path: String): String? {
+        if (!path.startsWith("/")) return null
+        val markerIndex = path.indexOf(CONTAINERS_APP_MARKER)
+        if (markerIndex < 0) return null
+        val prefixBeforeMarker = path.substring(0, markerIndex)
+        if (prefixBeforeMarker.split('/').any { it == "." || it == ".." }) return null
+        val containerStart = markerIndex + CONTAINERS_APP_MARKER.length
+        val suffixIndex = path.indexOf(ROTATED_DOCUMENTS_SUFFIX, startIndex = containerStart)
+        if (suffixIndex <= containerStart) return null
+        val containerSegment = path.substring(containerStart, suffixIndex)
+        if (containerSegment.isBlank() ||
+            containerSegment.contains('/') ||
+            containerSegment == "." ||
+            containerSegment == ".." ||
+            containerSegment.contains("..")
+        ) {
+            return null
+        }
+        return path.substring(suffixIndex + ROTATED_DOCUMENTS_SUFFIX.length)
+    }
+
+    private fun isValidOwnedFileName(fileName: String): Boolean =
+        fileName.isNotEmpty() &&
+            !fileName.contains('/') &&
+            fileName != "." &&
+            fileName != ".." &&
+            !fileName.contains("..")
+
+    /**
+     * Read the icon bytes back from a persisted [ref]'s path (relocating rotated container paths
+     * when owned). Throws [IllegalStateException] if the file is missing/unreadable, so callers
+     * fail loudly instead of rendering a blank icon.
+     */
     fun readIconBytes(ref: MediaRef): ByteArray {
-        val data: NSData = NSData.dataWithContentsOfFile(ref.value)
-            ?: error("IosIconPersistence: could not read icon bytes at '${ref.value}'")
+        val resolved = resolveOwnedPath(ref.value) ?: ref.value
+        if (resolved.isBlank()) {
+            error("IosIconPersistence: could not read icon bytes at '${ref.value}'")
+        }
+        val data: NSData = NSData.dataWithContentsOfFile(resolved)
+            ?: error("IosIconPersistence: could not read icon bytes at '$resolved'")
         return IosByteArrayInterop.fromNSData(data)
     }
 
     /**
- * True iff [path] is a helper-owned icon file: it starts with the owned prefix
- * (`<docs>/watermark_icons/icon_`) **and** the remainder is a single generated filename — non-empty
- * And containing **no path separator**. The no-`/` rule is what makes ownership safe: a generated path * is `prefix + NSUUID` (no `/`), whereas a traversal (`icon_/../../foreign`) or a nested/sibling path
- * (`icon_x/foreign`) has a `/` after the prefix and is therefore NOT owned. So [deleteIfOwned] can
- * never escape the owned directory or delete an arbitrary path that merely shares the prefix.
+     * True iff [ref] points at an existing readable icon file (after relocating rotated container
+     * paths when owned).
      */
-    fun isOwned(path: String): Boolean {
-        val prefix = ownedPrefix()
-        if (!path.startsWith(prefix)) return false
-        val fileName = path.substring(prefix.length)
-        return fileName.isNotEmpty() && !fileName.contains('/')
+    fun canReadIcon(ref: MediaRef): Boolean {
+        if (ref.value.isBlank()) return false
+        val resolved = resolveOwnedPath(ref.value) ?: ref.value
+        return NSFileManager.defaultManager.fileExistsAtPath(resolved)
     }
 
     /**
- * Best-effort delete of a PRIOR helper-owned icon file on replacement. **Only** deletes paths this
- * Helper owns ([isOwned]); a foreign/empty path is ignored, so arbitrary paths are never removed.     */
+     * True iff [path] resolves to a helper-owned icon file under either the current documents
+     * directory or a rotated iOS sandbox container path, with a valid single-segment filename.
+     */
+    fun isOwned(path: String): Boolean = resolveOwnedPath(path) != null
+
+    /**
+     * Best-effort delete of a PRIOR helper-owned icon file on replacement. **Only** deletes paths this
+     * helper owns ([isOwned]); a foreign/empty path is ignored, so arbitrary paths are never removed.
+     */
     fun deleteIfOwned(path: String) {
-        if (!isOwned(path)) return
-        NSFileManager.defaultManager.removeItemAtPath(path, error = null)
+        val owned = resolveOwnedPath(path) ?: return
+        NSFileManager.defaultManager.removeItemAtPath(owned, error = null)
     }
 }

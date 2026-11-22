@@ -1854,7 +1854,10 @@ class IosProductRootHost(
                     "preview",
                 )
             }
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            println(
+                "IosProductRootHost: bindProgressiveFocus preview failed for '${focusPath.substringAfterLast('/')}': ${t.message ?: t::class.simpleName}",
+            )
         }
         if (disposed || gen != previewGen) return
 
@@ -2239,7 +2242,6 @@ class IosProductRootHost(
         val sourcePath = forcePath ?: cur?.uri?.value.orEmpty()
         if (sourcePath.isBlank()) return
         val wm = forceWaterMark ?: launch.waterMark
-        val isText = wm.markMode == WatermarkMode.Text
         val previewBucket = committedPreviewBucket
         val ox = draftOffset?.first ?: forceOffsetX ?: cur?.offsetX ?: 0.5f
         val oy = draftOffset?.second ?: forceOffsetY ?: cur?.offsetY ?: 0.5f
@@ -2261,9 +2263,25 @@ class IosProductRootHost(
             }
         } ?: return
         hostBench.mark("source")
-        val overlay = withContext(Dispatchers.Default) {
-            composeIosOverlayCell(wm, source.width, ox, oy)
+        if (disposed || gen != previewGen) {
+            hostBench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
+            return
         }
+        val effectiveWm = resolveRenderableWaterMark(wm)
+        if (disposed || gen != previewGen) {
+            hostBench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
+            return
+        }
+        val (renderWm, overlay) = composeOverlayWithIconFallback(
+            wm = effectiveWm,
+            canRecover = { !disposed && gen == previewGen },
+            compose = { activeWm ->
+                withContext(Dispatchers.Default) {
+                    composeIosOverlayCell(activeWm, source.width, ox, oy)
+                }
+            },
+        )
+        val isText = renderWm.markMode == WatermarkMode.Text
         hostBench.mark("compose")
         if (gen != previewGen) {
             hostBench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
@@ -2351,6 +2369,76 @@ class IosProductRootHost(
             offsetY = oy,
             builtForWidth = if (isText) imageWidth else cell.logicalWidth,
         )
+    }
+
+    /**
+     * Relocate persisted iOS icon paths across sandbox container rotations while in Image mode, or
+     * reset cleanly to Text mode when the persisted icon is blank/missing/unreadable so preview
+     * never traps on a 128px WaitThumb. Uses [WatermarkSessionViewModel.applyConfigIf] under
+     * sessionMutex so repo and Session stay synchronized without flipping concurrent Text edits.
+     */
+    private suspend fun resolveRenderableWaterMark(wm: WaterMark): WaterMark {
+        if (wm.markMode != WatermarkMode.Image) return wm
+        val iconRef = wm.iconUri
+        if (iconRef.value.isNotBlank() && IosIconPersistence.canReadIcon(iconRef)) {
+            val relocated = IosIconPersistence.resolveOwnedPath(iconRef.value)
+            if (relocated != null && relocated != iconRef.value) {
+                val healed = services.session.applyConfigIf(
+                    stillValid = {
+                        val current = services.session.launchScreenUiStateFlow.value.waterMark
+                        !disposed &&
+                            current.markMode == WatermarkMode.Image &&
+                            current.iconUri == iconRef
+                    },
+                    change = WatermarkConfigChange.Icon(MediaRef(relocated)),
+                )
+                return healed ?: services.session.launchScreenUiStateFlow.value.waterMark
+            }
+            return wm
+        }
+        return recoverMissingOrCorruptedIconToText(iconRef)
+    }
+
+    private suspend fun recoverMissingOrCorruptedIconToText(failedIconUri: MediaRef): WaterMark {
+        println(
+            "IosProductRootHost: missing or unreadable icon '${failedIconUri.value}'; resetting mode to Text",
+        )
+        val recovered = services.session.applyConfigIf(
+            stillValid = {
+                val current = services.session.launchScreenUiStateFlow.value.waterMark
+                !disposed &&
+                    current.markMode == WatermarkMode.Image &&
+                    current.iconUri == failedIconUri
+            },
+            change = WatermarkConfigChange.MarkMode(WatermarkMode.Text),
+        )
+        return recovered ?: services.session.launchScreenUiStateFlow.value.waterMark
+    }
+
+    private suspend fun composeOverlayWithIconFallback(
+        wm: WaterMark,
+        canRecover: () -> Boolean,
+        compose: suspend (WaterMark) -> OverlayCell,
+    ): Pair<WaterMark, OverlayCell> {
+        return try {
+            wm to compose(wm)
+        } catch (t: Throwable) {
+            if (wm.markMode == WatermarkMode.Image && canRecover()) {
+                println(
+                    "IosProductRootHost: icon overlay compose failed for '${wm.iconUri.value}' (${t.message ?: t::class.simpleName}); resetting mode to Text",
+                )
+                val recovered = recoverMissingOrCorruptedIconToText(wm.iconUri)
+                if (
+                    !canRecover() ||
+                    (recovered.markMode == WatermarkMode.Image && recovered.iconUri == wm.iconUri)
+                ) {
+                    throw t
+                }
+                recovered to compose(recovered)
+            } else {
+                throw t
+            }
+        }
     }
 
     private fun clearLibraryDerivative() {
@@ -2512,16 +2600,25 @@ class IosProductRootHost(
         } ?: return false
         if (shouldDropLibraryDerivative(path)) return false
         val launch = services.session.launchScreenUiStateFlow.value
-        val wm = launch.waterMark
+        val wm = resolveRenderableWaterMark(launch.waterMark)
+        if (shouldDropLibraryDerivative(path)) return false
         val info = launch.selectedImageList.firstOrNull { it.uri.value == path }
             ?: launch.curImageInfo?.takeIf { it.uri.value == path }
-        val overlay = composeIosOverlayCell(
+        val ox = info?.offsetX ?: 0.5f
+        val oy = info?.offsetY ?: 0.5f
+        val (renderWm, overlay) = composeOverlayWithIconFallback(
             wm = wm,
-            imageWidth = bitmap.width,
-            ox = info?.offsetX ?: 0.5f,
-            oy = info?.offsetY ?: 0.5f,
+            canRecover = { !shouldDropLibraryDerivative(path) },
+            compose = { activeWm ->
+                composeIosOverlayCell(
+                    wm = activeWm,
+                    imageWidth = bitmap.width,
+                    ox = ox,
+                    oy = oy,
+                )
+            },
         )
-        val isText = wm.markMode == WatermarkMode.Text
+        val isText = renderWm.markMode == WatermarkMode.Text
         if (
             !OverlayPreviewPolicy.canPublishLivePhoto(
                 selectedPath = path,
