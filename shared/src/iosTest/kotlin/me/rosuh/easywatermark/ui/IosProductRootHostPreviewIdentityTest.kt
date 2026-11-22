@@ -806,4 +806,66 @@ class IosProductRootHostPreviewIdentityTest {
                 graph.close()
             }
         }
+
+    @Test
+    fun clearing_sticker_keeps_live_layers_sharp_with_empty_overlay() =
+        runTest(mainDispatcher.scheduler) {
+            val graph = isolatedGraph()
+            val ownedPath = IosIconPersistence.writeIconBytes(solidPng(Color.Red))
+            try {
+                graph.services.waterMarkRepo.updateIcon(MediaRef(ownedPath))
+                val host = IosProductRootHost(
+                    onPickPhoto = {},
+                    onPickIcon = {},
+                    onShare = {},
+                    onSaveToPhotos = { _, onComplete -> onComplete(true, null) },
+                    services = graph.services,
+                )
+                try {
+                    me.rosuh.easywatermark.session.IosPickGenerationGate.resetForTests()
+                    val gen =
+                        me.rosuh.easywatermark.session.IosPickGenerationGate.nextPhotoGeneration()
+                    host.deliverPickedPhotosBatch(
+                        images = listOf(solidPng(Color(0xFF203040))),
+                        append = false,
+                        renderPreview = true,
+                        pickGeneration = gen,
+                    )
+                    graph.trackSessionPaths()
+                    val path = graph.services.session.launchScreenUiStateFlow.first()
+                        .curImageInfo?.uri?.value
+                    assertNotNull(path)
+                    pumpUntil {
+                        val id = host.previewIdentityForTests()
+                        id.previewSourcePath == path && id.overlayPresent && (id.overlayAlpha ?: 0f) > 0f
+                    }
+
+                    host.clearLiveStickerForTests()
+                    pumpUntil {
+                        val id = host.previewIdentityForTests()
+                        val sessionWm = graph.services.session.launchScreenUiStateFlow.value.waterMark
+                        sessionWm.iconUri == MediaRef.Empty && id.overlayAlpha == 0f
+                    }
+
+                    val afterClear = host.previewIdentityForTests()
+                    assertEquals(
+                        path,
+                        afterClear.previewSourcePath,
+                        "clearing sticker must keep sharp Source photo layer",
+                    )
+                    assertTrue(
+                        afterClear.overlayPresent,
+                        "clearing sticker must keep LiveLayers active instead of falling back to 128px WaitThumb",
+                    )
+                    assertEquals(0f, afterClear.overlayAlpha)
+                    assertEquals(WatermarkMode.Image, graph.services.waterMarkRepo.currentConfig().markMode)
+                    assertEquals(MediaRef.Empty, graph.services.waterMarkRepo.currentConfig().iconUri)
+                } finally {
+                    host.dispose()
+                }
+            } finally {
+                IosIconPersistence.deleteIfOwned(ownedPath)
+                graph.close()
+            }
+        }
 }

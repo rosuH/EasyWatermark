@@ -17,6 +17,7 @@ data class ImageInfo(
     // commonMain (it had no runtime effect).
     val offsetX: Float = 0.5f,
     val offsetY: Float = 0.5f,
+    val hasCustomOffset: Boolean = false,
 ) {
     // Export success payload lives in [result] (typically `Result<MediaRef>` on Android). Share /
     // open-gallery map `result.data` at the Android edge (`uriFromExportResultData`); do not cast

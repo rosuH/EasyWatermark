@@ -17,14 +17,13 @@ internal class AndroidIconSelectionCoordinator(
     private val mutex = Mutex()
 
     suspend fun import(source: Uri): Result<MediaRef> = mutex.withLock {
-        val previous = try {
+        try {
             currentIcon()
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Throwable) {
             return@withLock Result.failure(failure)
         }
-        runCatching { store.pruneExcept(previous) }
         val copied = store.copyToOwnedRef(source)
         val next = copied.getOrElse { return@withLock copied }
 
@@ -35,8 +34,6 @@ internal class AndroidIconSelectionCoordinator(
             withContext(NonCancellable) {
                 commitIcon(next)
                 committed = true
-                runCatching { store.deleteIfOwned(previous) }
-                runCatching { store.pruneExcept(next) }
             }
             Result.success(next)
         } catch (cancelled: CancellationException) {

@@ -161,6 +161,28 @@ class IosWatermarkIconCacheTest {
         }
     }
 
+    @Test
+    fun switchingBetweenThreeIcons_reusesLruCache() {
+        IosWatermarkIconCache.resetForTests()
+        val first = MediaRef(writePng(64, 48, Color.Red, "lru1"))
+        val second = MediaRef(writePng(64, 48, Color.Green, "lru2"))
+        val third = MediaRef(writePng(64, 48, Color.Blue, "lru3"))
+
+        IosWatermarkIconCache.decoded(first, IosPreviewRaster.ICON_MAX_EDGE_PX)
+        IosWatermarkIconCache.decoded(second, IosPreviewRaster.ICON_MAX_EDGE_PX)
+        IosWatermarkIconCache.decoded(third, IosPreviewRaster.ICON_MAX_EDGE_PX)
+        assertEquals(3, IosWatermarkIconCache.decodeCountForTests())
+
+        IosWatermarkIconCache.decoded(first, IosPreviewRaster.ICON_MAX_EDGE_PX)
+        IosWatermarkIconCache.decoded(second, IosPreviewRaster.ICON_MAX_EDGE_PX)
+        IosWatermarkIconCache.decoded(third, IosPreviewRaster.ICON_MAX_EDGE_PX)
+        assertEquals(
+            3,
+            IosWatermarkIconCache.decodeCountForTests(),
+            "switching across 3 custom stickers must hit the bounded LRU without re-decoding",
+        )
+    }
+
     private fun pngBytes(width: Int, height: Int, color: Color): ByteArray {
         val bmp = ImageBitmap(width, height, ImageBitmapConfig.Argb8888)
         CanvasDrawScope().draw(

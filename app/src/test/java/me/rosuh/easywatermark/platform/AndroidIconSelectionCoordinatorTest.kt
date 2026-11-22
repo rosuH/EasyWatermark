@@ -34,11 +34,8 @@ class AndroidIconSelectionCoordinatorTest {
         assertEquals(
             listOf(
                 "current",
-                "prune:${old.value}",
                 "copy:content://picker/1",
                 "commit:${next.value}",
-                "delete:${old.value}",
-                "prune:${next.value}",
             ),
             events,
         )
@@ -60,7 +57,7 @@ class AndroidIconSelectionCoordinatorTest {
 
         assertEquals(failure.message, result.exceptionOrNull()?.message)
         assertEquals(
-            listOf("current", "prune:${old.value}", "copy:content://picker/missing"),
+            listOf("current", "copy:content://picker/missing"),
             events,
         )
     }
@@ -106,8 +103,7 @@ class AndroidIconSelectionCoordinatorTest {
         coordinator.import(Uri.parse("content://picker/2")).getOrThrow()
 
         assertEquals(second, current)
-        assertTrue(events.contains("delete:${original.value}"))
-        assertTrue(events.contains("delete:${first.value}"))
+        assertTrue(events.none { it.startsWith("delete:") })
     }
 
     @Test

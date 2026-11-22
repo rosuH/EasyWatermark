@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -409,7 +410,17 @@ class L1ProductUiTest {
         onNodeWithTag("sharedComposeExportPrimary", useUnmergedTree = true).performClick()
         waitUntil(timeoutMillis = 5_000) { session.exportRecovery.showCancel }
         waitForTag("sharedComposeExportCancel")
-        onNodeWithTag("sharedComposeExportCancel", useUnmergedTree = true).performClick()
+        val primaryNode = onNodeWithTag("sharedComposeExportPrimary", useUnmergedTree = true)
+        val cancelNode = onNodeWithTag("sharedComposeExportCancel", useUnmergedTree = true)
+        primaryNode.assertIsDisplayed()
+        primaryNode.assertIsNotEnabled()
+        val primaryBounds = primaryNode.fetchSemanticsNode().boundsInRoot
+        val cancelBounds = cancelNode.fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            primaryBounds.bottom <= cancelBounds.top,
+            "Cancel button ($cancelBounds) must sit strictly below disabled primary button ($primaryBounds)",
+        )
+        cancelNode.performClick()
         awaitIdle()
         waitUntil(timeoutMillis = 5_000) {
             session.exportCancelled && !session.exportRecovery.isExporting

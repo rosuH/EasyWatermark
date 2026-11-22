@@ -58,6 +58,7 @@ import me.rosuh.easywatermark.render.neighborIndices
 import me.rosuh.easywatermark.ui.DraftRenderConflator
 import me.rosuh.easywatermark.ui.LiveOverlayPreview
 import me.rosuh.easywatermark.ui.OverlayCell
+import me.rosuh.easywatermark.ui.emptyOverlayCellFor
 import me.rosuh.easywatermark.ui.overlayCellFrom
 import me.rosuh.easywatermark.ui.withOffset
 import me.rosuh.easywatermark.ui.compose.ColorOption
@@ -94,9 +95,14 @@ fun AndroidEditorScreen(
     onImageSelected: (ImageInfoUi) -> Unit = {},
     onWaterMrkChange: (WatermarkConfigChange) -> Unit = {},
     onIconPicked: (Uri) -> Unit = {},
+    onApplyBuiltInPng: (String, ByteArray) -> Unit = { _, _ -> },
+    stickers: List<me.rosuh.easywatermark.data.model.Sticker> = emptyList(),
+    onApplySticker: (me.rosuh.easywatermark.data.model.Sticker) -> Unit = {},
+    onDeleteSticker: (me.rosuh.easywatermark.data.model.Sticker) -> Unit = {},
     onAddMoreImages: () -> Unit = { },
     onShowSaveDialog: () -> Unit = { },
     onGoAboutScreen: () -> Unit = { },
+    onClearWatermark: () -> Unit = {},
     templates: List<Template> = emptyList(),
     onUseTemplate: (Template) -> Unit = {},
     onAddTemplate: (String) -> Unit = {},
@@ -112,6 +118,8 @@ fun AndroidEditorScreen(
     forcedOptionIndex: Int = 0,
     /** Store-capture hook. Bump to open the template sheet. */
     openTemplateSheetRequest: Int = 0,
+    onDeleteStickers: ((List<me.rosuh.easywatermark.data.model.Sticker>) -> Unit)? = null,
+    onReloadStickers: () -> Unit = {},
 ) {
     val colorModel = remember { FuncTitleModel(FuncType.Color) }
     val editorScope = rememberCoroutineScope()
@@ -243,16 +251,28 @@ fun AndroidEditorScreen(
                 )
             },
             iconOption = { optionModifier, mark, _ ->
+                val sheetReq = me.rosuh.easywatermark.ui.compose.LocalStickerSheetRequest.current
+                LaunchedEffect(sheetReq) {
+                    onReloadStickers()
+                }
                 IconOption(
                     waterMark = mark,
                     modifier = optionModifier,
+                    useLargeDialog = usesLargeScreenDialog(layoutClass),
+                    stickers = stickers,
+                    onApplySticker = onApplySticker,
+                    onDeleteSticker = onDeleteSticker,
                     onIconPicked = onIconPicked,
+                    onApplyBuiltInPng = onApplyBuiltInPng,
+                    onClear = onClearWatermark,
+                    onDeleteStickers = onDeleteStickers,
                 )
             },
             onBack = onBack,
             onAddMoreImages = onAddMoreImages,
             onShowSaveDialog = onShowSaveDialog,
             onGoAboutScreen = onGoAboutScreen,
+            onClearWatermark = onClearWatermark,
             onImageSelected = onImageSelected,
             // F2: typed WatermarkConfigChange from shared controls; no FuncType+Any / from().
             onConfigChange = { change ->
@@ -279,6 +299,9 @@ fun AndroidEditorScreen(
             forcedBottomTab = forcedBottomTab,
             forcedOptionIndex = forcedOptionIndex,
             openTemplateSheetRequest = openTemplateSheetRequest,
+            overlayBackHandler = { enabled, onDismissOverlay ->
+                androidx.activity.compose.BackHandler(enabled = enabled, onBack = onDismissOverlay)
+            },
         )
     }
     } // ContentEditorThemeHost
@@ -354,6 +377,10 @@ private fun WaterMarkCanvas(
 
         var offsetX by remember(selectedUri) { mutableStateOf(selectedImage.offsetX) }
         var offsetY by remember(selectedUri) { mutableStateOf(selectedImage.offsetY) }
+        LaunchedEffect(selectedUri, selectedImage.offsetX, selectedImage.offsetY) {
+            offsetX = selectedImage.offsetX
+            offsetY = selectedImage.offsetY
+        }
 
         var livePhoto by remember(selectedUri) { mutableStateOf<ImageBitmap?>(null) }
         var overlay by remember(selectedUri) { mutableStateOf<OverlayCell?>(null) }
@@ -393,9 +420,7 @@ private fun WaterMarkCanvas(
 
         fun decodeAndroidIcon(wm: WaterMark): Bitmap? {
             if (wm.markMode != WatermarkMode.Image) return null
-            if (wm.iconUri.value.isBlank()) {
-                error("Image-mode preview requires an icon")
-            }
+            if (wm.iconUri.value.isBlank()) return null
             return iconCache.decoded(wm.iconUri, WatermarkIconCache.ICON_MAX_EDGE_PX) {
                 PreviewSourceReuseProbe.recordIconDecode()
                 decodeSampledBitmapFromResourceSync(
@@ -502,6 +527,16 @@ private fun WaterMarkCanvas(
             if (base == null || base.isRecycled) return@paint
             if (selectedImage.uri.value != req.uri) return@paint
             val textMode = req.wm.markMode == WatermarkMode.Text
+            if (
+                (req.wm.markMode == WatermarkMode.Image && req.wm.iconUri.value.isBlank()) ||
+                (req.wm.markMode == WatermarkMode.Text && req.wm.text.isBlank())
+            ) {
+                val emptyOverlay = emptyOverlayCellFor(req.wm, base.width)
+                if (req.token != paintToken) return@paint
+                publishLiveLayers(req.uri, base.asImageBitmap(), emptyOverlay)
+                playFirstRevealIfNeeded()
+                return@paint
+            }
             val cell = try {
                 withContext(Dispatchers.Default) {
                     val icon = decodeAndroidIcon(req.wm)

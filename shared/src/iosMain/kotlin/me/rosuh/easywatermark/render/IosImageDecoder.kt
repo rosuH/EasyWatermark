@@ -165,6 +165,8 @@ internal object IosImageDecoder {
         }
     }
 
+    internal fun isHeif(bytes: ByteArray): Boolean = looksLikeHeif(bytes)
+
     /** ISO BMFF brands used by HEIC/HEIF stills (and common variants). */
     private fun looksLikeHeif(bytes: ByteArray): Boolean {
         if (bytes.size < 12) return false

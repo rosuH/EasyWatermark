@@ -54,4 +54,48 @@ class WatermarkIconCacheTest {
         }
         assertEquals(0, cache.decodeCountForTests())
     }
+
+    @Test
+    fun switchingBetweenRecentStickers_hitsLruWithoutRedecoding() {
+        val cache = WatermarkIconCache<String>()
+        val a = MediaRef("/tmp/a")
+        val b = MediaRef("/tmp/b")
+        val c = MediaRef("/tmp/c")
+
+        assertEquals("a", cache.decoded(a, 256) { "a" })
+        assertEquals("b", cache.decoded(b, 256) { "b" })
+        assertEquals("c", cache.decoded(c, 256) { "c" })
+        assertEquals(3, cache.decodeCountForTests())
+
+        assertEquals("a", cache.decoded(a, 256) { error("a should hit LRU") })
+        assertEquals("b", cache.decoded(b, 256) { error("b should hit LRU") })
+        assertEquals("c", cache.decoded(c, 256) { error("c should hit LRU") })
+        assertEquals(3, cache.decodeCountForTests())
+    }
+
+    @Test
+    fun exceedingMaxEntries_evictsLeastRecentlyUsed() {
+        val cache = WatermarkIconCache<String>(maxEntries = 3)
+        val a = MediaRef("/tmp/a")
+        val b = MediaRef("/tmp/b")
+        val c = MediaRef("/tmp/c")
+        val d = MediaRef("/tmp/d")
+
+        cache.decoded(a, 256) { "a1" }
+        cache.decoded(b, 256) { "b1" }
+        cache.decoded(c, 256) { "c1" }
+        // Touch `a` so `b` becomes least recently used.
+        assertEquals("a1", cache.decoded(a, 256) { error("a should still be cached") })
+
+        cache.decoded(d, 256) { "d1" }
+        assertEquals(4, cache.decodeCountForTests())
+
+        assertEquals("a1", cache.decoded(a, 256) { error("a was touched and must survive") })
+        assertEquals("c1", cache.decoded(c, 256) { error("c must survive") })
+        assertEquals("d1", cache.decoded(d, 256) { error("d must survive") })
+        assertEquals(4, cache.decodeCountForTests())
+
+        assertEquals("b2", cache.decoded(b, 256) { "b2" })
+        assertEquals(5, cache.decodeCountForTests())
+    }
 }

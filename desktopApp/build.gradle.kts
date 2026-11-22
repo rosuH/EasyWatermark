@@ -68,6 +68,7 @@ compose.desktop {
             prop("EwmForceMarkMode", "ewmForceMarkMode")?.let { "-Dewm.desktop.forceMarkMode=$it" },
             prop("EwmForceText", "ewmForceText")?.let { "-Dewm.desktop.forceText=$it" },
             prop("EwmOpenSheet", "ewmOpenSheet")?.let { "-Dewm.desktop.openSheet=$it" },
+            prop("EwmOpenStickerSheet", "ewmOpenStickerSheet")?.let { "-Dewm.desktop.openStickerSheet=$it" },
             prop("EwmPreviewProbe", "ewmPreviewProbe")?.let { "-Dewm.preview.probe=$it" },
             prop("EwmPreviewProbeLog", "ewmPreviewProbeLog")?.let { "-Dewm.preview.probeLog=$it" },
         ).forEach { jvmArgs += it }

@@ -532,28 +532,52 @@ open class WatermarkSessionViewModel(
             val index = current.selectedImageList.indexOfFirst { it.uri == info.uri }
             if (index < 0) return@update current
             val existing = current.selectedImageList[index]
+            val isCurrentFocus = current.curImageInfo?.uri == existing.uri
             if (existing.offsetX == info.offsetX && existing.offsetY == info.offsetY) {
                 // Same offsets → keep existing list identity; rebind cur if needed.
-                return@update if (
-                    current.curImageInfo?.uri == existing.uri &&
-                    current.curImageInfo !== existing
-                ) {
+                return@update if (isCurrentFocus && current.curImageInfo !== existing) {
                     current.copy(curImageInfo = existing)
                 } else {
                     current
                 }
             }
-            val committed = existing.copy(
-                offsetX = info.offsetX,
-                offsetY = info.offsetY,
-            )
-            val newList = current.selectedImageList.toMutableList().also { it[index] = committed }
-            val newCur =
-                if (current.curImageInfo?.uri == committed.uri) committed else current.curImageInfo
-            current.copy(
-                selectedImageList = newList,
-                curImageInfo = newCur,
-            )
+            val controlsSessionDefault = isCurrentFocus &&
+                (current.defaultClampAnchorUri == null || current.defaultClampAnchorUri == existing.uri)
+            if (controlsSessionDefault) {
+                val newList = current.selectedImageList.mapIndexed { idx, item ->
+                    when {
+                        idx == index -> item.copy(
+                            offsetX = info.offsetX,
+                            offsetY = info.offsetY,
+                            hasCustomOffset = false,
+                        )
+                        !item.hasCustomOffset -> item.copy(
+                            offsetX = info.offsetX,
+                            offsetY = info.offsetY,
+                        )
+                        else -> item
+                    }
+                }
+                current.copy(
+                    selectedImageList = newList,
+                    curImageInfo = newList[index],
+                    defaultClampOffsetX = info.offsetX,
+                    defaultClampOffsetY = info.offsetY,
+                    defaultClampAnchorUri = existing.uri,
+                )
+            } else {
+                val committed = existing.copy(
+                    offsetX = info.offsetX,
+                    offsetY = info.offsetY,
+                    hasCustomOffset = true,
+                )
+                val newList = current.selectedImageList.toMutableList().also { it[index] = committed }
+                val newCur = if (isCurrentFocus) committed else current.curImageInfo
+                current.copy(
+                    selectedImageList = newList,
+                    curImageInfo = newCur,
+                )
+            }
         }
     }
 }

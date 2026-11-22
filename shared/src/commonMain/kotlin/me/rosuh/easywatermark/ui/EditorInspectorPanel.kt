@@ -137,7 +137,13 @@ fun EditorInspectorPanel(
                     waterMark = waterMark,
                     onValueChange = onValueChange,
                     colorOption = colorOption,
-                    styleOptions = styleOptions,
+                    styleOptions = if (waterMark.markMode == WatermarkMode.Image) {
+                        styleOptions.filter {
+                            it.type != FuncType.TextTypeFace && it.type != FuncType.Color
+                        }
+                    } else {
+                        styleOptions
+                    },
                     currentFontName = currentFontName,
                     supportedStyles = supportedStyles,
                     onOpenFontPanel = onOpenFontPanel,
@@ -163,6 +169,9 @@ private fun ContentForm(
 ) {
     val textLabel = stringResource(Res.string.water_mark_mode_text)
     val iconLabel = stringResource(Res.string.water_mark_mode_image)
+    var stickerOpenRequest by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableIntStateOf(0)
+    }
 
     FormSectionLabel(stringResource(Res.string.inspector_section_mode))
     DesignChoiceChips(
@@ -174,6 +183,9 @@ private fun ContentForm(
         onSelected = { mode ->
             if (mode != waterMark.markMode) {
                 onValueChange(WatermarkConfigChange.MarkMode(mode))
+            }
+            if (mode == WatermarkMode.Image) {
+                stickerOpenRequest += 1
             }
         },
         equalWidth = true,
@@ -202,20 +214,24 @@ private fun ContentForm(
                 )
             }
             FuncType.Icon -> {
-                FormFieldLabel(iconLabel)
-                EditorOptionControl(
-                    spec = spec,
-                    waterMark = waterMark,
-                    templateIcon = templateIcon,
-                    optionActivationSignal = 0,
-                    onValueChange = onValueChange,
-                    onGoTemplateList = onGoTemplateList,
-                    colorOption = { _, _, _ -> },
-                    iconOption = iconOption,
-                    framed = false,
-                    formPath = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // Title + Remove action are owned by inline StickerPanelOnIcon (same row).
+                androidx.compose.runtime.CompositionLocalProvider(
+                    me.rosuh.easywatermark.ui.compose.LocalStickerSheetRequest provides stickerOpenRequest,
+                ) {
+                    EditorOptionControl(
+                        spec = spec,
+                        waterMark = waterMark,
+                        templateIcon = templateIcon,
+                        optionActivationSignal = 0,
+                        onValueChange = onValueChange,
+                        onGoTemplateList = onGoTemplateList,
+                        colorOption = { _, _, _ -> },
+                        iconOption = iconOption,
+                        framed = false,
+                        formPath = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             else -> Unit
         }

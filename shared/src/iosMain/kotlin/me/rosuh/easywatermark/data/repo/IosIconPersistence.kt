@@ -4,6 +4,8 @@ package me.rosuh.easywatermark.data.repo
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.Sticker
+import me.rosuh.easywatermark.data.model.StickerCatalog
 import me.rosuh.easywatermark.render.IosByteArrayInterop
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
@@ -90,6 +92,25 @@ internal object IosIconPersistence {
         val path = ownedPrefix() + NSUUID().UUIDString()
         val ok = IosByteArrayInterop.toNSData(bytes).writeToFile(path, atomically = true)
         check(ok) { "IosIconPersistence: failed to write ${bytes.size} icon bytes to '$path'" }
+        return path
+    }
+
+    /** Deterministic helper-owned path for built-in sticker [key]. */
+    internal fun builtInIconPath(key: String): String {
+        val safeKey = key.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+        require(safeKey.isNotEmpty()) { "IosIconPersistence: built-in sticker key is empty" }
+        return ownedPrefix() + "builtin_$safeKey.png"
+    }
+
+    /**
+     * Write built-in sticker [bytes] to a deterministic helper-owned file
+     * `<docs>/watermark_icons/icon_builtin_[key].png`, overwriting atomically in place.
+     */
+    fun writeBuiltInIconBytes(key: String, bytes: ByteArray): String {
+        require(bytes.isNotEmpty()) { "IosIconPersistence: refusing to persist empty built-in icon bytes" }
+        val path = builtInIconPath(key)
+        val ok = IosByteArrayInterop.toNSData(bytes).writeToFile(path, atomically = true)
+        check(ok) { "IosIconPersistence: failed to write ${bytes.size} built-in icon bytes to '$path'" }
         return path
     }
 
@@ -180,5 +201,36 @@ internal object IosIconPersistence {
     fun deleteIfOwned(path: String) {
         val owned = resolveOwnedPath(path) ?: return
         NSFileManager.defaultManager.removeItemAtPath(owned, error = null)
+    }
+
+    fun readCatalogText(): String {
+        val path = iconDirPath() + "/" + StickerCatalog.FILE_NAME
+        val data = NSData.dataWithContentsOfFile(path) ?: return ""
+        return IosByteArrayInterop.fromNSData(data).decodeToString()
+    }
+
+    fun writeCatalogText(text: String) {
+        val path = iconDirPath() + "/" + StickerCatalog.FILE_NAME
+        val ok = IosByteArrayInterop.toNSData(text.encodeToByteArray()).writeToFile(path, atomically = true)
+        check(ok) { "IosIconPersistence: failed to write sticker catalog" }
+    }
+
+    fun loadStickers(): List<Sticker> {
+        val raw = StickerCatalog.decode(readCatalogText())
+        if (raw.isEmpty()) return emptyList()
+        var changed = false
+        val relocated = raw.map { sticker ->
+            val resolved = resolveOwnedPath(sticker.icon.value)
+            if (resolved != null && resolved != sticker.icon.value) {
+                changed = true
+                sticker.copy(icon = MediaRef(resolved))
+            } else {
+                sticker
+            }
+        }
+        if (changed) {
+            runCatching { writeCatalogText(StickerCatalog.encode(relocated)) }
+        }
+        return relocated
     }
 }

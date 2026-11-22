@@ -40,6 +40,33 @@ data class OverlayCell(
     val logicalHeight: Int = cell.height,
     val drawWidth: Int = logicalWidth,
     val drawHeight: Int = logicalHeight,
+    val contentWidth: Float = drawWidth.toFloat(),
+    val contentHeight: Float = drawHeight.toFloat(),
+)
+
+private val EmptyOverlayPixel: ImageBitmap by lazy { ImageBitmap(1, 1) }
+
+/**
+ * Empty transparent overlay cell representing intentional "no active sticker" idle state while
+ * keeping live photo layers active and razor-sharp (zero fallback to low-res WaitThumb).
+ */
+fun emptyOverlayCellFor(config: WaterMark, builtForWidth: Int): OverlayCell = OverlayCell(
+    cell = EmptyOverlayPixel,
+    tileMode = when (config.tileMode) {
+        WatermarkTileMode.CLAMP -> WatermarkTileMode.CLAMP
+        else -> WatermarkTileMode.REPEAT
+    },
+    offsetX = 0.5f,
+    offsetY = 0.5f,
+    alpha = 0f,
+    builtForWidth = builtForWidth.coerceAtLeast(1),
+    renderedConfig = config,
+    logicalWidth = 1,
+    logicalHeight = 1,
+    drawWidth = 1,
+    drawHeight = 1,
+    contentWidth = 0f,
+    contentHeight = 0f,
 )
 
 fun OverlayCell.withOffset(offsetX: Float, offsetY: Float): OverlayCell =
@@ -80,6 +107,8 @@ fun overlayCellFrom(
     logicalHeight = raster.logicalHeight,
     drawWidth = raster.drawWidth,
     drawHeight = raster.drawHeight,
+    contentWidth = raster.contentWidth,
+    contentHeight = raster.contentHeight,
 )
 
 /**
@@ -112,6 +141,7 @@ internal fun DrawScope.drawLiveOverlayLayer(
     photoHeight: Int,
     overlay: OverlayCell,
 ) {
+    if (overlay.alpha <= 0f) return
     val dest = fitDestRect(
         srcW = photoWidth.toFloat(),
         srcH = photoHeight.toFloat(),

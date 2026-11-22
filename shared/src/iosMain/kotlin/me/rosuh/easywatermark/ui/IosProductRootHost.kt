@@ -5,7 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
@@ -28,10 +35,13 @@ import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.session.IosSourceStager
 import me.rosuh.easywatermark.ProductVersion
@@ -76,6 +86,10 @@ import me.rosuh.easywatermark.session.IosPickGenerationGate
 import me.rosuh.easywatermark.session.defaultIosAppServices
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.action_pick
+import me.rosuh.easywatermark.shared.generated.resources.action_save
+import me.rosuh.easywatermark.shared.generated.resources.template_delete
+import me.rosuh.easywatermark.shared.generated.resources.tips_list_empty
+import me.rosuh.easywatermark.shared.generated.resources.water_mark_mode_image
 import me.rosuh.easywatermark.shared.generated.resources.dev_comment
 import me.rosuh.easywatermark.shared.generated.resources.dialog_export_to_gallery
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_export_cd_done
@@ -143,7 +157,7 @@ internal enum class LibraryReadBannerKind {
     Restricted,
 }
 
-@OptIn(ExperimentalObjCName::class)
+@OptIn(ExperimentalObjCName::class, ExperimentalMaterial3Api::class)
 @ObjCName(name = "IosProductRootHost", exact = true)
 class IosProductRootHost(
     private val onPickPhoto: () -> Unit,
@@ -294,7 +308,6 @@ class IosProductRootHost(
      * Preview / export re-read staged `ewm_src_*` paths. Field retained only for dispose clear.
      */
     private var sourceBytes by mutableStateOf<ByteArray?>(null)
-    private var iconBytes by mutableStateOf<ByteArray?>(null)
     /** Live photo layer (Source or Library). Never assigned without a matching [overlayCell]. */
     private var previewBitmap by mutableStateOf<ImageBitmap?>(null)
     /** Overlay cell tiled at display time (ADR-0033). */
@@ -304,6 +317,13 @@ class IosProductRootHost(
     private var outputPath by mutableStateOf<String?>(null)
     private var statusLine by mutableStateOf("")
     private var isBusy by mutableStateOf(false)
+    private var showStickerSheet by mutableStateOf(false)
+    private var stickers by mutableStateOf(IosIconPersistence.loadStickers())
+    private val stickerCatalogMutex = Mutex()
+    private var stickerActionGen: Int = 0
+    private var stickerReloadJob: Job? = null
+    private var stickerPrewarmJob: Job? = null
+    private var stickerSwitchJob: Job? = null
     /**
      * One lifecycle-owned cache/in-flight state machine for source/watermarked/export thumbs.
      * Byte caps follow [PreviewWorkingSetBudget] for the current preview long-edge.
@@ -483,6 +503,7 @@ class IosProductRootHost(
         val libraryDerivativePath: String? = null,
         val libraryDerivativeSize: Pair<Int, Int>? = null,
         val overlayPresent: Boolean = false,
+        val overlayAlpha: Float? = null,
     )
 
     internal fun installPhotoKitFastPathForTests(
@@ -549,6 +570,7 @@ class IosProductRootHost(
             libraryDerivativePath = libraryDerivativePath,
             libraryDerivativeSize = libraryDerivativeBitmap?.let { it.width to it.height },
             overlayPresent = overlayCell != null && previewBitmap != null,
+            overlayAlpha = overlayCell?.alpha,
         )
     }
 
@@ -758,7 +780,6 @@ class IosProductRootHost(
     fun trimCaches() {
         if (disposed) return
         sourceBytes = null
-        // Keep iconBytes: single small buffer needed for Image-mode editor chrome; Session still owns icon path.
         clearLiveLayers()
         clearLibraryDerivative()
         previewGen += 1
@@ -783,6 +804,12 @@ class IosProductRootHost(
         try {
             if (disposed) return
             sourceBytes = null
+            stickerReloadJob?.cancel()
+            stickerReloadJob = null
+            stickerPrewarmJob?.cancel()
+            stickerPrewarmJob = null
+            stickerSwitchJob?.cancel()
+            stickerSwitchJob = null
             clearLiveLayers()
             clearLibraryDerivative()
             photoKitResolveFailedIds.clear()
@@ -832,10 +859,15 @@ class IosProductRootHost(
             // before writing closed=true.
             previewImages.closeFromOwner()
             stopPhotoKitNeighborWindow()
+            stickerReloadJob?.cancel()
+            stickerReloadJob = null
+            stickerPrewarmJob?.cancel()
+            stickerPrewarmJob = null
+            stickerSwitchJob?.cancel()
+            stickerSwitchJob = null
             hostScope.coroutineContext.cancelChildren()
             // Clear presentation + caches (Main-thread host; lock serializes vs ownership adopt).
             sourceBytes = null
-            iconBytes = null
             clearLiveLayers()
             clearLibraryDerivative()
             photoKitResolveFailedIds.clear()
@@ -1105,8 +1137,8 @@ class IosProductRootHost(
                 }
 
                 ProductShellNav.Route.Editor -> {
-                    val iconBitmap = iconBytes?.let { bytes ->
-                        remember(bytes) { IosImageDecoder.decode(bytes) }
+                    LaunchedEffect(Unit) {
+                        prewarmStickers()
                     }
                     var colorDraft by remember(waterMark.textColor) {
                         mutableStateOf(formatArgbHexColor(waterMark.textColor))
@@ -1254,7 +1286,15 @@ class IosProductRootHost(
                                 renderGestureCell = null,
                                 renderGestureCellRaster = { config ->
                                     val o = composeIosOverlayCell(config, livePhoto!!.width, 0f, 0f)
-                                    RasteredWatermarkCell(o.cell, o.logicalWidth, o.logicalHeight, o.drawWidth, o.drawHeight)
+                                    RasteredWatermarkCell(
+                                        bitmap = o.cell,
+                                        logicalWidth = o.logicalWidth,
+                                        logicalHeight = o.logicalHeight,
+                                        drawWidth = o.drawWidth,
+                                        drawHeight = o.drawHeight,
+                                        contentWidth = o.contentWidth,
+                                        contentHeight = o.contentHeight,
+                                    )
                                 },
                                 chrome = chrome,
                                 photo = livePhoto,
@@ -1331,13 +1371,25 @@ class IosProductRootHost(
                                 onCustomTextChange = { colorDraft = it },
                             )
                         },
-                        iconOption = { optionModifier, _, _ ->
-                            IconWatermarkOption(
-                                hasIcon = iconBitmap != null,
-                                pickLabel = stringResource(Res.string.action_pick),
+                        iconOption = { optionModifier, mark, _ ->
+                            val sheetReq = me.rosuh.easywatermark.ui.compose.LocalStickerSheetRequest.current
+                            LaunchedEffect(sheetReq) {
+                                reloadStickers()
+                            }
+                            me.rosuh.easywatermark.ui.compose.StickerPanelOnIcon(
+                                waterMark = mark,
+                                userStickers = stickers,
                                 modifier = optionModifier,
                                 enabled = !isBusy,
-                                onPick = onPickIcon,
+                                useLargeDialog = usesLargeScreenDialog(layoutClass),
+                                onAdd = onPickIcon,
+                                onApplyBuiltIn = { builtIn, bitmap ->
+                                    applyBuiltInSticker(builtIn, bitmap)
+                                },
+                                onApplyUser = { applySticker(it) },
+                                onDeleteUser = { deleteSticker(it) },
+                                onDeleteUsers = { deleteStickers(it) },
+                                onClear = { clearLiveSticker() },
                             )
                         },
                         onBack = {
@@ -1361,6 +1413,7 @@ class IosProductRootHost(
                             showSaveSheet = true
                         },
                         onGoAboutScreen = { openAboutFromEditor() },
+                        onClearWatermark = { clearLiveSticker() },
                         onImageSelected = { info ->
                             scope.launch {
                                 val path = info.uri.value
@@ -1369,6 +1422,9 @@ class IosProductRootHost(
                                 try {
                                     clearLiveLayers()
                                     services.session.dispatchAndAwait(AppIntent.SelectCurrent(info.uri))
+                                    val latestInfo = services.session.launchScreenUiStateFlow.value
+                                        .selectedImageList
+                                        .firstOrNull { it.uri == info.uri }
                                     switchBench.mark("select")
                                     val sourceHit = previewImages.peekCached(
                                         sourcePreviewKey(path, previewBucket),
@@ -1381,8 +1437,8 @@ class IosProductRootHost(
                                     renderPreviewForCurrentSelection(
                                         gen = gen,
                                         forcePath = path,
-                                        forceOffsetX = info.offsetX,
-                                        forceOffsetY = info.offsetY,
+                                        forceOffsetX = latestInfo?.offsetX ?: info.offsetX,
+                                        forceOffsetY = latestInfo?.offsetY ?: info.offsetY,
                                     )
                                     if (gen == previewGen) {
                                         prefetchNeighborWatermarkedPreviews(path, gen)
@@ -1744,8 +1800,29 @@ class IosProductRootHost(
                         exportJob.completedCount,
                         exportJob.isSaving,
                         exportJob.isFinished,
+                        finished,
+                        sheetPhotosResult,
+                        sheetExportCancelRequested,
                     ) {
-                        info.jobState
+                        val rawJob = info.jobState
+                        if (
+                            rawJob is JobState.Success &&
+                            finished &&
+                            (sheetPhotosResult != null || sheetExportCancelRequested)
+                        ) {
+                            // CPU render completed before Photos persistence; only show ✓ for items
+                            // that actually persisted to Photos (keep info.jobState intact for Retry).
+                            val outPath = (rawJob.result.data as? MediaRef)?.value
+                                ?: (info.result?.data as? MediaRef)?.value
+                            val persisted = sheetPhotosResult?.persistedPaths.orEmpty()
+                            if (outPath == null || outPath !in persisted) {
+                                JobState.Ready
+                            } else {
+                                rawJob
+                            }
+                        } else {
+                            rawJob
+                        }
                     }
                     me.rosuh.easywatermark.ui.save.ExportProgressOverlay(
                         jobState = job,
@@ -2159,6 +2236,238 @@ class IosProductRootHost(
         }
     }
 
+    private fun prewarmStickers(list: List<me.rosuh.easywatermark.data.model.Sticker> = stickers) {
+        if (disposed || list.isEmpty()) return
+        stickerPrewarmJob?.cancel()
+        stickerPrewarmJob = hostScope.launch(Dispatchers.Default) {
+            for (sticker in list.take(8)) {
+                if (disposed) break
+                runCatching {
+                    IosWatermarkIconCache.decoded(
+                        sticker.icon,
+                        IosPreviewRaster.ICON_MAX_EDGE_PX,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun reloadStickers() {
+        stickerReloadJob?.cancel()
+        stickerReloadJob = hostScope.launch {
+            val loaded = stickerCatalogMutex.withLock {
+                withContext(Dispatchers.Default) {
+                    if (disposed) emptyList() else IosIconPersistence.loadStickers()
+                }
+            }
+            if (disposed) return@launch
+            stickers = loaded
+            if (isInEditor()) {
+                prewarmStickers(loaded)
+            }
+        }
+    }
+
+    internal fun clearLiveStickerForTests() = clearLiveSticker()
+
+    private fun clearLiveSticker() {
+        val gen = ++stickerActionGen
+        stickerSwitchJob?.cancel()
+        stickerSwitchJob = hostScope.launch {
+            val latest = stickerCatalogMutex.withLock {
+                if (disposed || gen != stickerActionGen) return@withLock null
+                services.waterMarkRepo.updateIcon(MediaRef.Empty)
+                services.waterMarkRepo.currentConfig()
+            } ?: return@launch
+            if (disposed || gen != stickerActionGen) return@launch
+            previewGen += 1
+            renderPreviewForCurrentSelection(gen = previewGen, forceWaterMark = latest)
+        }
+    }
+
+    private suspend fun sanitizeCurrentSingleOffsetIfNeeded(markNow: WaterMark? = null) {
+        val current = services.session.launchScreenUiStateFlow.value.curImageInfo ?: return
+        val resolvedMark = markNow ?: services.waterMarkRepo.waterMark.first()
+        if (resolvedMark.tileMode != WatermarkTileMode.CLAMP) return
+        val coerced = me.rosuh.easywatermark.data.model.StickerPlacement
+            .sanitizeLiveSingleOffset(current.offsetX, current.offsetY) ?: return
+        services.session.applyOffset(current.copy(offsetX = coerced.first, offsetY = coerced.second))
+    }
+
+    private fun appendSticker(icon: MediaRef) {
+        if (icon.value.isBlank()) return
+        hostScope.launch {
+            val loaded = stickerCatalogMutex.withLock {
+                withContext(Dispatchers.Default) {
+                    if (disposed) return@withContext emptyList()
+                    val sticker = me.rosuh.easywatermark.data.model.Sticker(
+                        id = platform.Foundation.NSUUID().UUIDString(),
+                        icon = icon,
+                    )
+                    val next = me.rosuh.easywatermark.data.model.StickerCatalog.add(
+                        IosIconPersistence.readCatalogText(),
+                        sticker,
+                    )
+                    IosIconPersistence.writeCatalogText(next)
+                    IosIconPersistence.loadStickers()
+                }
+            }
+            if (disposed) return@launch
+            stickerReloadJob?.cancel()
+            stickers = loaded
+            if (isInEditor()) {
+                prewarmStickers(loaded)
+            }
+        }
+    }
+
+    private fun applyBuiltInSticker(
+        builtIn: me.rosuh.easywatermark.ui.compose.BuiltInSticker,
+        bitmap: ImageBitmap,
+    ) {
+        val gen = ++stickerActionGen
+        stickerSwitchJob?.cancel()
+        stickerSwitchJob = hostScope.launch {
+            val path = withContext(Dispatchers.Default) {
+                val expectedRef = MediaRef(IosIconPersistence.builtInIconPath(builtIn.key))
+                if (IosIconPersistence.canReadIcon(expectedRef)) {
+                    expectedRef.value
+                } else {
+                    val bytes = me.rosuh.easywatermark.render.IosWatermarkRenderer.encodePng(bitmap)
+                    IosIconPersistence.writeBuiltInIconBytes(builtIn.key, bytes)
+                }
+            }
+            if (disposed || gen != stickerActionGen) return@launch
+            val committed = services.session.applyConfigIf(
+                stillValid = { !disposed && gen == stickerActionGen },
+                change = WatermarkConfigChange.Icon(MediaRef(path)),
+            ) ?: return@launch
+            sanitizeCurrentSingleOffsetIfNeeded(committed)
+            if (disposed || gen != stickerActionGen) return@launch
+            previewGen += 1
+            renderPreviewForCurrentSelection(gen = previewGen, forceWaterMark = committed)
+        }
+    }
+
+    private fun applySticker(sticker: me.rosuh.easywatermark.data.model.Sticker) {
+        val gen = ++stickerActionGen
+        stickerSwitchJob?.cancel()
+        stickerSwitchJob = hostScope.launch {
+            val committed = stickerCatalogMutex.withLock {
+                if (disposed || gen != stickerActionGen) return@withLock null
+                val stillInCatalog = withContext(Dispatchers.Default) {
+                    if (disposed) return@withContext false
+                    val existing = IosIconPersistence.readCatalogText()
+                    val decoded = me.rosuh.easywatermark.data.model.StickerCatalog.decode(existing)
+                    if (decoded.none { it.id == sticker.id }) {
+                        false
+                    } else {
+                        val next = me.rosuh.easywatermark.data.model.StickerCatalog.markUsed(
+                            existing,
+                            sticker.id,
+                        )
+                        if (next != existing) {
+                            IosIconPersistence.writeCatalogText(next)
+                        }
+                        true
+                    }
+                }
+                if (!stillInCatalog || disposed || gen != stickerActionGen) return@withLock null
+                services.session.applyConfigIf(
+                    stillValid = { !disposed && gen == stickerActionGen },
+                    change = WatermarkConfigChange.Icon(sticker.icon),
+                )
+            } ?: return@launch
+            sanitizeCurrentSingleOffsetIfNeeded(committed)
+            if (disposed || gen != stickerActionGen) return@launch
+            previewGen += 1
+            renderPreviewForCurrentSelection(gen = previewGen, forceWaterMark = committed)
+        }
+    }
+
+    private fun deleteSticker(sticker: me.rosuh.easywatermark.data.model.Sticker) =
+        deleteStickers(listOf(sticker))
+
+    private fun deleteStickers(
+        targets: List<me.rosuh.easywatermark.data.model.Sticker>,
+    ) {
+        if (targets.isEmpty()) return
+        stickerActionGen += 1
+        hostScope.launch {
+            val ids = targets.map { it.id }.toSet()
+            var clearedWm: WaterMark? = null
+            val loaded = stickerCatalogMutex.withLock {
+                val (loadedList, deletedOrphanPaths) = withContext(Dispatchers.Default) {
+                    if (disposed) {
+                        return@withContext emptyList<me.rosuh.easywatermark.data.model.Sticker>() to emptySet<String>()
+                    }
+                    val next = me.rosuh.easywatermark.data.model.StickerCatalog.removeAll(
+                        IosIconPersistence.readCatalogText(),
+                        ids,
+                    )
+                    IosIconPersistence.writeCatalogText(next)
+                    val remainingPaths = me.rosuh.easywatermark.data.model.StickerCatalog.decode(next)
+                        .mapTo(mutableSetOf()) {
+                            IosIconPersistence.resolveOwnedPath(it.icon.value) ?: it.icon.value
+                        }
+                    val orphanedPaths = linkedSetOf<String>()
+                    targets.asSequence()
+                        .distinctBy { IosIconPersistence.resolveOwnedPath(it.icon.value) ?: it.icon.value }
+                        .filter {
+                            val resolved = IosIconPersistence.resolveOwnedPath(it.icon.value) ?: it.icon.value
+                            resolved !in remainingPaths
+                        }
+                        .forEach { target ->
+                            val resolved = IosIconPersistence.resolveOwnedPath(target.icon.value) ?: target.icon.value
+                            orphanedPaths.add(resolved)
+                            IosIconPersistence.deleteIfOwned(target.icon.value)
+                        }
+                    IosIconPersistence.loadStickers() to orphanedPaths
+                }
+                if (disposed) return@withLock emptyList()
+                val currentLive = services.waterMarkRepo.currentConfig().iconUri.value
+                val normalizedLive = IosIconPersistence.resolveOwnedPath(currentLive) ?: currentLive
+                if (normalizedLive.isNotEmpty() && normalizedLive in deletedOrphanPaths) {
+                    services.waterMarkRepo.updateIcon(MediaRef.Empty)
+                    clearedWm = services.waterMarkRepo.currentConfig()
+                }
+                loadedList
+            }
+            if (disposed) return@launch
+            stickerReloadJob?.cancel()
+            stickers = loaded
+            previewGen += 1
+            renderPreviewForCurrentSelection(gen = previewGen, forceWaterMark = clearedWm)
+        }
+    }
+
+    private fun normalizeCustomIconBytes(bytes: ByteArray): ByteArray {
+        if (bytes.isEmpty()) return bytes
+        val isHeif = IosImageDecoder.isHeif(bytes)
+        val meta = runCatching {
+            me.rosuh.easywatermark.render.IosImageIODecoder.metadataFromBytes(bytes)
+        }.getOrNull()
+        val longest = meta?.let { maxOf(it.width, it.height) } ?: 0
+        if (!isHeif && longest <= CUSTOM_STICKER_MAX_EDGE_PX) {
+            return bytes
+        }
+        val targetEdge = if (longest in 1 until CUSTOM_STICKER_MAX_EDGE_PX) {
+            longest
+        } else {
+            CUSTOM_STICKER_MAX_EDGE_PX
+        }
+        return runCatching {
+            val bitmap = if (isHeif) {
+                me.rosuh.easywatermark.render.IosImageIODecoder
+                    .decodeThumbnailBitmapFromBytes(bytes, maxEdgePx = targetEdge)
+                    .asComposeImageBitmap()
+            } else {
+                IosImageDecoder.decodeThumbnail(bytes, maxEdgePx = targetEdge)
+            }
+            me.rosuh.easywatermark.render.IosWatermarkRenderer.encodePng(bitmap)
+        }.getOrElse { bytes }
+    }
+
     /**
      * @param pickGeneration icon generation from [me.rosuh.easywatermark.session.IosPickGenerationGate.nextIconGeneration]
      * (F15/F16 — Kotlin publication boundary for icon config via [WatermarkSessionViewModel.applyConfigIf]).
@@ -2170,8 +2479,9 @@ class IosProductRootHost(
             if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
                 throw me.rosuh.easywatermark.session.StalePickGenerationException(pickGeneration)
             }
-            val previousRef = services.waterMarkRepo.waterMark.first().iconUri
-            val path = IosIconPersistence.writeIconBytes(bytes)
+            val path = withContext(Dispatchers.Default) {
+                IosIconPersistence.writeIconBytes(normalizeCustomIconBytes(bytes))
+            }
             // Re-check after IO before config publication (F15/F16).
             me.rosuh.easywatermark.session.IosPickPublishProbe.awaitBeforeIconConfig(pickGeneration)
             if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
@@ -2192,8 +2502,8 @@ class IosProductRootHost(
             if (!me.rosuh.easywatermark.session.IosPickGenerationGate.isIconCurrent(pickGeneration)) {
                 return
             }
-            IosIconPersistence.deleteIfOwned(previousRef.value)
-            iconBytes = bytes
+            stickerActionGen += 1
+            appendSticker(MediaRef(path))
             previewGen += 1
             renderPreviewForCurrentSelection(gen = previewGen)
         } finally {
@@ -2267,6 +2577,23 @@ class IosProductRootHost(
             hostBench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
             return
         }
+        if (
+            (wm.markMode == WatermarkMode.Image && wm.iconUri.value.isBlank()) ||
+            (wm.markMode == WatermarkMode.Text && wm.text.isBlank())
+        ) {
+            val emptyOverlay = emptyOverlayCellFor(wm, source.width)
+            publishLiveLayers(sourcePath, source, emptyOverlay)
+            hostBench.finish(
+                mapOf(
+                    "noSticker" to true,
+                    "isDraft" to isDraft,
+                    "path" to sourcePath.substringAfterLast('/'),
+                    "w" to source.width,
+                    "h" to source.height,
+                ),
+            )
+            return
+        }
         val effectiveWm = resolveRenderableWaterMark(wm)
         if (disposed || gen != previewGen) {
             hostBench.finish(mapOf("staleGen" to true, "isDraft" to isDraft))
@@ -2323,8 +2650,8 @@ class IosProductRootHost(
     }
 
     private fun publishLiveLayers(path: String, photo: ImageBitmap, overlay: OverlayCell) {
-        val isText = services.session.launchScreenUiStateFlow.value.waterMark.markMode ==
-            WatermarkMode.Text
+        val isText = (overlay.renderedConfig ?: services.session.launchScreenUiStateFlow.value.waterMark)
+            .markMode == WatermarkMode.Text
         if (
             !OverlayPreviewPolicy.canPublishLivePhoto(
                 selectedPath = path,
@@ -2373,9 +2700,9 @@ class IosProductRootHost(
 
     /**
      * Relocate persisted iOS icon paths across sandbox container rotations while in Image mode, or
-     * reset cleanly to Text mode when the persisted icon is blank/missing/unreadable so preview
-     * never traps on a 128px WaitThumb. Uses [WatermarkSessionViewModel.applyConfigIf] under
-     * sessionMutex so repo and Session stay synchronized without flipping concurrent Text edits.
+     * reset cleanly to Text mode when the persisted icon is missing/unreadable so preview never
+     * traps on a 128px WaitThumb. Uses [WatermarkSessionViewModel.applyConfigIf] under sessionMutex
+     * so repo and Session stay synchronized without flipping concurrent Text edits.
      */
     private suspend fun resolveRenderableWaterMark(wm: WaterMark): WaterMark {
         if (wm.markMode != WatermarkMode.Image) return wm
@@ -2600,24 +2927,32 @@ class IosProductRootHost(
         } ?: return false
         if (shouldDropLibraryDerivative(path)) return false
         val launch = services.session.launchScreenUiStateFlow.value
-        val wm = resolveRenderableWaterMark(launch.waterMark)
-        if (shouldDropLibraryDerivative(path)) return false
+        val wm0 = launch.waterMark
         val info = launch.selectedImageList.firstOrNull { it.uri.value == path }
             ?: launch.curImageInfo?.takeIf { it.uri.value == path }
         val ox = info?.offsetX ?: 0.5f
         val oy = info?.offsetY ?: 0.5f
-        val (renderWm, overlay) = composeOverlayWithIconFallback(
-            wm = wm,
-            canRecover = { !shouldDropLibraryDerivative(path) },
-            compose = { activeWm ->
-                composeIosOverlayCell(
-                    wm = activeWm,
-                    imageWidth = bitmap.width,
-                    ox = ox,
-                    oy = oy,
-                )
-            },
-        )
+        val (renderWm, overlay) = if (
+            (wm0.markMode == WatermarkMode.Image && wm0.iconUri.value.isBlank()) ||
+            (wm0.markMode == WatermarkMode.Text && wm0.text.isBlank())
+        ) {
+            wm0 to emptyOverlayCellFor(wm0, bitmap.width)
+        } else {
+            val wm = resolveRenderableWaterMark(wm0)
+            if (shouldDropLibraryDerivative(path)) return false
+            composeOverlayWithIconFallback(
+                wm = wm,
+                canRecover = { !shouldDropLibraryDerivative(path) },
+                compose = { activeWm ->
+                    composeIosOverlayCell(
+                        wm = activeWm,
+                        imageWidth = bitmap.width,
+                        ox = ox,
+                        oy = oy,
+                    )
+                },
+            )
+        }
         val isText = renderWm.markMode == WatermarkMode.Text
         if (
             !OverlayPreviewPolicy.canPublishLivePhoto(
@@ -2793,6 +3128,8 @@ private fun iosPreviewMaxLongEdgePx(): Int =
     } else {
         PreviewResolutionPolicy.BUCKET_3840
     }
+
+private const val CUSTOM_STICKER_MAX_EDGE_PX: Int = 1024
 
 private fun iosPhysicalMemoryBytes(): Long =
     NSProcessInfo.processInfo.physicalMemory.toLong()

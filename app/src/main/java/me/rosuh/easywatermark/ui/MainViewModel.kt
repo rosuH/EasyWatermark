@@ -13,11 +13,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.BuildConfig
 import me.rosuh.easywatermark.MyApp
@@ -28,6 +32,9 @@ import me.rosuh.easywatermark.shared.generated.resources.tip_not_mail_found
 import me.rosuh.easywatermark.data.model.ImageFormat
 import me.rosuh.easywatermark.data.model.ImageInfo
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.Sticker
+import me.rosuh.easywatermark.data.model.StickerCatalog
+import me.rosuh.easywatermark.data.model.StickerPlacement
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.UserPreferences
@@ -41,6 +48,7 @@ import me.rosuh.easywatermark.data.repo.WaterMarkRepository
 import me.rosuh.easywatermark.domain.TemplateEditor
 import me.rosuh.easywatermark.platform.AndroidIconPersistence
 import me.rosuh.easywatermark.platform.AndroidIconSelectionCoordinator
+import me.rosuh.easywatermark.platform.AndroidStickerCatalogStore
 import me.rosuh.easywatermark.session.AndroidExportPipelinePort
 import me.rosuh.easywatermark.session.AndroidMediaLibraryPort
 import me.rosuh.easywatermark.session.AppIntent
@@ -102,6 +110,12 @@ class MainViewModel (
         emptyList()
     )
 
+    private val _stickers = MutableStateFlow<List<Sticker>>(emptyList())
+    val stickers: StateFlow<List<Sticker>> = _stickers.asStateFlow()
+    private val stickerCatalogMutex = Mutex()
+    private val stickerActionGen = java.util.concurrent.atomic.AtomicInteger(0)
+    private var stickerReloadJob: Job? = null
+
     private val applicationContext: Context by inject(Context::class.java)
 
     private val iconPersistence by lazy { AndroidIconPersistence(applicationContext) }
@@ -125,6 +139,7 @@ class MainViewModel (
         )
         // Media library port for gallery listing / picker enrichment (default app ContentResolver).
         mediaLibrary = AndroidMediaLibraryPort(applicationContext.contentResolver)
+        reloadStickers()
     }
 
     fun addTemplate(content: String) {
@@ -223,9 +238,137 @@ class MainViewModel (
 
     /** Copy a transient Photo Picker Uri, then atomically advance the persisted icon reference. */
     fun importWatermarkIcon(source: Uri) {
+        stickerActionGen.incrementAndGet()
         iconImportJob?.cancel()
         iconImportJob = viewModelScope.launch {
-            iconSelectionCoordinator.import(source)
+            val ref = iconSelectionCoordinator.import(source).getOrNull() ?: return@launch
+            appendSticker(ref)
+        }
+    }
+
+    fun applyBuiltInPng(key: String, bytes: ByteArray) {
+        val gen = stickerActionGen.incrementAndGet()
+        viewModelScope.launch {
+            val ref = withContext(Dispatchers.IO) {
+                iconPersistence.writeOwnedPng(bytes, fixedId = "builtin-$key")
+            }
+            if (gen != stickerActionGen.get()) return@launch
+            applyConfigIf(
+                stillValid = { gen == stickerActionGen.get() },
+                change = WatermarkConfigChange.Icon(ref),
+            ) ?: return@launch
+            if (gen != stickerActionGen.get()) return@launch
+            sanitizeCurrentSingleOffsetIfNeeded()
+        }
+    }
+
+    private suspend fun sanitizeCurrentSingleOffsetIfNeeded() {
+        val current = launchScreenUiStateFlow.value.curImageInfo ?: return
+        if (waterMarkRepo.waterMark.first().tileMode != WatermarkTileMode.CLAMP) return
+        val coerced = StickerPlacement.sanitizeLiveSingleOffset(current.offsetX, current.offsetY) ?: return
+        updateOffset(current.copy(offsetX = coerced.first, offsetY = coerced.second))
+    }
+
+    private suspend fun appendSticker(icon: MediaRef) {
+        val sticker = Sticker(
+            id = java.util.UUID.randomUUID().toString(),
+            icon = icon,
+        )
+        val loaded = stickerCatalogMutex.withLock {
+            withContext(Dispatchers.IO) {
+                val next = StickerCatalog.add(
+                    AndroidStickerCatalogStore.readText(applicationContext),
+                    sticker,
+                )
+                AndroidStickerCatalogStore.writeText(applicationContext, next)
+                StickerCatalog.decode(next)
+            }
+        }
+        stickerReloadJob?.cancel()
+        _stickers.value = loaded
+    }
+
+    fun reloadStickers() {
+        stickerReloadJob?.cancel()
+        stickerReloadJob = viewModelScope.launch {
+            val loaded = stickerCatalogMutex.withLock {
+                withContext(Dispatchers.IO) {
+                    StickerCatalog.decode(AndroidStickerCatalogStore.readText(applicationContext))
+                }
+            }
+            _stickers.value = loaded
+        }
+    }
+
+    fun clearLiveIcon() {
+        val gen = stickerActionGen.incrementAndGet()
+        viewModelScope.launch {
+            stickerCatalogMutex.withLock {
+                if (gen != stickerActionGen.get()) return@withLock
+                waterMarkRepo.updateIcon(MediaRef.Empty)
+            }
+        }
+    }
+
+    fun applySticker(sticker: Sticker) {
+        val gen = stickerActionGen.incrementAndGet()
+        viewModelScope.launch {
+            val applied = stickerCatalogMutex.withLock {
+                if (gen != stickerActionGen.get()) return@withLock false
+                val stillInCatalog = withContext(Dispatchers.IO) {
+                    val existing = AndroidStickerCatalogStore.readText(applicationContext)
+                    val decoded = StickerCatalog.decode(existing)
+                    if (decoded.none { it.id == sticker.id }) {
+                        false
+                    } else {
+                        val next = StickerCatalog.markUsed(existing, sticker.id)
+                        if (next != existing) {
+                            AndroidStickerCatalogStore.writeText(applicationContext, next)
+                        }
+                        true
+                    }
+                }
+                if (!stillInCatalog || gen != stickerActionGen.get()) return@withLock false
+                applyConfigIf(
+                    stillValid = { gen == stickerActionGen.get() },
+                    change = WatermarkConfigChange.Icon(sticker.icon),
+                ) != null
+            }
+            if (!applied || gen != stickerActionGen.get()) return@launch
+            sanitizeCurrentSingleOffsetIfNeeded()
+        }
+    }
+
+    fun deleteSticker(sticker: Sticker) = deleteStickers(listOf(sticker))
+
+    fun deleteStickers(targets: List<Sticker>) {
+        if (targets.isEmpty()) return
+        stickerActionGen.incrementAndGet()
+        viewModelScope.launch {
+            val ids = targets.map { it.id }.toSet()
+            val remaining = stickerCatalogMutex.withLock {
+                val (decoded, deletedOrphanIcons) = withContext(Dispatchers.IO) {
+                    val existing = AndroidStickerCatalogStore.readText(applicationContext)
+                    val next = StickerCatalog.removeAll(existing, ids)
+                    AndroidStickerCatalogStore.writeText(applicationContext, next)
+                    val decoded = StickerCatalog.decode(next)
+                    val remainingIcons = decoded.mapTo(mutableSetOf()) { it.icon.value }
+                    val orphaned = targets.asSequence()
+                        .map { it.icon }
+                        .distinctBy { it.value }
+                        .filter { it.value !in remainingIcons }
+                        .toList()
+                    orphaned.forEach { iconPersistence.deleteIfOwned(it) }
+                    decoded to orphaned.mapTo(mutableSetOf()) { it.value }
+                }
+                val currentLiveIcon = waterMarkRepo.waterMark.first().iconUri.value
+                if (currentLiveIcon.isNotEmpty() && currentLiveIcon in deletedOrphanIcons) {
+                    waterMarkRepo.updateIcon(MediaRef.Empty)
+                }
+                decoded
+            }
+            stickerReloadJob?.cancel()
+            _stickers.value = remaining
         }
     }
 

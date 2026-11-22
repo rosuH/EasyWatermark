@@ -1157,4 +1157,72 @@ final class PickerFlowUITests: XCTestCase {
         return element.label != previousLabel
     }
 
+    private func openStickerRailViaIcon(in app: XCUIApplication) -> XCUIElement {
+        let tab = app.descendants(matching: .any)["editorTab-0"].firstMatch
+        XCTAssertTrue(tab.waitForExistence(timeout: 15), "Missing Content tab.")
+        tapIfPossible(tab)
+
+        let rail = app.descendants(matching: .any)["stickerInlineRail"].firstMatch
+        if !rail.exists {
+            let option = app.descendants(matching: .any)["editorOption-Icon"].firstMatch
+            XCTAssertTrue(option.waitForExistence(timeout: 10), "Missing editor option Icon.")
+            tapIfPossible(option)
+        }
+        XCTAssertTrue(rail.waitForExistence(timeout: 8), "Inline sticker rail did not appear.")
+        return rail
+    }
+
+    /// Icon control shows the inline sticker rail directly and exposes add + built-in tiles.
+    func testStickerSheetOpensFromIcon() {
+        let app = launchFixtureApp()
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 30), "Fixture preview never appeared.")
+        _ = openStickerRailViaIcon(in: app)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["stickerExpand"].firstMatch.waitForExistence(timeout: 5),
+            "Expand sticker panel button never appeared."
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["stickerAdd"].firstMatch.waitForExistence(timeout: 5),
+            "Add sticker tile never appeared."
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["stickerBuiltIn_copyright"].firstMatch.waitForExistence(timeout: 5),
+            "Built-in copyright sticker tile never appeared."
+        )
+        attach(app, "sticker-rail")
+    }
+
+    /// Selecting a built-in sticker applies it live in the inline rail and clear removes it.
+    func testSeededStickerApplyThenDelete() {
+        let app = launchFixtureApp()
+        let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 30), "Fixture preview never appeared.")
+        let rail = openStickerRailViaIcon(in: app)
+
+        let copyrightTile = app.descendants(matching: .any)["stickerBuiltIn_copyright"].firstMatch
+        XCTAssertTrue(copyrightTile.waitForExistence(timeout: 8), "Copyright tile never appeared.")
+        tapIfPossible(copyrightTile)
+
+        let clearBtn = app.descendants(matching: .any)["stickerClear"].firstMatch
+        XCTAssertTrue(clearBtn.waitForExistence(timeout: 8), "Clear button never appeared on active sticker rail.")
+        XCTAssertTrue(rail.exists, "Inline sticker rail should remain visible during 1-tap switching.")
+        let badge = app.descendants(matching: .any)["stickerSelectedBadge"].firstMatch
+        XCTAssertTrue(
+            copyrightTile.isSelected || badge.exists,
+            "Copyright tile did not show selected state after apply."
+        )
+        attach(app, "sticker-applied")
+
+        let sealTile = app.descendants(matching: .any)["stickerBuiltIn_seal"].firstMatch
+        XCTAssertTrue(sealTile.waitForExistence(timeout: 5), "Seal tile never appeared.")
+        tapIfPossible(sealTile)
+
+        XCTAssertTrue(clearBtn.waitForExistence(timeout: 8), "Clear button disappeared after switching sticker.")
+        tapIfPossible(clearBtn)
+        let cleared = expectation(for: NSPredicate(format: "exists == NO"), evaluatedWith: clearBtn, handler: nil)
+        wait(for: [cleared], timeout: 10)
+        attach(app, "sticker-cleared")
+    }
+
 }

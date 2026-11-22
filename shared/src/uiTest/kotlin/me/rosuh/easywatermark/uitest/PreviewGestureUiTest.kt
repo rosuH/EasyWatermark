@@ -1,5 +1,6 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
@@ -12,16 +13,21 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.*
 import me.rosuh.easywatermark.render.OverlayPreviewChrome
 import me.rosuh.easywatermark.ui.theme.AppTheme
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import kotlinx.coroutines.CompletableDeferred
+import kotlin.math.abs
 import kotlin.test.*
 
 @OptIn(ExperimentalTestApi::class)
@@ -143,10 +149,10 @@ class PreviewGestureUiTest {
         }
         onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
         onNodeWithTag("previewGestureSurface").performTouchInput {
-            down(0, Offset(width * .1f, height * .1f))
-            down(1, Offset(width * .3f, height * .1f))
-            moveTo(0, Offset(width * .05f, height * .05f))
-            moveTo(1, Offset(width * .4f, height * .2f))
+            down(0, Offset(width * .5f, height * .45f))
+            down(1, Offset(width * .3f, height * .45f))
+            moveTo(0, Offset(width * .6f, height * .35f))
+            moveTo(1, Offset(width * .2f, height * .6f))
             up(0); up(1)
         }
         waitUntil { changes.size == 1 }
@@ -158,8 +164,8 @@ class PreviewGestureUiTest {
     fun unselectedSimultaneousPointersAlwaysZoomPhoto_evenOnWatermark() = runComposeUiTest {
         val photo = bitmap(300, 300, Color.White)
         val cell = bitmap(60, 30, Color.Red)
-        var config by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP))
-        var offset by mutableStateOf(Offset(.4f, .4f))
+        var config by mutableStateOf(WaterMark.default)
+        var offset by mutableStateOf(Offset(0f, 0f))
         val changes = mutableListOf<WatermarkConfigChange.Transform>()
         setContent {
             AppTheme {
@@ -208,7 +214,8 @@ class PreviewGestureUiTest {
         }
         onNodeWithTag("previewGestureSurface").performTouchInput {
             down(0, Offset(width * .1f, height * .1f))
-            advanceEventTime(16)
+            // Move past touchSlop in blank space first so target locks to the view before finger 1 lands.
+            moveTo(0, Offset(width * .2f, height * .2f))
             down(1, Offset(width * .5f, height * .45f))
             moveTo(0, Offset(width * .05f, height * .05f))
             moveTo(1, Offset(width * .8f, height * .8f))
@@ -430,6 +437,81 @@ class PreviewGestureUiTest {
     }
 
     @Test
+    fun singleSelectionShowsDeleteAndRotate_repeatHidesThem() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        var clamp by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, degree = 0f))
+        var offset by mutableStateOf(Offset(.4f, .4f))
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+                    "photo",
+                    clamp,
+                    { change ->
+                        if (change is WatermarkConfigChange.Transform) {
+                            transforms += change
+                            clamp = clamp.copy(textSize = change.size, degree = change.degree)
+                        }
+                    },
+                    {},
+                )) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, clamp, offset.x, offset.y, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y -> offset = Offset(x, y) },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewSelectionDelete").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewSelectionDelete").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed().performTouchInput {
+            down(center)
+            moveBy(Offset(0f, 48f))
+            up()
+        }
+        waitUntil { transforms.size == 1 }
+        runOnIdle { assertNotEquals(0f, clamp.degree) }
+        runOnIdle { clamp = clamp.copy(tileMode = WatermarkTileMode.REPEAT) }
+        onNodeWithTag("previewSelectionDelete").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+        onNodeWithTag("previewViewTarget").assertExists()
+    }
+
+    @Test
+    fun repeatSelectionKeepsTheDashedFrameWithoutHandles() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.REPEAT)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        onNodeWithTag("previewSelectionDelete").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+    }
+
+    @Test
     fun inverseViewCoordinatesAndRepeatPhaseRemainConsistent() {
         val fit = computeFittedImageRect(400f, 600f, 800f, 400f)!!
         assertEquals(Offset(.5f, .5f), photoPoint(Offset(240f, 320f), Size(400f, 600f), fit, 2f, Offset(40f, 20f)))
@@ -439,5 +521,1048 @@ class PreviewGestureUiTest {
         assertEquals(-1, hit.column)
         assertEquals(-1, hit.row)
         assertEquals(Offset.Zero, boundedViewPan(Offset(20f, 30f), 1f, fit))
+    }
+
+    @Test
+    fun computeRotatedSelectionFrame_rotatesCornersClockwiseAndRespectsMinSize() {
+        val center = Offset(200f, 200f)
+        val f0 = computeRotatedSelectionFrame(center, 80f, 40f, framePadPx = 8f, minSizePx = 32f, degree = 0f)
+        assertEquals(48f, f0.halfW, 0.01f)
+        assertEquals(28f, f0.halfH, 0.01f)
+        assertEquals(Offset(248f, 172f), f0.topRightCanvas)
+        assertEquals(Offset(248f, 228f), f0.bottomRightCanvas)
+
+        // +90° clockwise: local topRight (+halfW, -halfH) rotates to (+halfH, +halfW).
+        val f90 = computeRotatedSelectionFrame(center, 80f, 40f, framePadPx = 8f, minSizePx = 32f, degree = 90f)
+        assertEquals(228f, f90.topRightCanvas.x, 0.1f)
+        assertEquals(248f, f90.topRightCanvas.y, 0.1f)
+        assertEquals(172f, f90.bottomRightCanvas.x, 0.1f)
+        assertEquals(248f, f90.bottomRightCanvas.y, 0.1f)
+
+        // Tiny content clamps cleanly to minSizePx/2 without collapsing.
+        val fTiny = computeRotatedSelectionFrame(center, 4f, 4f, framePadPx = 2f, minSizePx = 32f, degree = -30f)
+        assertEquals(16f, fTiny.halfW, 0.01f)
+        assertEquals(16f, fTiny.halfH, 0.01f)
+        assertEquals(-30f, fTiny.degree, 0.01f)
+    }
+
+    @Test
+    fun rotateHandleShowsAngleHudAndShiftsCornerHandles() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(80, 40, Color.Red)
+        var mark by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, degree = 0f))
+        var offset by mutableStateOf(Offset(.35f, .4f))
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+                    "photo",
+                    mark,
+                    { change ->
+                        if (change is WatermarkConfigChange.Transform) {
+                            transforms += change
+                            mark = mark.copy(textSize = change.size, degree = change.degree)
+                        }
+                    },
+                    {},
+                )) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, mark, offset.x, offset.y, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y -> offset = Offset(x, y) },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .48f, height * .46f)) }
+        onNodeWithTag("previewSelectionDelete").assertDoesNotExist()
+        val beforeRotateBounds = onNodeWithTag("previewSelectionRotate").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+
+        onNodeWithTag("previewSelectionAngle").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").performTouchInput {
+            down(center)
+            moveBy(Offset(-16f, 16f))
+            moveBy(Offset(-16f, 16f))
+            // Keep finger down so live angle HUD stays visible.
+        }
+        onNodeWithTag("previewSelectionAngle").assertIsDisplayed()
+            .assertTextContains("%", substring = true)
+            .assertTextContains("°", substring = true)
+        onNodeWithTag("previewSelectionRotate").performTouchInput { up() }
+        waitUntil { transforms.size == 1 }
+        runOnIdle { assertNotEquals(0f, mark.degree) }
+
+        val afterRotateBounds = onNodeWithTag("previewSelectionRotate").fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            beforeRotateBounds.topLeft != afterRotateBounds.topLeft,
+            "Rotated selection frame handle should move with the rotated corner vertex",
+        )
+    }
+
+    @Test
+    fun clampDragAllowsCornerPlacementPastCellPadding() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 60, Color.Red)
+        var offset = Offset(.4f, .4f)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, degree = 0f)
+        var overlay by mutableStateOf(overlayCellFrom(cell, config, offset.x, offset.y, 300))
+        var commits = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlay,
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y ->
+                            commits += 1
+                            offset = Offset(x, y)
+                            overlay = overlay.withOffset(x, y)
+                        },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+
+        // Drag into top-left corner past the outer cell padding.
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width * .5f, height * .5f))
+            moveTo(Offset(-width * .05f, -height * .05f))
+            up()
+        }
+        waitUntil { commits == 1 }
+        waitForIdle()
+        runOnIdle {
+            // keepInside = 12px on 60x60 mark => center clamped at (-18, -18), offset = -48 / 300 = -0.16f.
+            assertEquals(-0.16f, offset.x, 0.02f)
+            assertEquals(-0.16f, offset.y, 0.02f)
+        }
+
+        // Deselect and verify the remaining 12px top-left corner sliver can still be tapped & selected.
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .9f, height * .9f)) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .02f, height * .02f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+
+        // Drag from center to bottom-right corner past (1 - cell/photo).
+        runOnIdle {
+            offset = Offset(.4f, .4f)
+            overlay = overlayCellFrom(cell, config, offset.x, offset.y, 300)
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .9f, height * .9f)) }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width * .5f, height * .5f))
+            moveTo(Offset(width * 1.5f, height * 1.5f))
+            up()
+        }
+        waitUntil { commits == 2 }
+        waitForIdle()
+        runOnIdle {
+            // center clamped at (318, 318), offset = (318 - 30) / 300 = 0.96f.
+            assertEquals(0.96f, offset.x, 0.02f)
+            assertEquals(0.96f, offset.y, 0.02f)
+        }
+
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .1f, height * .1f)) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .98f, height * .98f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+    }
+
+    @Test
+    fun clampSingleWatermarkCenter_allowsDeepEdgeOverhangAndReversesWithoutSticking() = runComposeUiTest {
+        val photoSize = IntSize(300, 300)
+        // 0°: 120x120 mark -> keepInside = 12 -> center can reach -48, leaving 12px inside photo.
+        val c0 = clampSingleWatermarkCenter(Offset(-200f, 150f), photoSize, 120f, 120f, 0f)
+        assertEquals(-48f, c0.x, 0.1f)
+        assertEquals(150f, c0.y, 0.1f)
+
+        // 45° rotated 120x120 mark at top-left corner: diamond tip extends well past center < 0.
+        val c45 = clampSingleWatermarkCenter(Offset(-200f, -200f), photoSize, 120f, 120f, 45f)
+        assertTrue(c45.x < -25f && c45.y < -25f, "45° rotated mark must overhang corner smoothly (got $c45)")
+
+        // End-to-end continuous drag: push past left edge, then immediately reverse right by +30px
+        // without lifting finger; reversing must respond immediately with zero overshoot dead-zone.
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(120, 120, Color.Red)
+        var offset = Offset(0.3f, 0.3f)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, degree = 0f)
+        var overlay by mutableStateOf(overlayCellFrom(cell, config, offset.x, offset.y, 300))
+        var commits = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlay,
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y ->
+                            commits += 1
+                            offset = Offset(x, y)
+                            overlay = overlay.withOffset(x, y)
+                        },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+
+        // Drag far left (center wants -300, clamps at -48 -> offsetX = -108/300 = -0.36f),
+        // then immediately reverse +30px right (clamped center -48 -> -18 -> offsetX = -78/300 = -0.26f).
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width * .5f, height * .5f))
+            moveTo(Offset(-width * 1.0f, height * .5f))
+            moveBy(Offset(30f, 0f))
+            up()
+        }
+        waitUntil { commits == 1 }
+        waitForIdle()
+        runOnIdle {
+            assertTrue(
+                offset.x > -0.30f && offset.x < -0.22f,
+                "reversing +30px from clamped edge must move immediately without dead-zone (offsetX=${offset.x})",
+            )
+        }
+    }
+
+    @Test
+    fun emptyOverlayClearsSelectionAndIgnoresTaps() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 60, Color.Red)
+        var config by mutableStateOf(
+            WaterMark.default.copy(
+                markMode = WatermarkMode.Image,
+                tileMode = WatermarkTileMode.CLAMP,
+                iconUri = MediaRef("/tmp/icon.png"),
+            ),
+        )
+        var overlay by mutableStateOf(overlayCellFrom(cell, config, .4f, .4f, 300))
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlay,
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        onNodeWithTag("previewSelectionDelete").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed()
+
+        runOnIdle {
+            val cleared = config.copy(iconUri = MediaRef.Empty)
+            config = cleared
+            overlay = emptyOverlayCellFor(cleared, 300)
+        }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewSelectionDelete").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewWatermarkTarget").assertDoesNotExist()
+    }
+
+    @Test
+    fun hitSingleWatermark_handlesHollowInteriorRotatedFrameAndCornerSlivers() {
+        val photo = Size(300f, 300f)
+        val center = Offset(150f, 150f)
+        assertTrue(hitSingleWatermark(center, photo, center, 100f, 40f, degree = 0f, minHalfSize = 16f, slop = 12f))
+        assertTrue(hitSingleWatermark(Offset(88f, 118f), photo, center, 100f, 40f, degree = 0f, minHalfSize = 16f, slop = 12f))
+        assertFalse(hitSingleWatermark(Offset(87f, 150f), photo, center, 100f, 40f, degree = 0f, minHalfSize = 16f, slop = 12f))
+
+        // Rotated 90 degrees: long axis runs vertically, short axis horizontally.
+        assertTrue(hitSingleWatermark(Offset(150f, 200f), photo, center, 100f, 40f, degree = 90f, minHalfSize = 16f, slop = 12f))
+        assertFalse(hitSingleWatermark(Offset(200f, 150f), photo, center, 100f, 40f, degree = 90f, minHalfSize = 16f, slop = 12f))
+
+        // Tiny content respects minHalfSize floor.
+        assertTrue(hitSingleWatermark(Offset(170f, 150f), photo, center, 2f, 2f, degree = 0f, minHalfSize = 16f, slop = 12f))
+
+        // Corner sliver overhanging outside the photo remains tappable inside photo + slop.
+        val cornerCenter = Offset(-18f, -18f)
+        assertTrue(hitSingleWatermark(Offset(6f, 6f), photo, cornerCenter, 60f, 60f, degree = 0f, minHalfSize = 16f, slop = 12f))
+        assertFalse(hitSingleWatermark(Offset(-20f, -20f), photo, cornerCenter, 60f, 60f, degree = 0f, minHalfSize = 16f, slop = 12f))
+        assertFalse(hitSingleWatermark(Offset(Float.NaN, 10f), photo, center, 60f, 60f, degree = 0f, minHalfSize = 16f, slop = 12f))
+        assertFalse(hitSingleWatermark(center, Size.Zero, center, 60f, 60f, degree = 0f, minHalfSize = 16f, slop = 12f))
+    }
+
+    @Test
+    fun snapSingleWatermarkCenter_and_snapWatermarkDegree_enforceHysteresis() {
+        val photoSize = IntSize(300, 300)
+        val outside = snapSingleWatermarkCenter(Offset(144f, 160f), photoSize, wasSnappedX = false, wasSnappedY = false, enterThresholdPx = 5f, exitThresholdPx = 9f)
+        assertEquals(Offset(144f, 160f), outside.center)
+        assertFalse(outside.snappedX)
+        assertFalse(outside.snappedY)
+
+        val entered = snapSingleWatermarkCenter(Offset(146f, 154f), photoSize, wasSnappedX = false, wasSnappedY = false, enterThresholdPx = 5f, exitThresholdPx = 9f)
+        assertEquals(Offset(150f, 150f), entered.center)
+        assertTrue(entered.snappedX)
+        assertTrue(entered.snappedY)
+
+        val held = snapSingleWatermarkCenter(Offset(158f, 142f), photoSize, wasSnappedX = true, wasSnappedY = true, enterThresholdPx = 5f, exitThresholdPx = 9f)
+        assertEquals(Offset(150f, 150f), held.center)
+        assertTrue(held.snappedX)
+        assertTrue(held.snappedY)
+
+        val exited = snapSingleWatermarkCenter(Offset(160f, 140f), photoSize, wasSnappedX = true, wasSnappedY = true, enterThresholdPx = 5f, exitThresholdPx = 9f)
+        assertEquals(Offset(160f, 140f), exited.center)
+        assertFalse(exited.snappedX)
+        assertFalse(exited.snappedY)
+
+        val xOnly = snapSingleWatermarkCenter(Offset(152f, 100f), photoSize, wasSnappedX = false, wasSnappedY = false, enterThresholdPx = 5f, exitThresholdPx = 9f)
+        assertEquals(Offset(150f, 100f), xOnly.center)
+        assertTrue(xOnly.snappedX)
+        assertFalse(xOnly.snappedY)
+
+        // Angle snap across 0/360 wrap and cardinals with enter=3.5, exit=6.0.
+        val wrapEnter = snapWatermarkDegree(357f, wasSnapped = false)
+        assertTrue(wrapEnter.snapped)
+        assertEquals(0f, wrapEnter.degree, 0.001f)
+        assertEquals(0f, wrapEnter.targetDegree)
+
+        val wrapHold = snapWatermarkDegree(355f, wasSnapped = true)
+        assertTrue(wrapHold.snapped)
+        assertEquals(0f, wrapHold.degree, 0.001f)
+
+        val wrapExit = snapWatermarkDegree(353f, wasSnapped = true)
+        assertFalse(wrapExit.snapped)
+        assertEquals(353f, wrapExit.degree, 0.001f)
+        assertNull(wrapExit.targetDegree)
+
+        val deg90Enter = snapWatermarkDegree(87f, wasSnapped = false)
+        assertTrue(deg90Enter.snapped)
+        assertEquals(90f, deg90Enter.degree, 0.001f)
+
+        val deg90Hold = snapWatermarkDegree(95f, wasSnapped = true)
+        assertTrue(deg90Hold.snapped)
+        assertEquals(90f, deg90Hold.degree, 0.001f)
+
+        val deg180 = snapWatermarkDegree(182f, wasSnapped = false)
+        assertTrue(deg180.snapped)
+        assertEquals(180f, deg180.degree, 0.001f)
+
+        val negDeg270 = snapWatermarkDegree(-92f, wasSnapped = false)
+        assertTrue(negDeg270.snapped)
+        assertEquals(270f, negDeg270.degree, 0.001f)
+    }
+
+    @Test
+    fun isInBottomTrashZone_checksCircularRadiusAtBottomCenter() {
+        val box = IntSize(300, 300)
+        assertTrue(isInBottomTrashZone(Offset(150f, 260f), box, zoneCenterYOffsetPx = 40f, hitRadiusPx = 42f))
+        assertTrue(isInBottomTrashZone(Offset(150f, 219f), box, zoneCenterYOffsetPx = 40f, hitRadiusPx = 42f))
+        assertFalse(isInBottomTrashZone(Offset(150f, 217f), box, zoneCenterYOffsetPx = 40f, hitRadiusPx = 42f))
+        assertFalse(isInBottomTrashZone(Offset(150f, 260f), IntSize.Zero, zoneCenterYOffsetPx = 40f, hitRadiusPx = 42f))
+    }
+
+    @Test
+    fun hollowIcon_selectsViaInteriorTap_and_unselectedDirectDragAndPinchLeaveCanvasClean() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 60, Color.Transparent)
+        CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(cell), Size(60f, 60f)) {
+            drawRect(Color.Red, Offset(0f, 0f), Size(60f, 2f))
+            drawRect(Color.Red, Offset(0f, 58f), Size(60f, 2f))
+            drawRect(Color.Red, Offset(0f, 0f), Size(2f, 60f))
+            drawRect(Color.Red, Offset(58f, 0f), Size(2f, 60f))
+        }
+        var config by mutableStateOf(
+            WaterMark.default.copy(
+                markMode = WatermarkMode.Image,
+                tileMode = WatermarkTileMode.CLAMP,
+                iconUri = MediaRef("/tmp/hollow.png"),
+                degree = 0f,
+            ),
+        )
+        var offset by mutableStateOf(Offset(.4f, .4f))
+        var overlay by mutableStateOf(overlayCellFrom(cell, config, offset.x, offset.y, 300))
+        var commits = 0
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {
+                    val change = it as WatermarkConfigChange.Transform
+                    transforms += change
+                    config = config.copy(textSize = change.size, degree = change.degree)
+                    overlay = overlayCellFrom(cell, config, offset.x, offset.y, 300)
+                }, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlay,
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y ->
+                            commits++
+                            offset = Offset(x, y)
+                            overlay = overlay.withOffset(x, y)
+                        },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        // Tapping the hollow transparent center selects the sticker.
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed()
+
+        // Deselect back to clean view.
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .1f, height * .1f)) }
+        onNodeWithTag("previewViewTarget").assertExists()
+
+        // Unselected direct drag works immediately and keeps canvas IG-clean on release.
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width * .5f, height * .5f))
+            moveTo(Offset(width * .7f, height * .7f))
+            up()
+        }
+        waitUntil { commits == 1 }
+        runOnIdle { assertTrue(offset.x > .55f && offset.y > .55f) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewSelectionDone").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+
+        // Unselected direct 2-finger pinch (one finger on sticker hollow center) transforms cleanly and leaves canvas clean.
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .7f, height * .7f))
+            down(1, Offset(width * .2f, height * .2f))
+            moveTo(0, Offset(width * .85f, height * .65f))
+            moveTo(1, Offset(width * .1f, height * .1f))
+            up(0); up(1)
+        }
+        waitUntil { transforms.size == 1 }
+        runOnIdle {
+            assertTrue(transforms.single().size > 14f)
+            assertNotEquals(0f, transforms.single().degree)
+        }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewResetView").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+    }
+
+    @Test
+    fun staggeredTwoFingerPinchWithSecondFingerOnSticker_grabsStickerBeforeMove() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        var config by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP))
+        var offset by mutableStateOf(Offset(.4f, .4f))
+        val changes = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {
+                    val value = it as WatermarkConfigChange.Transform
+                    changes += value
+                    config = config.copy(textSize = value.size, degree = value.degree)
+                }, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, config, offset.x, offset.y, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y -> offset = Offset(x, y) },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .1f, height * .1f))
+            advanceEventTime(16)
+            down(1, Offset(width * .5f, height * .45f))
+            moveTo(0, Offset(width * .05f, height * .05f))
+            moveTo(1, Offset(width * .7f, height * .75f))
+            up(0); up(1)
+        }
+        waitUntil { changes.size == 1 }
+        runOnIdle {
+            assertTrue(changes.single().size > 14f)
+            assertNotEquals(315f, changes.single().degree)
+        }
+        onNodeWithTag("previewResetView").assertDoesNotExist()
+        onNodeWithTag("previewViewTarget").assertExists()
+    }
+
+    @Test
+    fun selectedSingleBlankPinch_zoomsPhotoWithoutChangingWatermark() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP)
+        val changes = mutableListOf<WatermarkConfigChange>()
+        var commits = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {
+                    changes += it
+                }, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> commits++ },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .1f, height * .1f))
+            down(1, Offset(width * .3f, height * .1f))
+            moveTo(0, Offset(width * .05f, height * .05f))
+            moveTo(1, Offset(width * .4f, height * .2f))
+            up(0); up(1)
+        }
+        runOnIdle {
+            assertTrue(changes.isEmpty())
+            assertEquals(0, commits)
+        }
+        onNodeWithTag("previewResetView").assertIsDisplayed()
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+    }
+
+    @Test
+    fun singleDragIntoBottomTrashArmsAndClears_draggingBackOutDisarmsAndCommitsMove() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, degree = 0f)
+        var offset by mutableStateOf(Offset(.4f, .4f))
+        var overlay by mutableStateOf(overlayCellFrom(cell, config, offset.x, offset.y, 300))
+        var commits = 0
+        var cleared = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+                    "photo",
+                    config,
+                    {},
+                    {},
+                    onClear = {
+                        cleared++
+                        overlay = emptyOverlayCellFor(config, 300)
+                    },
+                )) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlay,
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y ->
+                            commits++
+                            offset = Offset(x, y)
+                            overlay = overlay.withOffset(x, y)
+                        },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width * .5f, height * .45f))
+            moveTo(Offset(width * .5f, height * .55f))
+        }
+        val surfaceBounds = onNodeWithTag("previewGestureSurface").fetchSemanticsNode().boundsInRoot
+        val trashCenter = onNodeWithTag("previewDragTrashZone").assertIsDisplayed().fetchSemanticsNode().boundsInRoot.center
+        val trashLocal = trashCenter - surfaceBounds.topLeft
+        onNodeWithTag("previewDragTrashArmed").assertDoesNotExist()
+
+        onNodeWithTag("previewGestureSurface").performTouchInput { moveTo(trashLocal) }
+        onNodeWithTag("previewDragTrashArmed").assertIsDisplayed()
+
+        // Dragging back out disarms trash and commits move on release.
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            moveTo(Offset(width * .75f, height * .45f))
+        }
+        onNodeWithTag("previewDragTrashZone").assertIsDisplayed()
+        onNodeWithTag("previewDragTrashArmed").assertDoesNotExist()
+        onNodeWithTag("previewGestureSurface").performTouchInput { up() }
+        waitUntil { commits == 1 }
+        runOnIdle { assertEquals(0, cleared) }
+        onNodeWithTag("previewDragTrashZone").assertDoesNotExist()
+
+        // Dragging into trash and releasing calls onClear without committing offset.
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width * .75f, height * .45f))
+            moveTo(trashLocal)
+        }
+        onNodeWithTag("previewDragTrashArmed").assertIsDisplayed()
+        onNodeWithTag("previewGestureSurface").performTouchInput { up() }
+        waitUntil { cleared == 1 }
+        runOnIdle { assertEquals(1, commits) }
+        onNodeWithTag("previewDragTrashZone").assertDoesNotExist()
+        onNodeWithTag("previewViewTarget").assertExists()
+    }
+
+    @Test
+    fun combinedBottomRightHandle_changesSizeAndDegreeInOneTransformAndShowsHud() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(80, 40, Color.Red)
+        var mark by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, textSize = 14f, degree = 0f))
+        var offset by mutableStateOf(Offset(.35f, .4f))
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+                    "photo",
+                    mark,
+                    { change ->
+                        val t = change as WatermarkConfigChange.Transform
+                        transforms += t
+                        mark = mark.copy(textSize = t.size, degree = t.degree)
+                    },
+                    {},
+                )) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, mark, offset.x, offset.y, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y -> offset = Offset(x, y) },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .48f, height * .46f)) }
+        onNodeWithTag("previewSelectionAngle").assertDoesNotExist()
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed().performTouchInput {
+            down(center)
+            moveBy(Offset(24f, 48f))
+        }
+        onNodeWithTag("previewSelectionAngle").assertIsDisplayed()
+            .assertTextContains("%", substring = true)
+            .assertTextContains("°", substring = true)
+        onNodeWithTag("previewSelectionRotate").performTouchInput { up() }
+        waitUntil { transforms.size == 1 }
+        runOnIdle {
+            assertTrue(transforms.single().size > 14f)
+            assertTrue(transforms.single().degree in 10f..25f)
+        }
+        onNodeWithTag("previewSelectionAngle").assertDoesNotExist()
+    }
+
+    @Test
+    fun centerMagneticSnap_snapsCenterInLivePreview() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 60, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, degree = 0f)
+        var offset by mutableStateOf(Offset(.1f, .1f))
+        var overlay by mutableStateOf(overlayCellFrom(cell, config, offset.x, offset.y, 300))
+        var commits = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlay,
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y ->
+                            commits++
+                            offset = Offset(x, y)
+                            overlay = overlay.withOffset(x, y)
+                        },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width * .2f, height * .2f))
+            moveTo(Offset(width * .5f + 2f, height * .5f - 2f))
+            up()
+        }
+        waitUntil { commits == 1 }
+        runOnIdle {
+            assertEquals(0.4f, offset.x, 0.002f)
+            assertEquals(0.4f, offset.y, 0.002f)
+        }
+    }
+
+    @Test
+    fun angleMagneticSnap_snapsCardinalDegreeOnHandle() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 60, Color.Red)
+        var mark by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, textSize = 14f, degree = 25f))
+        var offset by mutableStateOf(Offset(.4f, .4f))
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+                    "photo",
+                    mark,
+                    { change ->
+                        val t = change as WatermarkConfigChange.Transform
+                        transforms += t
+                        mark = mark.copy(textSize = t.size, degree = t.degree)
+                    },
+                    {},
+                )) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, mark, offset.x, offset.y, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y -> offset = Offset(x, y) },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed().performTouchInput {
+            down(center)
+            moveBy(Offset(19.6f, -12.5f))
+            up()
+        }
+        waitUntil { transforms.size == 1 }
+        runOnIdle { assertEquals(0f, transforms.single().degree, 0.01f) }
+    }
+
+    @Test
+    fun switchingIconUri_clearsSelectionAndHandles() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 60, Color.Red)
+        var config by mutableStateOf(
+            WaterMark.default.copy(
+                markMode = WatermarkMode.Image,
+                tileMode = WatermarkTileMode.CLAMP,
+                iconUri = MediaRef("/tmp/a.png"),
+            ),
+        )
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .5f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed()
+
+        runOnIdle { config = config.copy(iconUri = MediaRef("/tmp/b.png")) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+    }
+
+    @Test
+    fun cancelledHandleDrag_commitsNothing() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(80, 40, Color.Red)
+        var mark by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, textSize = 14f, degree = 0f))
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        var commits = 0
+        var interceptCancel by mutableStateOf(false)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+                    "photo",
+                    mark,
+                    { change ->
+                        val t = change as WatermarkConfigChange.Transform
+                        transforms += t
+                        mark = mark.copy(textSize = t.size, degree = t.degree)
+                    },
+                    {},
+                )) {
+                    Box(
+                        Modifier.pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    if (interceptCancel) {
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        },
+                    ) {
+                        LiveOverlayPreview(
+                            OverlayPreviewChrome.LiveLayers,
+                            photo,
+                            overlayCellFrom(cell, mark, .35f, .4f, 300),
+                            null,
+                            modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                            onOffsetCommit = { _, _ -> commits++ },
+                            renderGestureCell = { cell },
+                        )
+                    }
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .48f, height * .46f)) }
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed().performTouchInput {
+            down(center)
+            moveBy(Offset(20f, 36f))
+        }
+        onNodeWithTag("previewSelectionAngle").assertIsDisplayed()
+        runOnIdle { interceptCancel = true }
+        onNodeWithTag("previewSelectionRotate").performTouchInput {
+            moveBy(Offset(4f, 4f))
+            up()
+        }
+        waitForIdle()
+        runOnIdle {
+            assertTrue(transforms.isEmpty())
+            assertEquals(0, commits)
+            assertEquals(0f, mark.degree)
+            assertEquals(14f, mark.textSize)
+        }
+        onNodeWithTag("previewSelectionAngle").assertDoesNotExist()
+    }
+
+    @Test
+    fun concurrentHandleAndBodyDrag_isolatesOwnership() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(80, 40, Color.Red)
+        var mark by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, textSize = 14f, degree = 0f))
+        var offset by mutableStateOf(Offset(.35f, .4f))
+        var overlay by mutableStateOf(overlayCellFrom(cell, mark, offset.x, offset.y, 300))
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        var commits = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
+                    "photo",
+                    mark,
+                    { change ->
+                        val t = change as WatermarkConfigChange.Transform
+                        transforms += t
+                        mark = mark.copy(textSize = t.size, degree = t.degree)
+                        overlay = overlayCellFrom(cell, mark, offset.x, offset.y, 300)
+                    },
+                    {},
+                )) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlay,
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y ->
+                            commits++
+                            offset = Offset(x, y)
+                            overlay = overlay.withOffset(x, y)
+                        },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .48f, height * .46f)) }
+
+        // Part A: handle transform active -> body drag on previewGestureSurface must be ignored.
+        onNodeWithTag("previewSelectionRotate").performTouchInput {
+            down(0, center)
+            moveBy(0, Offset(0f, 36f))
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(1, Offset(width * .48f, height * .46f))
+            moveTo(1, Offset(width * .7f, height * .7f))
+            up(1)
+        }
+        runOnIdle { assertEquals(0, commits) }
+        onNodeWithTag("previewSelectionRotate").performTouchInput { up(0) }
+        waitUntil { transforms.size == 1 }
+        runOnIdle { assertTrue(offset.x < 0.45f) }
+
+        // Part B: body drag active -> handle drag must be ignored.
+        transforms.clear()
+        val beforeCommits = commits
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .48f, height * .46f))
+            moveTo(0, Offset(width * .65f, height * .65f))
+        }
+        onNodeWithTag("previewSelectionRotate").performTouchInput {
+            down(1, center)
+            moveBy(1, Offset(0f, 40f))
+            up(1)
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { up(0) }
+        waitUntil { commits == beforeCommits + 1 }
+        runOnIdle {
+            assertTrue(transforms.isEmpty(), "handle must not transform while body drag is locked")
+            assertTrue(offset.x > 0.5f)
+        }
+    }
+
+    @Test
+    fun clampSingleWatermarkCenter_elongated45DegreeIsIdempotentWithZeroDrift() {
+        val photoSize = IntSize(300, 300)
+        val cLeft1 = clampSingleWatermarkCenter(Offset(-50f, 150f), photoSize, 140f, 36f, 45f)
+        val cLeft2 = clampSingleWatermarkCenter(Offset(-120f, 150f), photoSize, 140f, 36f, 45f)
+        assertEquals(150f, cLeft1.y, 0.01f)
+        assertEquals(150f, cLeft2.y, 0.01f)
+        assertEquals(cLeft1.x, cLeft2.x, 1e-3f)
+        assertEquals(cLeft1.y, cLeft2.y, 1e-3f)
+
+        val cLeftIdem = clampSingleWatermarkCenter(cLeft1, photoSize, 140f, 36f, 45f)
+        assertEquals(cLeft1.x, cLeftIdem.x, 1e-3f)
+        assertEquals(cLeft1.y, cLeftIdem.y, 1e-3f)
+
+        val cCorner = clampSingleWatermarkCenter(Offset(-200f, -200f), photoSize, 140f, 36f, 45f)
+        val cCornerIdem = clampSingleWatermarkCenter(cCorner, photoSize, 140f, 36f, 45f)
+        assertEquals(cCorner.x, cCornerIdem.x, 1e-3f)
+        assertEquals(cCorner.y, cCornerIdem.y, 1e-3f)
+    }
+
+    @Test
+    fun stationaryTwoFingerTap_on358DegreeNearCenterMark_commitsNothing() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 60, Color.Red)
+        val config = WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, degree = 358f)
+        val changes = mutableListOf<WatermarkConfigChange>()
+        var commits = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {
+                    changes += it
+                }, {})) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, config, 122f / 300f, 120f / 300f, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> commits++ },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(0, Offset(width * .5f, height * .5f))
+            down(1, Offset(width * .5f + 16f, height * .5f))
+            up(0); up(1)
+        }
+        waitForIdle()
+        runOnIdle {
+            assertTrue(changes.isEmpty())
+            assertEquals(0, commits)
+        }
+        onNodeWithTag("previewViewTarget").assertExists()
+    }
+
+    @Test
+    fun clearedBlankText_behavesAsEmptyOverlayAndCannotBeReselected() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        var config by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, text = "Hello"))
+        var opened = 0
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, { opened++ })) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { _, _ -> },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewWatermarkTarget").assertExists()
+        onNodeWithTag("previewSelectionRotate").assertIsDisplayed()
+
+        runOnIdle { config = config.copy(text = "") }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewSelectionRotate").assertDoesNotExist()
+
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .5f, height * .45f)) }
+        onNodeWithTag("previewViewTarget").assertExists()
+        onNodeWithTag("previewWatermarkTarget").assertDoesNotExist()
+        runOnIdle { assertEquals(0, opened) }
+    }
+
+    @Test
+    fun rtlLayout_keepsHandleAlignedWithRotatedBottomRightCorner() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(80, 40, Color.Red)
+        var mark by mutableStateOf(WaterMark.default.copy(tileMode = WatermarkTileMode.CLAMP, textSize = 14f, degree = 0f))
+        var offset by mutableStateOf(Offset(.35f, .4f))
+        val transforms = mutableListOf<WatermarkConfigChange.Transform>()
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides LayoutDirection.Rtl,
+                    LocalPreviewInteraction provides PreviewInteraction(
+                        "photo",
+                        mark,
+                        { change ->
+                            val t = change as WatermarkConfigChange.Transform
+                            transforms += t
+                            mark = mark.copy(textSize = t.size, degree = t.degree)
+                        },
+                        {},
+                    ),
+                ) {
+                    LiveOverlayPreview(
+                        OverlayPreviewChrome.LiveLayers,
+                        photo,
+                        overlayCellFrom(cell, mark, offset.x, offset.y, 300),
+                        null,
+                        modifier = Modifier.size(width = 300.dp, height = 348.dp),
+                        onOffsetCommit = { x, y -> offset = Offset(x, y) },
+                        renderGestureCell = { cell },
+                    )
+                }
+            }
+        }
+        onNodeWithTag("previewGestureSurface").performTouchInput { click(Offset(width * .48f, height * .46f)) }
+        val surfaceBounds = onNodeWithTag("previewGestureSurface").fetchSemanticsNode().boundsInRoot
+        val handleBounds = onNodeWithTag("previewSelectionRotate").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val relCenter = handleBounds.center - surfaceBounds.topLeft
+        assertTrue(abs(relCenter.x - 193f) < 3f, "RTL handle X must align physically near 193 (got ${relCenter.x})")
+        assertTrue(abs(relCenter.y - 168f) < 3f, "RTL handle Y must align physically near 168 (got ${relCenter.y})")
+
+        onNodeWithTag("previewSelectionRotate").performTouchInput {
+            down(center)
+            moveBy(Offset(20f, 36f))
+            up()
+        }
+        waitUntil { transforms.size == 1 }
     }
 }

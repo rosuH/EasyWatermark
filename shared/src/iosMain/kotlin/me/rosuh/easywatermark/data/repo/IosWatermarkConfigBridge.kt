@@ -130,14 +130,11 @@ class IosWatermarkConfigBridge(private val repo: WaterMarkRepository) {
     /**
  * Persist picked icon [bytes] for image-watermark mode. Order matters: the bytes are written * to an app-private file **first** (so the stored ref always points at real bytes), then the file path
  * is persisted as the icon [MediaRef] via the shared [WatermarkConfigEditor.updateIcon] — which also
- * flips persisted `markMode` to Image — and finally the **prior** helper-owned icon file is cleaned up
- * best-effort. Empty [bytes] fail loudly (no unusable icon file is created and no ref is changed).
+ * flips persisted `markMode` to Image. Earlier owned icon files stay on disk so a sticker library can keep them.
      */
     suspend fun setIconFromBytes(bytes: ByteArray) {
-        val previousRef = repo.waterMark.first().iconUri
         val path = IosIconPersistence.writeIconBytes(bytes)
         editor.updateIcon(MediaRef(path))
-        IosIconPersistence.deleteIfOwned(previousRef.value)
     }
 
     /**

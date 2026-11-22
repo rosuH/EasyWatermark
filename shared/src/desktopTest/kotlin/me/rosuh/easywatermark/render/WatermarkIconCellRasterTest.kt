@@ -432,4 +432,18 @@ class WatermarkIconCellRasterTest {
             "1:1 drawWidth icon pixels must match un-capped manual draw without downscale blur (maxDelta=$maxDelta)",
         )
     }
+
+    @Test
+    fun content_dims_match_scaled_icon_across_rotations() {
+        val icon = syntheticIcon(40, 20)
+        val deg0 = WatermarkCellComposer.composeIconCellRaster(icon, degree = 0f, scaleRatio = 2f)
+        val deg45 = WatermarkCellComposer.composeIconCellRaster(icon, degree = 45f, scaleRatio = 2f)
+        val deg90 = WatermarkCellComposer.composeIconCellRaster(icon, degree = 90f, scaleRatio = 2f)
+        assertEquals(80f, deg0.contentWidth, 0.5f)
+        assertEquals(40f, deg0.contentHeight, 0.5f)
+        assertEquals(deg0.contentWidth, deg45.contentWidth, 0.5f)
+        assertEquals(deg0.contentHeight, deg45.contentHeight, 0.5f)
+        assertEquals(deg0.contentWidth, deg90.contentWidth, 0.5f)
+        assertEquals(deg0.contentHeight, deg90.contentHeight, 0.5f)
+    }
 }

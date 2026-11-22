@@ -72,4 +72,29 @@ class DesktopIconPersistenceTest {
         assertEquals("icon.png", copied.name)
         assertEquals("EEE", copied.readText())
     }
+
+    @Test
+    fun library_copy_keeps_earlier_files_and_catalog() {
+        val first = DesktopIconPersistence.persistLibraryIcon(src("a.png", "AAA"), iconsDir(), "one")
+        DesktopIconPersistence.writeCatalogText(iconsDir(), "catalog")
+        val second = DesktopIconPersistence.persistLibraryIcon(src("b.jpg", "BBB"), iconsDir(), "two")
+        assertEquals("icon-one.png", first.name)
+        assertEquals("icon-two.jpg", second.name)
+        assertEquals("AAA", first.readText())
+        assertEquals("BBB", second.readText())
+        assertEquals(listOf("icon-one.png", "icon-two.jpg", "stickers.catalog"), iconNames())
+        assertEquals("catalog", DesktopIconPersistence.readCatalogText(iconsDir()))
+    }
+
+    @Test
+    fun built_in_png_writes_deterministic_name_and_overwrites_in_place() {
+        val bytesA = byteArrayOf(1, 2, 3, 4)
+        val bytesB = byteArrayOf(5, 6, 7, 8)
+        val first = DesktopIconPersistence.persistBuiltInPng(bytesA, iconsDir(), "copyright")
+        val second = DesktopIconPersistence.persistBuiltInPng(bytesB, iconsDir(), "copyright")
+        assertEquals("icon-builtin-copyright.png", first.name)
+        assertEquals(first.canonicalFile, second.canonicalFile)
+        assertTrue(second.readBytes().contentEquals(bytesB))
+        assertEquals(listOf("icon-builtin-copyright.png"), iconNames())
+    }
 }

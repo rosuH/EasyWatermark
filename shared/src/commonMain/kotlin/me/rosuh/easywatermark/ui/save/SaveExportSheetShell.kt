@@ -355,52 +355,38 @@ fun <T> SaveExportSheetShell(
                     .fillMaxWidth()
                     .height(PrimaryButtonHeight),
             ) {
-                if (showCancelButton && onCancelClick != null) {
-                    OutlinedButton(
-                        onClick = onCancelClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(PrimaryButtonHeight)
-                            .testTag("sharedComposeExportCancel")
-                            .semantics { contentDescription = cancelLabel },
-                        shape = RectangleShape,
-                    ) {
-                        Text(cancelLabel)
-                    }
-                } else {
-                    Button(
-                        onClick = onExportClick,
-                        enabled = primaryActionEnabled,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(PrimaryButtonHeight)
-                            .testTag("sharedComposeExportPrimary")
-                            .semantics { contentDescription = primaryActionLabel },
-                        shape = RectangleShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DesignBrand,
-                            contentColor = DesignEditorBg,
-                            disabledContainerColor = DesignBrand.copy(alpha = 0.4f),
-                            disabledContentColor = DesignEditorBg.copy(alpha = 0.6f),
-                        ),
-                    ) {
-                        // Crossfade CTA copy in-place (Exporting / Share / Export) — no height change.
-                        AnimatedContent(
-                            targetState = primaryActionLabel,
-                            transitionSpec = {
-                                fadeIn(animationSpec = fadeSpec) togetherWith
-                                    fadeOut(animationSpec = fadeSpec)
-                            },
-                            label = "exportPrimaryLabel",
-                        ) { label ->
-                            Text(label)
-                        }
+                Button(
+                    onClick = onExportClick,
+                    enabled = primaryActionEnabled && !isExporting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(PrimaryButtonHeight)
+                        .testTag("sharedComposeExportPrimary")
+                        .semantics { contentDescription = primaryActionLabel },
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DesignBrand,
+                        contentColor = DesignEditorBg,
+                        disabledContainerColor = DesignBrand.copy(alpha = 0.4f),
+                        disabledContentColor = DesignEditorBg.copy(alpha = 0.6f),
+                    ),
+                ) {
+                    // Crossfade CTA copy in-place (Exporting / Share / Export) — no height change.
+                    AnimatedContent(
+                        targetState = primaryActionLabel,
+                        transitionSpec = {
+                            fadeIn(animationSpec = fadeSpec) togetherWith
+                                fadeOut(animationSpec = fadeSpec)
+                        },
+                        label = "exportPrimaryLabel",
+                    ) { label ->
+                        Text(label)
                     }
                 }
             }
 
-            // Fixed secondary height; fade content top-aligned so Share↔gallery stay tight and
-            // sheet measure never changes when Retry / Open-gallery appear.
+            // Fixed secondary height; cancel sits here during active export so it never spawns under
+            // the user's finger at primary CTA coordinates, and sheet measure stays fixed.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -411,6 +397,20 @@ fun <T> SaveExportSheetShell(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    if (showCancelButton && onCancelClick != null) {
+                        OutlinedButton(
+                            onClick = onCancelClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp)
+                                .height(PrimaryButtonHeight)
+                                .testTag("sharedComposeExportCancel")
+                                .semantics { contentDescription = cancelLabel },
+                            shape = RectangleShape,
+                        ) {
+                            Text(cancelLabel)
+                        }
+                    }
                     AnimatedVisibility(
                         visible = showRetry,
                         enter = fadeIn(animationSpec = fadeSpec),
@@ -432,7 +432,7 @@ fun <T> SaveExportSheetShell(
                         }
                     }
                     AnimatedVisibility(
-                        visible = showOpenGallery,
+                        visible = showOpenGallery && !isExporting,
                         enter = fadeIn(animationSpec = fadeSpec),
                         exit = fadeOut(animationSpec = fadeSpec),
                     ) {

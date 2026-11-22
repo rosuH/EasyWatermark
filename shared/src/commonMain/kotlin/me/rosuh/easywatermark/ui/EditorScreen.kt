@@ -20,16 +20,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import me.rosuh.easywatermark.data.model.ImageInfoUi
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.entity.Template
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.about_title_about
@@ -51,6 +55,39 @@ import org.jetbrains.compose.resources.stringResource
  * Session switching is filmstrip-only; no left session library rail.
  * Filmstrip always under the primary preview (F1), never in the inspector rail.
  */
+internal class EditorBottomOverlayHostState {
+    private var ownerToken: Any? = null
+    private var onDismissHandler: (() -> Unit)? = null
+    var content by mutableStateOf<(@Composable () -> Unit)?>(null)
+        private set
+
+    fun show(
+        token: Any,
+        onDismiss: (() -> Unit)? = null,
+        overlay: @Composable () -> Unit,
+    ) {
+        ownerToken = token
+        onDismissHandler = onDismiss
+        content = overlay
+    }
+
+    fun dismiss(): Boolean {
+        val handler = onDismissHandler ?: return false
+        handler()
+        return true
+    }
+
+    fun clear(token: Any) {
+        if (ownerToken === token) {
+            ownerToken = null
+            onDismissHandler = null
+            content = null
+        }
+    }
+}
+
+internal val LocalEditorBottomOverlayHost = staticCompositionLocalOf<EditorBottomOverlayHostState?> { null }
+
 data class EditorUiIcons(
     val back: Painter,
     val addMoreImages: Painter,
@@ -121,6 +158,8 @@ fun EditorScreen(
     fontPanelState: FontPanelUiState = FontPanelUiState(),
     onFontPanelEvent: (FontPanelEvent) -> Unit = {},
     openFontSheetRequest: Int = 0,
+    onClearWatermark: () -> Unit = {},
+    overlayBackHandler: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit = { _, _ -> },
 ) {
     var showPreviewTextEditor by remember { mutableStateOf(false) }
     val progressiveSlots = LocalEditorProgressiveSlotPresentation.current
@@ -192,141 +231,179 @@ fun EditorScreen(
                 onGoTemplateList = { showPreviewTextEditor = false; showTemplateSheet() },
             )
         }
-        CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction(
-            selected?.uri?.value.orEmpty(), waterMark, onConfigChange, { showPreviewTextEditor = true },
-        )) {
+        val bottomOverlayHost = remember { EditorBottomOverlayHostState() }
+        if (!dualOrWide) {
+            overlayBackHandler(bottomOverlayHost.content != null) {
+                bottomOverlayHost.dismiss()
+            }
+        }
+        CompositionLocalProvider(
+            LocalPreviewInteraction provides PreviewInteraction(
+                selected?.uri?.value.orEmpty(),
+                waterMark,
+                onConfigChange,
+                { showPreviewTextEditor = true },
+                onClear = {
+                    if (waterMark.markMode == WatermarkMode.Image) onClearWatermark()
+                    else onConfigChange(WatermarkConfigChange.Text(""))
+                },
+            ),
+            LocalEditorBottomOverlayHost provides bottomOverlayHost,
+        ) {
         Surface(
             modifier = modifier
                 .fillMaxSize()
                 .testTag("sharedComposeEditorScreen"),
             color = MaterialTheme.colorScheme.background,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .safeDrawingPadding()
-                    .testTag(layoutTag),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                EditorTopBar(
-                    backIcon = icons.back,
-                    addMoreImagesIcon = icons.addMoreImages,
-                    saveIcon = icons.save,
-                    aboutIcon = icons.about,
-                    backContentDescription = backCd,
-                    addMoreImagesContentDescription = addMoreCd,
-                    saveContentDescription = saveCd,
-                    aboutContentDescription = aboutCd,
-                    modifier = Modifier.fillMaxWidth(),
-                    onBack = onBack,
-                    onAddMoreImages = onAddMoreImages,
-                    onShowSaveDialog = onShowSaveDialog,
-                    onGoAboutScreen = onGoAboutScreen,
-                )
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .safeDrawingPadding()
+                        .testTag(layoutTag),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    EditorTopBar(
+                        backIcon = icons.back,
+                        addMoreImagesIcon = icons.addMoreImages,
+                        saveIcon = icons.save,
+                        aboutIcon = icons.about,
+                        backContentDescription = backCd,
+                        addMoreImagesContentDescription = addMoreCd,
+                        saveContentDescription = saveCd,
+                        aboutContentDescription = aboutCd,
+                        modifier = Modifier.fillMaxWidth(),
+                        onBack = onBack,
+                        onAddMoreImages = onAddMoreImages,
+                        onShowSaveDialog = onShowSaveDialog,
+                        onGoAboutScreen = onGoAboutScreen,
+                    )
 
-                if (dualOrWide) {
-                    // Supporting-pane A for Expanded and Wide: preview+filmstrip | form inspector.
-                    // Wide no longer mounts a left session library (owner 2026-08-10).
-                    Row(
-                        modifier = Modifier
-                            .weight(1f, fill = true)
-                            .fillMaxWidth()
-                            .testTag(
-                                if (layoutClass == EditorLayoutClass.Wide) {
-                                    "editorWidePaneRow"
-                                } else {
-                                    "editorExpandedPaneRow"
-                                },
-                            ),
-                    ) {
-                        // Primary pane: preview + filmstrip under canvas (F1).
-                        Column(
+                    if (dualOrWide) {
+                        // Supporting-pane A for Expanded and Wide: preview+filmstrip | form inspector.
+                        // Wide no longer mounts a left session library (owner 2026-08-10).
+                        Row(
                             modifier = Modifier
                                 .weight(1f, fill = true)
-                                .fillMaxHeight()
-                                .testTag("editorPrimaryPreviewPane"),
+                                .fillMaxWidth()
+                                .testTag(
+                                    if (layoutClass == EditorLayoutClass.Wide) {
+                                        "editorWidePaneRow"
+                                    } else {
+                                        "editorExpandedPaneRow"
+                                    },
+                                ),
                         ) {
-                            EditorPreviewFrame(
-                                hasImage = hasPreviewContent,
-                                emptyText = emptyPreview,
-                                lowResolutionHint = lowResolutionHint,
+                            // Primary pane: preview + filmstrip under canvas (F1).
+                            Column(
                                 modifier = Modifier
                                     .weight(1f, fill = true)
-                                    .fillMaxWidth()
-                                    .testTag("sharedComposeWatermarkPreview"),
-                            ) { previewModifier ->
-                                preview(previewModifier)
+                                    .fillMaxHeight()
+                                    .testTag("editorPrimaryPreviewPane"),
+                            ) {
+                                EditorPreviewFrame(
+                                    hasImage = hasPreviewContent,
+                                    emptyText = emptyPreview,
+                                    lowResolutionHint = lowResolutionHint,
+                                    modifier = Modifier
+                                        .weight(1f, fill = true)
+                                        .fillMaxWidth()
+                                        .testTag("sharedComposeWatermarkPreview"),
+                                ) { previewModifier ->
+                                    preview(previewModifier)
+                                }
+                                EditorMainFilmstrip(
+                                    imageList = imageList,
+                                    selected = selected,
+                                    progressiveSlots = progressiveSlots,
+                                    hasProgressiveSlots = hasProgressiveSlots,
+                                    thumbnail = thumbnail,
+                                    onImageSelected = onImageSelected,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
-                            EditorMainFilmstrip(
-                                imageList = imageList,
-                                selected = selected,
-                                progressiveSlots = progressiveSlots,
-                                hasProgressiveSlots = hasProgressiveSlots,
-                                thumbnail = thumbnail,
-                                onImageSelected = onImageSelected,
-                                modifier = Modifier.fillMaxWidth(),
+
+                            // Supporting form inspector — top tabs + scroll body (no phone Center chrome).
+                            EditorInspectorPanel(
+                                waterMark = waterMark,
+                                templateIcon = icons.templateList,
+                                onValueChange = onConfigChange,
+                                onGoTemplateList = showTemplateSheet,
+                                colorOption = colorOption,
+                                iconOption = iconOption,
+                                initialTabIndex = initialInspectorTab,
+                                currentFontName = fontPanelState.currentDisplayName,
+                                supportedStyles = fontPanelState.supportedStyles.styles,
+                                onOpenFontPanel = showFontSheet,
+                                modifier = Modifier
+                                    .width(EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
+                                    .widthIn(max = EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
+                                    .fillMaxHeight()
+                                    .padding(EDITOR_SUPPORTING_PANE_PADDING_DP.dp)
+                                    .testTag("editorExpandedControlsPane"),
                             )
                         }
+                    } else {
+                        // Compact / Medium: phone vertical stack (M1).
+                        EditorPreviewFrame(
+                            hasImage = hasPreviewContent,
+                            emptyText = emptyPreview,
+                            lowResolutionHint = lowResolutionHint,
+                            modifier = Modifier
+                                .weight(1f, fill = true)
+                                .fillMaxWidth()
+                                .testTag("sharedComposeWatermarkPreview"),
+                        ) { previewModifier ->
+                            preview(previewModifier)
+                        }
 
-                        // Supporting form inspector — top tabs + scroll body (no phone Center chrome).
-                        EditorInspectorPanel(
+                        EditorMainFilmstrip(
+                            imageList = imageList,
+                            selected = selected,
+                            progressiveSlots = progressiveSlots,
+                            hasProgressiveSlots = hasProgressiveSlots,
+                            thumbnail = thumbnail,
+                            onImageSelected = onImageSelected,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        EditorBottomControls(
                             waterMark = waterMark,
                             templateIcon = icons.templateList,
                             onValueChange = onConfigChange,
                             onGoTemplateList = showTemplateSheet,
                             colorOption = colorOption,
                             iconOption = iconOption,
-                            initialTabIndex = initialInspectorTab,
+                            optionItem = optionItem,
+                            modifier = Modifier.fillMaxWidth(),
+                            initialTabIndex = forcedBottomTab,
+                            initialOptionIndex = forcedOptionIndex,
                             currentFontName = fontPanelState.currentDisplayName,
                             supportedStyles = fontPanelState.supportedStyles.styles,
                             onOpenFontPanel = showFontSheet,
-                            modifier = Modifier
-                                .width(EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
-                                .widthIn(max = EDITOR_EXPANDED_CONTROLS_PANE_MAX_DP.dp)
-                                .fillMaxHeight()
-                                .padding(EDITOR_SUPPORTING_PANE_PADDING_DP.dp)
-                                .testTag("editorExpandedControlsPane"),
                         )
                     }
-                } else {
-                    // Compact / Medium: phone vertical stack (M1).
-                    EditorPreviewFrame(
-                        hasImage = hasPreviewContent,
-                        emptyText = emptyPreview,
-                        lowResolutionHint = lowResolutionHint,
+                }
+                if (!dualOrWide) {
+                    Box(
                         modifier = Modifier
-                            .weight(1f, fill = true)
+                            .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .testTag("sharedComposeWatermarkPreview"),
-                    ) { previewModifier ->
-                        preview(previewModifier)
+                            .layout { measurable, constraints ->
+                                val maxH = if (constraints.hasBoundedHeight) {
+                                    (constraints.maxHeight * 0.58f).roundToInt().coerceAtLeast(1)
+                                } else {
+                                    constraints.maxHeight
+                                }
+                                val p = measurable.measure(
+                                    constraints.copy(maxHeight = constraints.maxHeight.coerceAtMost(maxH)),
+                                )
+                                layout(p.width, p.height) { p.placeRelative(0, 0) }
+                            },
+                    ) {
+                        bottomOverlayHost.content?.invoke()
                     }
-
-                    EditorMainFilmstrip(
-                        imageList = imageList,
-                        selected = selected,
-                        progressiveSlots = progressiveSlots,
-                        hasProgressiveSlots = hasProgressiveSlots,
-                        thumbnail = thumbnail,
-                        onImageSelected = onImageSelected,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    EditorBottomControls(
-                        waterMark = waterMark,
-                        templateIcon = icons.templateList,
-                        onValueChange = onConfigChange,
-                        onGoTemplateList = showTemplateSheet,
-                        colorOption = colorOption,
-                        iconOption = iconOption,
-                        optionItem = optionItem,
-                        modifier = Modifier.fillMaxWidth(),
-                        initialTabIndex = forcedBottomTab,
-                        initialOptionIndex = forcedOptionIndex,
-                        currentFontName = fontPanelState.currentDisplayName,
-                        supportedStyles = fontPanelState.supportedStyles.styles,
-                        onOpenFontPanel = showFontSheet,
-                    )
                 }
             }
         }
@@ -346,20 +423,26 @@ private fun EditorMainFilmstrip(
     onImageSelected: (ImageInfoUi) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Parent tag stays on this wrapper. The strip scaffold owns editorPhotoStrip /
+    // progressiveImportFilmstrip — chaining both testTags on one Box overwrites one of them.
     if (progressiveSlots != null && hasProgressiveSlots) {
-        EditorProgressivePhotoStrip(
-            presentation = progressiveSlots,
-            thumbnail = thumbnail,
-            modifier = modifier.testTag("editorMainFilmstrip"),
-        )
+        Box(modifier.testTag("editorMainFilmstrip")) {
+            EditorProgressivePhotoStrip(
+                presentation = progressiveSlots,
+                thumbnail = thumbnail,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     } else if (imageList.isNotEmpty()) {
-        EditorPhotoStrip(
-            images = imageList,
-            selectedImage = selected,
-            modifier = modifier.testTag("editorMainFilmstrip"),
-            onImageSelected = onImageSelected,
-            thumbnail = thumbnail,
-        )
+        Box(modifier.testTag("editorMainFilmstrip")) {
+            EditorPhotoStrip(
+                images = imageList,
+                selectedImage = selected,
+                modifier = Modifier.fillMaxWidth(),
+                onImageSelected = onImageSelected,
+                thumbnail = thumbnail,
+            )
+        }
     }
 }
 
