@@ -2,7 +2,7 @@
 
 **Status:** Proposed (2026-08-09)  
 **Context slice:** Storage / build toolchain  
-**Related:** AGENTS.md Room KMP notes; research `2026-08-08-android17-memory-r8-coroutines.md`
+**Related:** AGENTS.md Room KMP notes; archived research [`2026-08-08-android17-memory-r8-coroutines.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/research/2026-08-08-android17-memory-r8-coroutines.md)
 
 ## Context
 

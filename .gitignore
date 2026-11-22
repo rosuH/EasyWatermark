@@ -50,14 +50,7 @@ proguard/
 .navigation/
 
 # Android Studio captures folder (repo root only).
-# Phase B evidence under docs/parity must stay tracked — never ignore those trees.
 /captures/
-!docs/parity/
-!docs/parity/**/
-!docs/parity/**/captures/
-!docs/parity/**/captures/**
-!docs/parity/**/*.png
-!docs/parity/**/*.md
 
 # Xcode result bundles are generated test output, including under parity captures.
 *.xcresult/

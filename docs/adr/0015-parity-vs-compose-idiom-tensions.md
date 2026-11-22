@@ -4,7 +4,7 @@
 
 ## Context
 
-The 2026-06-13 parity pass (`docs/superpowers/research/2026-06-13-ui-parity-backlog.md`) fixed every **unambiguous** deviation (theme, text-input wiring, save-sheet thumbnails, single-image filmstrip — all build-green + verified on real device/emulator). The remaining backlog items are NOT bugs: each is a point where strict visual parity with production v2.10.0 (ADR-0011) collides with idiomatic/healthy Compose (Goal 3). ADR-0011 makes parity the default, but blindly reverting these would in some cases regress UX or fight Compose conventions — so each needs an explicit ruling rather than an autonomous edit.
+The 2026-06-13 parity pass ([`2026-06-13-ui-parity-backlog.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/research/2026-06-13-ui-parity-backlog.md)) fixed every **unambiguous** deviation (theme, text-input wiring, save-sheet thumbnails, single-image filmstrip — all build-green + verified on real device/emulator). The remaining backlog items are NOT bugs: each is a point where strict visual parity with production v2.10.0 (ADR-0011) collides with idiomatic/healthy Compose (Goal 3). ADR-0011 makes parity the default, but blindly reverting these would in some cases regress UX or fight Compose conventions — so each needs an explicit ruling rather than an autonomous edit.
 
 ## Items needing a ruling
 

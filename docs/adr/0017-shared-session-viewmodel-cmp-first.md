@@ -1,7 +1,7 @@
 # ADR-0017: Shared session ViewModel + ports + CMP-first UI
 
 **Status:** Accepted (2026-07-12)  
-**Plan ref:** `docs/superpowers/plans/2026-07-12-shared-business-state-machine-plan.md`  
+**Plan ref:** [`2026-07-12-shared-business-state-machine-plan.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/plans/2026-07-12-shared-business-state-machine-plan.md)  
 **Supersedes (scope only):** S4d-191 “no shared ViewModel without named consumer” — consumers are now explicit (Android / Desktop / iOS CMP)
 
 ## Context
@@ -76,6 +76,6 @@ Ship in small PRs: toolchain → nav/selection VM → export ports → Desktop b
 
 ## References
 
-- Plan: `docs/superpowers/plans/2026-07-12-shared-business-state-machine-plan.md`
+- Plan: [`2026-07-12-shared-business-state-machine-plan.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/plans/2026-07-12-shared-business-state-machine-plan.md)
 - Android ViewModel KMP: https://developer.android.com/kotlin/multiplatform/viewmodel
 - ADR-0004 (renderer), ADR-0005 (DI/ports), ADR-0011 (parity baseline)

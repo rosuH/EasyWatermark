@@ -1,7 +1,7 @@
 # ADR-0019: Compose Multiplatform resources for product UI strings and drawables
 
 **Status:** Accepted (implementation Phases 0–3 landed 2026-07-12; owner authorized Phase 0→3)  
-**Related:** plan `docs/superpowers/plans/2026-07-12-cmp-compose-resources-i18n-plan.md`; Weblate deferral note `docs/superpowers/research/2026-07-12-s-i18n-1-weblate-retarget.md`; AGENTS.md Strings / i18n section  
+**Related:** plan [`2026-07-12-cmp-compose-resources-i18n-plan.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/plans/2026-07-12-cmp-compose-resources-i18n-plan.md); Weblate deferral note [`2026-07-12-s-i18n-1-weblate-retarget.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/research/2026-07-12-s-i18n-1-weblate-retarget.md); AGENTS.md Strings / i18n section  
 **Does not supersede:** ADR-0004 / 0018 renderer policies; Android system-only `app/res` for themes/mipmaps/gallery edges
 
 ## Context

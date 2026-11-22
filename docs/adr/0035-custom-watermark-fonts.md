@@ -183,7 +183,7 @@ Android `previewFingerprint()` 必须纳入 `fontRef`；三端 cell 请求与发
 
 ## 7. 共享 UI
 
-具体入口、窄屏/大屏布局、选择与导入状态、实施任务和 UI 验收见 [字体面板 UI 计划](../superpowers/plans/2026-09-05-font-panel-ui-plan.md)。本节只保留架构职责。
+具体入口、窄屏/大屏布局、选择与导入状态、实施任务和 UI 验收见 [字体面板 UI 计划](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/plans/2026-09-05-font-panel-ui-plan.md)。本节只保留架构职责。
 
 新增共享 `EditorFontSheetHost`，沿用 `EditorTemplateSheetHost` 的数据与回调注入方式；平台 Host 持有面板开关、来源加载状态、导入进度和选择序号，不抽取新的共享 ViewModel。当前字体的样式能力随成功解析结果更新；不支持的样式控件禁用并提供说明。
 

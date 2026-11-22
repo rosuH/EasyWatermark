@@ -1,7 +1,7 @@
 # ADR-0027: Wallpaper dynamic color + Content editor theme
 
 **Status:** Accepted (2026-08-11)  
-**Owner decision:** grill-with-docs on cross-platform dynamic color (research `docs/superpowers/research/2026-08-10-cross-platform-dynamic-color.md`)  
+**Owner decision:** grill-with-docs on cross-platform dynamic color (archived research [`2026-08-10-cross-platform-dynamic-color.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/research/2026-08-10-cross-platform-dynamic-color.md))  
 **Supersedes in part:** ADR-0014 palette “keep/drop” product path for photo-driven chrome (S4d-41 drop remains for dormant Palette plumbing; **feature reopened** here under a different design)  
 **Related:** ADR-0007 (`DynamicColorCapability` = wallpaper gate only), ADR-0011 (forced-dark parity)
 

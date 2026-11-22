@@ -1,7 +1,7 @@
 # ADR-0032: E2E test case map and layered harness
 
 **Status:** Accepted (owner 2026-08-19)
-**Related:** ADR-0010 / 0010-c2 (golden policy — unchanged; goldens are not this harness), ADR-0011 (parity baseline; `docs/parity/v2.10.0/inventory/screens.md` is the map's ancestor), ADR-0026 (adaptive layout — dual-pane morph is a mapped edge), ADR-0031 (no third-party path classifiers; no dynamic required checks)
+**Related:** ADR-0010 / 0010-c2 (golden policy — unchanged; goldens are not this harness), ADR-0011 (parity baseline; archived [`screens.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/parity/v2.10.0/inventory/screens.md) is the map's ancestor), ADR-0026 (adaptive layout — dual-pane morph is a mapped edge), ADR-0031 (no third-party path classifiers; no dynamic required checks)
 
 ## Context
 

@@ -43,7 +43,7 @@ Load only the context needed for the task. Use these routes when relevant; a sma
 | GitHub label names | `docs/agents/triage-labels.md` |
 | Android / KMP API (not training data) | `android docs search '<query>'` then `android docs fetch` |
 
-Start from the current request and relevant sources above. Historical mission files such as `task_plan.md`, `findings.md`, and `progress.md`, plus notes in `docs/superpowers/research/`, are evidence, not active instructions, unless the user resumes that work; reconcile it with the current request and this contract.
+Start from the current request and relevant sources above. Historical migration records (`task_plan.md`, `findings.md`, `progress.md`, `docs/migration-log.md`, `docs/parity/`, `docs/superpowers/`) are archived in Git history (`dae43630`), not kept in the working tree; treat them as historical evidence only if explicitly resumed.
 
 ## Commands
 
@@ -75,7 +75,7 @@ Debug `applicationId` is `me.rosuh.easywatermark.debug` (installs beside product
 - **Editor layout:** dual-pane at **≥800 dp** via `editorLayoutClass` (ADR-0026). Route large-surface checks through `usesLargeScreenDialog`, never a raw width compare.
 - **Motion:** `EwmMotionTokens` + `motionDurationMs`. Android first Launch frame is opaque; iOS/Desktop keep the process-first fade (ADR-0032). Filmstrip switch is a hard cut.
 - **i18n:** product strings/icons live in `shared/.../composeResources/`. Dual-write default EN to Weblate’s `app/src/main/res/values/` as well. Never hand-edit non-default locales. Do not put watermark fonts or Room seed DBs in composeResources.
-- **iOS:** session holds Ready paths only. PhotoKit pixels never enter the pipeline, Session, or preview caches. Production framework is classic ObjC `Shared.framework` — do not migrate to Alpha Swift export. Prefer `internal` on implementation-only iosMain.
+- **iOS:** session holds Ready paths only. PhotoKit pixels never enter the pipeline, Session, or `SourcePlaceholder`/`Watermarked` preview caches (they stay in the iOS-only `SourceFastPath` photo-layer slot under a matching overlay). Production framework is classic ObjC `Shared.framework` — do not migrate to Alpha Swift export. Prefer `internal` on implementation-only iosMain.
 - **Desktop:** app data is OS-native (`DesktopAppPaths`). macOS export folder uses native AWT directory `FileDialog`, not Swing `JFileChooser`.
 - **Deps:** stable-by-default; one catalog slice at a time; record rollback HEAD before a promotion.
 - **Store assets:** marketing config stays in this repo (`goldie/`, `goldie-play/`, `.argent/flows`). The engine is the [rosuH/goldie](https://github.com/rosuH/goldie) fork (`scripts/`, `studio/play/`). Do not patch `node_modules/goldie`. Framed/raw outputs stay untracked (`goldie/out/`, `goldie-play/out/`).
