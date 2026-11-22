@@ -173,7 +173,7 @@ python3 scripts/testmap_run.py --self-check
 ./gradlew --max-workers=8 :shared:desktopTest
 ```
 
-The generator validates the map and titles and produces `map.mmd` and `coverage.md`. `TestMapGuardTest` checks map/code references. L1 witnesses show observable end states, not byte-comparison goldens. Review them visually. Preserve the `screens_ref` links to the [frozen parity inventory](../parity/v2.10.0/inventory/screens.md).
+The generator validates the map and titles and produces `map.mmd` and `coverage.md`. `TestMapGuardTest` checks map/code references. L1 witnesses show observable end states, not byte-comparison goldens. Review them visually. Preserve the `screens_ref` links to the [archived parity inventory](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/parity/v2.10.0/inventory/screens.md).
 
 For product changes, follow [Mode B](../../eval/README.md): select affected paths, run the selected host checks, diagnose failures with bounded single cases, complete the required repetitions, then fill the local verify report with observations and limitations. Human Confirm remains pending until the user acts. Do not recommend merge or ship without the required evidence and confirmation.
 

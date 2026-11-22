@@ -7,7 +7,7 @@
 # and layout class (compact / medium / expanded / wide) are states of `editor`, not nodes.
 # Drive labels: real | seam | none. System picker cells, FileDialog, share sheets, and
 # permission prompts are never claimed as real.
-# screens_ref is a one-way back-link to docs/parity/v2.10.0/inventory/screens.md (frozen).
+# screens_ref is a one-way back-link to archived docs/parity/v2.10.0/inventory/screens.md (git dae43630).
 
 nodes:
   - id: system

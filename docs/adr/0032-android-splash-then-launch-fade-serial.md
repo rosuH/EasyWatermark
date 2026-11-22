@@ -3,7 +3,7 @@
 **Status:** Accepted (owner 2026-08-26; iPhone 16 Pro Launch fill witness). **Amended 2026-09-13:** Android handshake reverted.  
 **Context slice:** Cold start / system launch chrome vs process-first Launch reveal  
 **Related:** ADR-0023, I3 MotionPolicy  
-**Hub:** [cold-launch knowledge](../superpowers/research/2026-08-26-cold-launch-knowledge.md) (historical; Android hold is no longer product code)
+**Hub:** [cold-launch knowledge](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/research/2026-08-26-cold-launch-knowledge.md) (historical; Android hold is no longer product code)
 
 ## Context
 

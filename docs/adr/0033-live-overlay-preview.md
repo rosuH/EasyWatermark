@@ -2,8 +2,7 @@
 
 **Status:** Proposed — Implemented, pending device sign-off  
 **Amends:** ADR-0018 §5 (preview slot no longer paints the export `composeOverBackground` bitmap)  
-**Related:** ADR-0029 (Library derivative stays photo-layer chrome), ADR-0030 (working set: Source stays; Watermarked is no longer the editor paint), ADR-0028 (filmstrip thumbs stay Coil)  
-**Hub:** `docs/superpowers/research/2026-08-26-watermark-background-platform-docs.md`
+**Related:** ADR-0029 (Library derivative stays photo-layer chrome), ADR-0030 (working set: Source stays; Watermarked is no longer the editor paint), ADR-0028 (filmstrip thumbs stay Coil)
 
 ## Context
 

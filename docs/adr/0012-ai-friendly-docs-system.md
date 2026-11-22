@@ -1,6 +1,6 @@
 # ADR-0012: AI-friendly repository — CLAUDE.md + CONTEXT.md + ADRs + docs-with-code gate
 
-**Status:** Accepted (2026-06-13) · **Plan ref:** Goal 4, plan v1.2 toolkit section
+**Status:** Accepted (2026-06-13) · **Amended (2026-11-22):** root session-memory files (`task_plan.md`/`findings.md`/`progress.md`) retired to Git history (`dae43630`); active guidance lives in `AGENTS.md`, `docs/CONTEXT.md`, `docs/adr/`, and `docs/agents/` · **Plan ref:** Goal 4, plan v1.2 toolkit section
 
 ## Context
 Developer goal: accumulate context continuously so any agent (or future human) can be productive without re-deriving decisions. The repo had no CLAUDE.md and no decision log.
@@ -9,7 +9,7 @@ Developer goal: accumulate context continuously so any agent (or future human) c
 - `CLAUDE.md` (root): commands, big-picture architecture, migration state, agent conventions.
 - `docs/CONTEXT.md`: domain glossary + invariants — the shared vocabulary.
 - `docs/adr/`: one record per decision; `grill-with-docs` maintains them at decision points; Proposed → Accepted requires developer sign-off.
-- `task_plan.md`/`findings.md`/`progress.md`: session memory (planning-with-files), already in force.
+- `task_plan.md`/`findings.md`/`progress.md`: session memory (planning-with-files) *(historical; retired to Git history at `dae43630`)*.
 - `.claude/skills/` committed to git so installed skills travel with the repo; stabilized procedures get distilled into project skills (skill-creator).
 - **Docs-with-code gate:** every milestone PR ships its context delta or states "no doc impact".
 

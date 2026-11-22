@@ -2,7 +2,7 @@
 
 **Status:** Accepted (owner verbal sign-off **「c2！」** 2026-07-12)  
 **Supersedes / reopens (in part):** ADR-0004 addenda that kept **Android production** text/icon/**composition** on native `WatermarkRenderer` indefinitely (S4d-8 Option A, S4d-17 Option C, S4d-190 No-Go). Geometry-sharing and Desktop/iOS commonMain paths remain in force.  
-**Related:** U0 / product UI strategy Option **C** in `docs/parity/v2.10.0/alignment/u0-cmp-product-ui-decisions.md`; golden policy ADR-0010 (will need rebaseline / perceptual tier).
+**Related:** U0 / product UI strategy Option **C** in [`u0-cmp-product-ui-decisions.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/parity/v2.10.0/alignment/u0-cmp-product-ui-decisions.md); golden policy ADR-0010 (will need rebaseline / perceptual tier).
 
 ## Context
 
@@ -46,7 +46,7 @@ C2 was previously blocked by byte-parity failures (rotated non-uniform icons; CJ
 ### Status update (2026-07-13 P3.5)
 
 - Preview + export production path uses common raster for **debug and release**.
-- Smoke pack: `docs/parity/v2.10.0/captures/c2-p35-smoke-2026-07-13/`.
+- Smoke pack: [`c2-p35-smoke-2026-07-13/`](https://github.com/rosuH/EasyWatermark/tree/dae43630/docs/parity/v2.10.0/captures/c2-p35-smoke-2026-07-13).
 - Export **panel** is shared `SaveExportSheetShell` on Android/Desktop/iOS; Photos/MediaStore/FS/share remain platform edges.
 - Gate 4 full native-builder delete still owner-gated; **rollout flag removed** (2026-07-17): `CommonRasterFlags` deleted — production always uses `AndroidCommonRaster` / commonMain pipeline. Native `WatermarkRenderer` kept for dual-path measurement and historical goldens.
 

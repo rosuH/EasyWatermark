@@ -2,8 +2,8 @@
 
 **Status:** Accepted (2026-08-09); **amended 2026-08-10** (drop three-zone left rail); **amended 2026-08-16** (dual-pane threshold 840 → 800 dp)  
 **Owner decision:** grill-with-docs Round 1–2 + UX demo sign-off (“符合预期”); 2026-08-10 live Desktop review — left session library “毫无意义”, use dual-pane only; 2026-08-16 iOS iPad route B review — lower the dual-pane floor so 11" iPads are not stuck on the phone stack  
-**UX demo:** `docs/superpowers/research/easywatermark-adaptive-layout-ux-demo.html`  
-**Research:** `docs/superpowers/research/2026-08-09-large-screen-layout-synthesis.md`
+**UX demo:** [`easywatermark-adaptive-layout-ux-demo.html`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/research/easywatermark-adaptive-layout-ux-demo.html)  
+**Research:** [`2026-08-09-large-screen-layout-synthesis.md`](https://github.com/rosuH/EasyWatermark/blob/dae43630/docs/superpowers/research/2026-08-09-large-screen-layout-synthesis.md)
 
 ## Context
 
@@ -45,7 +45,7 @@ Product research compared three schemes: **A** Supporting Pane Studio, **B** Imm
 - **2026-08-10 amendment:** remove `EditorSessionImageLibrary` left rail; filmstrip-only multi-image switch on dual-pane.
 - **Gallery** remains feed/grid adaptive (existing min-cell policy); this ADR does not redefine gallery as list-detail.
 - **iOS multi-window** remains out of scope (ADR-0020); adaptive rules apply to the single shared editor window size.
-- **Docs:** glossary terms in `docs/CONTEXT.md`; interactive morph demo under `docs/superpowers/research/` (demo may still show historical C — product chrome is dual-pane).
+- **Docs:** glossary terms in `docs/CONTEXT.md`; archived interactive morph demo in Git history (`dae43630`, demo may still show historical C — product chrome is dual-pane).
 
 ## Glossary delta
 
