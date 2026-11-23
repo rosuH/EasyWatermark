@@ -90,7 +90,7 @@ Do **not** skip select and run a favorite edge.
 3. Otherwise run suggested host scripts (warn before long emulator+build).
 4. Agent edges: `scripts/e2e-verify.sh --change '<natural language of this change>' --run --android-device '<authorized-serial>' --ios-device '<authorized-udid>'` (default 3 repeats, `EWM_AGENT_REPEATS`). Supply a concrete device ID for every selected platform; omit the flag for an unselected platform. Missing, empty, or `auto` bindings are rejected before execution, and the existing device resolver rejects unknown or wrong-platform IDs. Formal runs no longer auto-select a connected phone. The existing runner receives each platform's exact selection and device, with `TESTMAP_NO_EXPAND=1`. Without `--run` it only writes the stub and needs no device bindings.
 5. Look at console frames / `build/agent-device/` vs expected effect (change text + `copy.yaml` titles). Fill the UI heuristic in the generated `docs/testmap/runs/<ts>-<sha>-verify.md`.
-6. Human Confirm on the console. Independent review is not Confirm.
+6. Human Confirm on the console or `scripts/e2e-run.sh --review <edge>`. Independent review is not Confirm.
 7. L3 only if select suggested it or the change is perf. Numbers do not own pass/fail.
 8. **Do not recommend merge or ship** if the report is missing, Confirm is missing where required, or any agent task is 0/N (unless the edge is a known product failure such as Add More).
 
