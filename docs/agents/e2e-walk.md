@@ -68,9 +68,7 @@ Verify by screenshot. `-PewmAutoOpen` is a **seam**, not `real`.
 
 ### Standing repo rules
 
-- Warn before sustained emulator + build load (this machine has frozen input devices under that load).
-- Do not shut down already-live Android or iOS simulators used for migration work unless the owner orders it.
-- `./gradlew --stop` when the heavy run is done.
+- Build load, live simulators, and the Gradle daemon: follow **Machines** in [`AGENTS.md`](../../AGENTS.md).
 - Verify renders by **viewing** screenshots, not byte sizes (ADR-0010).
 
 ## Promotion

@@ -49,8 +49,7 @@ scripts/e2e-select.sh
 
 Use the commands select printed, or the same task ids via `scripts/e2e-run.sh` / the testmap console. Script red/green is whether **the path works**.
 
-- Warn before sustained emulator + build (this machine has frozen under that load).
-- Do not shut down already-live Android or iOS simulators.
+- Build load and live simulators: follow **Machines** in [`AGENTS.md`](../AGENTS.md).
 
 ## 3. Heuristic — when select said L1, L2, L3, or agent/manual
 

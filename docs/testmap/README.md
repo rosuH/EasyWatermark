@@ -97,7 +97,7 @@ Open the local console at `http://127.0.0.1:8931`. The console serves the built 
 
 The CLI is the only runner. The web client can select tasks, start a CLI run, stop it, and display its records. Looking at a page must not start a test or boot a device. There is no queue-pause control. Stop is complete only when the recorded process and task state say it is complete.
 
-Mobile Agent Device tasks can expand to supported Android and iOS lanes. Review the actual task list and selected devices before starting. Desktop remains host/L1 coverage; a witness image is not Desktop device video. Do not close existing emulators, clear user data, or open native scrcpy windows automatically. Warn before sustained emulator and build load; cap Gradle with `--max-workers=8`.
+Mobile Agent Device tasks can expand to supported Android and iOS lanes. Review the actual task list and selected devices before starting. Desktop remains host/L1 coverage; a witness image is not Desktop device video. Do not close existing emulators, clear user data, or open native scrcpy windows automatically. For build load and the Gradle cap, follow **Machines** in [`AGENTS.md`](../../AGENTS.md).
 
 The Android E2E runner exposes `android-ai-journey` and the diagnostic `android-large-image-preview` task. Each must run alone, once, on an explicitly selected Android device. The preview task creates one owned 49,861×1,350 banded PNG, then checks fresh same-process decode and Canvas-fatal logs; `bug_reproduced` is separate from the native test failure. It does not claim an export, and fixture/private-state restoration remains required.
 

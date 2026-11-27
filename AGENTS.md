@@ -7,10 +7,10 @@ Keep this always-on contract limited to durable project constraints. Put task hi
 ## Working together
 
 - **Complete the task:** derive completion from the requested outcome, including applicable checks and runtime inspection. Continue through failures caused by the change; a first implementation is not completion. Infer routine details, state material assumptions, and ask only when missing input changes scope, correctness, or authorization. Incorporate mid-task corrections without dropping unfinished work.
-- **Delegate:** for substantial work, the lead owns scope and acceptance; subagents handle bounded reading, implementation, batch edits, and tests. Assign file ownership, constraints, and acceptance evidence; parallelize independent work and preserve others' edits. Keep trivial tasks local. If delegation is unavailable, report it and honor explicit role restrictions.
+- **Delegate:** the lead splits the task, briefs workers, and accepts results. It does not write product code or tests. Implementation workers write the code: at most four workstreams at once, one worker per workstream, each with its own files. Check runners take mechanical work such as running checks, splitting up CI, and wide searches. With Claude models the lead is Fable, implementation workers are Opus, and check runners are Sonnet. Name the model on every spawn, because an unnamed worker inherits the lead's model, the most expensive tier. A worker starts without the lead's context, so brief it with the goal, files, constraints, and acceptance evidence, and tell it to preserve others' edits. Guidance, docs, and one-step lookups stay with the lead. If delegation is unavailable, report it and honor explicit role restrictions.
 - **Verify:** inspect the current diff and relevant evidence, not worker status alone. Run affected checks and required gates; repeat only after relevant edits, failures, or unresolved concerns. Docs-only changes need static checks. UI/performance claims need applicable visual and physical-device evidence; mark missing evidence pending. Product code before merge or ship: `e2e-testmap` pre-merge mode in [`eval/README.md`](eval/README.md) and a local verify report — not a GitHub required check; do not mint human Confirm.
 - **Communicate:** lead with the outcome, relevant changes, checks, and remaining limitations in concise, plain language.
-- **Authorization:** requested local edits, checks, and fixes may proceed without repeated approval. Preserve unrelated work. Publishing, messaging, merging, and destructive cleanup require user authorization, which may already be present in the session. While awaiting missing input, continue independent authorized work.
+- **Authorization:** within the requested task, local edits, builds, tests, emulator or simulator runs, and messages between the lead and its workers need no approval. Ask before `git push`, opening or merging a PR, writing to GitHub Issues or PR threads, tagging or releasing, uploading to a store or Weblate, and discarding or deleting work you did not create. Approval already given in the session counts. Preserve unrelated work, and continue independent authorized work while you wait.
 
 ## Product
 
@@ -81,18 +81,18 @@ Debug `applicationId` is `me.rosuh.easywatermark.debug` (installs beside product
 - **Store assets:** marketing config stays in this repo (`goldie/`, `goldie-play/`, `.argent/flows`). The engine is the [rosuH/goldie](https://github.com/rosuH/goldie) fork (`scripts/`, `studio/play/`). Do not patch `node_modules/goldie`. Framed/raw outputs stay untracked (`goldie/out/`, `goldie-play/out/`).
 - **Decisions:** new forks get an ADR (`docs/adr/`, Proposed until the owner signs). Milestone PRs update CONTEXT/ADR, or say “no doc impact”. Change this file only for durable agent rules.
 - **Parity:** Android production v2.10.0 on `master` is the visual/behavior baseline. Verify renders by viewing screenshots, not byte sizes.
-- **Machines:** do not shut down already-live Android or iOS simulators (standing order). Cap Gradle with `--max-workers=8`; `./gradlew --stop` when you started the daemon. Warn before long emulator+build load.
+- **Machines:** sustained emulator plus Gradle load has frozen this machine's input devices. Cap Gradle with `--max-workers=8` and run one Gradle build at a time across all workers. Before a long emulator+build run, say so in one line, then continue. Leave running any emulator or simulator you did not boot, because the owner or another session may be using it; shut down the ones you booted when you finish. Run `./gradlew --stop` when you started the daemon.
 - **Human Confirm:** only a click in the testmap page may call `POST /api/confirm` (the page load issues an expiring page token). Agents must not call this endpoint, including via curl, fetch, or scripts. Independent review is not Confirm.
 
 ## Skills
 
 Use explicitly requested skills or skills whose workflow matches the task, not merely a related keyword. Read the selected `SKILL.md`, then only supporting files needed for that workflow; name the skill when first used. Explicit user instructions take precedence over skill guidelines, subject to system/developer constraints. If a skill blocks authorized work, link and quote the exact rule and distinguish it from your interpretation; otherwise continue.
 
-Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; read one copy. Compose / HotSwan skills live under `.agents/skills/`. For skill maintenance, see `docs/agents/workflow.md`.
+Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; read one copy. Compose / HotSwan skills live under `.agents/skills/` and `.claude/skills/`. For skill maintenance, see `docs/agents/workflow.md`.
 
 | Situation | Skill |
 |---|---|
-| App Store / Play store assets | `goldie` (engine fork: https://github.com/rosuH/goldie) |
+| App Store / Play store assets | `goldie`, read from the engine checkout because it is not in the project mirrors: `skills/goldie/SKILL.md` under `$GOLDIE_HOME`, else `../goldie` (fork: https://github.com/rosuH/goldie) |
 | XML → Compose parity | `migrate-xml-views-to-jetpack-compose` |
 | System bars / IME / cutout | `edge-to-edge` |
 | Nav / multi-pane scenes | `navigation-3` |
@@ -104,6 +104,7 @@ Skills are mirrored under `skills/`, `.claude/skills/`, and `.agents/skills/`; r
 | R8 / keep rules | `r8-analyzer` |
 | Jank / startup / traces | `android-profiler` |
 | Play Data Safety | `play-policy-insights` |
+| Compose UI performance | `jetpack-compose-performance` |
 | Recompose / stability | `auditing-compose-performance` |
 
 ## Cursor Cloud
