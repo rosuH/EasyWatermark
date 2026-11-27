@@ -1172,56 +1172,69 @@ final class PickerFlowUITests: XCTestCase {
         return rail
     }
 
-    /// Icon control shows the inline sticker rail directly and exposes add + built-in tiles.
+    /// Icon control shows the inline sticker rail directly: None, Import, built-ins, All pinned last.
     func testStickerSheetOpensFromIcon() {
         let app = launchFixtureApp()
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 30), "Fixture preview never appeared.")
-        _ = openStickerRailViaIcon(in: app)
-        XCTAssertTrue(
-            app.descendants(matching: .any)["stickerExpand"].firstMatch.waitForExistence(timeout: 5),
-            "Expand sticker panel button never appeared."
-        )
+        let rail = openStickerRailViaIcon(in: app)
+        let none = app.descendants(matching: .any)["stickerClear"].firstMatch
+        XCTAssertTrue(none.waitForExistence(timeout: 5), "None sticker tile never appeared.")
         XCTAssertTrue(
             app.descendants(matching: .any)["stickerAdd"].firstMatch.waitForExistence(timeout: 5),
-            "Add sticker tile never appeared."
+            "Import sticker tile never appeared."
         )
         XCTAssertTrue(
-            app.descendants(matching: .any)["stickerBuiltIn_copyright"].firstMatch.waitForExistence(timeout: 5),
-            "Built-in copyright sticker tile never appeared."
+            app.descendants(matching: .any)["stickerBuiltIn_verified"].firstMatch.waitForExistence(timeout: 5),
+            "Built-in verified sticker tile never appeared."
+        )
+        let all = app.descendants(matching: .any)["stickerExpand"].firstMatch
+        XCTAssertTrue(all.waitForExistence(timeout: 5), "All sticker tile never appeared.")
+        // All is pinned at the END of the rail, right of None and Import.
+        XCTAssertGreaterThan(
+            all.frame.minX,
+            none.frame.minX,
+            "All tile must sit at the trailing end of the rail."
+        )
+        XCTAssertLessThanOrEqual(
+            all.frame.maxX,
+            rail.frame.maxX + 1,
+            "All tile must stay inside the rail's trailing edge."
         )
         attach(app, "sticker-rail")
     }
 
-    /// Selecting a built-in sticker applies it live in the inline rail and clear removes it.
+    /// Built-ins apply live in the rail; the always-present None tile takes the selection back.
     func testSeededStickerApplyThenDelete() {
         let app = launchFixtureApp()
         let preview = app.descendants(matching: .any)["sharedComposeWatermarkPreview"].firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 30), "Fixture preview never appeared.")
         let rail = openStickerRailViaIcon(in: app)
 
-        let copyrightTile = app.descendants(matching: .any)["stickerBuiltIn_copyright"].firstMatch
-        XCTAssertTrue(copyrightTile.waitForExistence(timeout: 8), "Copyright tile never appeared.")
-        tapIfPossible(copyrightTile)
+        let noneTile = app.descendants(matching: .any)["stickerClear"].firstMatch
+        XCTAssertTrue(noneTile.waitForExistence(timeout: 8), "None tile must always be present.")
 
-        let clearBtn = app.descendants(matching: .any)["stickerClear"].firstMatch
-        XCTAssertTrue(clearBtn.waitForExistence(timeout: 8), "Clear button never appeared on active sticker rail.")
+        let verifiedTile = app.descendants(matching: .any)["stickerBuiltIn_verified"].firstMatch
+        XCTAssertTrue(verifiedTile.waitForExistence(timeout: 8), "Verified tile never appeared.")
+        tapIfPossible(verifiedTile)
+
         XCTAssertTrue(rail.exists, "Inline sticker rail should remain visible during 1-tap switching.")
-        let badge = app.descendants(matching: .any)["stickerSelectedBadge"].firstMatch
-        XCTAssertTrue(
-            copyrightTile.isSelected || badge.exists,
-            "Copyright tile did not show selected state after apply."
-        )
+        let verifiedSelected = expectation(for: NSPredicate(format: "isSelected == YES"), evaluatedWith: verifiedTile, handler: nil)
+        wait(for: [verifiedSelected], timeout: 15)
+        XCTAssertFalse(noneTile.isSelected, "None must not stay selected while a sticker is applied.")
         attach(app, "sticker-applied")
 
-        let sealTile = app.descendants(matching: .any)["stickerBuiltIn_seal"].firstMatch
-        XCTAssertTrue(sealTile.waitForExistence(timeout: 5), "Seal tile never appeared.")
-        tapIfPossible(sealTile)
+        let originalTile = app.descendants(matching: .any)["stickerBuiltIn_original"].firstMatch
+        XCTAssertTrue(originalTile.waitForExistence(timeout: 5), "Original tile never appeared.")
+        tapIfPossible(originalTile)
+        let originalSelected = expectation(for: NSPredicate(format: "isSelected == YES"), evaluatedWith: originalTile, handler: nil)
+        wait(for: [originalSelected], timeout: 15)
 
-        XCTAssertTrue(clearBtn.waitForExistence(timeout: 8), "Clear button disappeared after switching sticker.")
-        tapIfPossible(clearBtn)
-        let cleared = expectation(for: NSPredicate(format: "exists == NO"), evaluatedWith: clearBtn, handler: nil)
-        wait(for: [cleared], timeout: 10)
+        // None clears the sticker and takes the selection — the tile itself never disappears.
+        tapIfPossible(noneTile)
+        let noneSelected = expectation(for: NSPredicate(format: "isSelected == YES"), evaluatedWith: noneTile, handler: nil)
+        wait(for: [noneSelected], timeout: 15)
+        XCTAssertTrue(noneTile.exists, "None tile must stay in the rail after clearing.")
         attach(app, "sticker-cleared")
     }
 

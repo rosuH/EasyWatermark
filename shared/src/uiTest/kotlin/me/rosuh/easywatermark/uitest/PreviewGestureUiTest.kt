@@ -1089,7 +1089,10 @@ class PreviewGestureUiTest {
             moveTo(Offset(width * .5f, height * .55f))
         }
         val surfaceBounds = onNodeWithTag("previewGestureSurface").fetchSemanticsNode().boundsInRoot
-        val trashCenter = onNodeWithTag("previewDragTrashZone").assertIsDisplayed().fetchSemanticsNode().boundsInRoot.center
+        val trashZone = onNodeWithTag("previewDragTrashZone").assertIsDisplayed()
+        // Sticker v3 §1.5: the drag-to-remove target is a 40.dp chip, no longer a 48.dp circle pill.
+        trashZone.assertHeightIsEqualTo(40.dp)
+        val trashCenter = trashZone.fetchSemanticsNode().boundsInRoot.center
         val trashLocal = trashCenter - surfaceBounds.topLeft
         onNodeWithTag("previewDragTrashArmed").assertDoesNotExist()
 

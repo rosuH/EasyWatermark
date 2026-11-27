@@ -14,7 +14,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -1391,6 +1390,7 @@ internal fun InteractiveOverlayPreview(
                         targetValue = if (overTrash) MaterialTheme.colorScheme.onError else Color.White.copy(alpha = 0.92f),
                         animationSpec = tween(fadeMs),
                     )
+                    val trashShape = RoundedCornerShape(EwmTheme.shapes.chipRadiusDp)
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -1401,14 +1401,14 @@ internal fun InteractiveOverlayPreview(
                     ) {
                         Row(
                             modifier = Modifier
-                                .height(48.dp)
+                                .height(40.dp)
                                 .graphicsLayer {
                                     scaleX = trashScale
                                     scaleY = trashScale
                                 }
-                                .clip(CircleShape)
-                                .background(trashBg, CircleShape)
-                                .border(1.dp, trashBorder, CircleShape)
+                                .clip(trashShape)
+                                .background(trashBg, trashShape)
+                                .border(1.dp, trashBorder, trashShape)
                                 .padding(horizontal = 16.dp)
                                 .then(if (overTrash) Modifier.testTag("previewDragTrashArmed") else Modifier),
                             verticalAlignment = Alignment.CenterVertically,

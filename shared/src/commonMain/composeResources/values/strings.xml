@@ -59,7 +59,7 @@
     <string name="desktop_drop_busy">Busy — wait for the current operation before dropping another image.</string>
     <string name="desktop_drop_unsupported">Unsupported drop — no supported image files in drop (%1$s).</string>
     <string name="water_mark_mode_text">Text</string>
-    <string name="water_mark_mode_image">Icon</string>
+    <string name="water_mark_mode_image">Sticker</string>
     <string name="tips_ok">Confirm</string>
     <string name="tips_cancel_output">Cancel</string>
     <string name="tips_tip_title">Crash detected</string>
@@ -172,23 +172,32 @@
     <string name="tips_database_init_error">Database init failed.</string>
     <string name="tile_mode_title_repeat">Repeat</string>
     <string name="tile_mode_title_decal">Single</string>
-    <string name="sticker_import">Import</string>
-    <string name="sticker_change">Change</string>
-    <string name="sticker_remove">Remove</string>
-    <string name="sticker_label_copyright">Copyright</string>
-    <string name="sticker_label_prohibit">Prohibit</string>
-    <string name="sticker_label_shield">Protected</string>
-    <string name="sticker_label_seal">Certified</string>
-    <string name="sticker_label_camera">Camera</string>
-    <string name="sticker_label_lock">Private</string>
+    <string name="sticker_none">No sticker</string>
+    <string name="sticker_import">Import image</string>
     <string name="sticker_section_mine">Mine</string>
     <string name="sticker_section_builtin">Built-in</string>
     <string name="sticker_all_open">All stickers</string>
+    <string name="cd_sticker_close">Close sticker panel</string>
     <string name="sticker_manage">Manage</string>
     <string name="sticker_select_all">Select all</string>
-    <string name="sticker_deselect_all">Clear</string>
+    <string name="sticker_deselect_all">Deselect all</string>
+    <string name="sticker_selected_count">%1$d selected</string>
     <string name="sticker_delete_selected">Delete (%1$d)</string>
-    <string name="sticker_delete_batch_confirm">Delete %1$d selected stickers?</string>
+    <string name="sticker_delete_title">Delete stickers</string>
+    <string name="sticker_delete_batch_confirm">%1$d imported sticker(s) will be removed. Your original images are not affected.</string>
+    <!-- Built-in sticker labels, in BuiltInSticker display order (ADR-0041 / sticker pack v3). -->
+    <string name="sticker_label_verified">Verified</string>
+    <string name="sticker_label_original">Original</string>
+    <string name="sticker_label_no_ai">No AI training</string>
+    <string name="sticker_label_no_repost">No repost</string>
+    <string name="sticker_label_do_not_copy">Do not copy</string>
+    <string name="sticker_label_rights_reserved">All rights reserved</string>
+    <string name="sticker_label_sample">Sample</string>
+    <string name="sticker_label_private">Private</string>
+    <string name="sticker_label_smiley">Smiley</string>
+    <string name="sticker_label_seal_original">Original work seal</string>
+    <string name="sticker_label_no_reprint">No reprint</string>
+    <string name="sticker_label_anti_theft">Image theft will be pursued</string>
 
     <!-- S-i18n-2: labels previously hard-coded EN on edges (default EN only until Weblate retarget). -->
     <string name="recovery_send_email">Send email</string>

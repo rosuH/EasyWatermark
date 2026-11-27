@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,18 +18,21 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -42,6 +46,7 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,6 +56,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -59,68 +65,89 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import me.rosuh.easywatermark.data.model.MediaRef
 import me.rosuh.easywatermark.data.model.Sticker
 import me.rosuh.easywatermark.data.model.WaterMark
+import me.rosuh.easywatermark.render.WatermarkIconCache
 import me.rosuh.easywatermark.shared.generated.resources.Res
-import me.rosuh.easywatermark.shared.generated.resources.cd_back
+import me.rosuh.easywatermark.shared.generated.resources.cd_sticker_close
 import me.rosuh.easywatermark.shared.generated.resources.ic_close_24dp
 import me.rosuh.easywatermark.shared.generated.resources.ic_save_done
-import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_camera
-import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_copyright
-import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_lock_simple
-import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_prohibit
-import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_seal_check
-import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_shield_check
-import me.rosuh.easywatermark.shared.generated.resources.ic_template_list_item_edit
-import me.rosuh.easywatermark.shared.generated.resources.ic_tile_mode
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_anti_theft
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_do_not_copy
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_no_ai
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_no_reprint
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_no_repost
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_original
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_private
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_rights_reserved
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_sample
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_seal_original
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_smiley
+import me.rosuh.easywatermark.shared.generated.resources.ic_sticker_verified
 import me.rosuh.easywatermark.shared.generated.resources.preview_selection_done
 import me.rosuh.easywatermark.shared.generated.resources.sticker_all_open
 import me.rosuh.easywatermark.shared.generated.resources.sticker_delete_batch_confirm
 import me.rosuh.easywatermark.shared.generated.resources.sticker_delete_selected
+import me.rosuh.easywatermark.shared.generated.resources.sticker_delete_title
 import me.rosuh.easywatermark.shared.generated.resources.sticker_deselect_all
 import me.rosuh.easywatermark.shared.generated.resources.sticker_import
-import me.rosuh.easywatermark.shared.generated.resources.sticker_label_camera
-import me.rosuh.easywatermark.shared.generated.resources.sticker_label_copyright
-import me.rosuh.easywatermark.shared.generated.resources.sticker_label_lock
-import me.rosuh.easywatermark.shared.generated.resources.sticker_label_prohibit
-import me.rosuh.easywatermark.shared.generated.resources.sticker_label_seal
-import me.rosuh.easywatermark.shared.generated.resources.sticker_label_shield
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_anti_theft
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_do_not_copy
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_no_ai
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_no_reprint
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_no_repost
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_original
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_private
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_rights_reserved
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_sample
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_seal_original
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_smiley
+import me.rosuh.easywatermark.shared.generated.resources.sticker_label_verified
 import me.rosuh.easywatermark.shared.generated.resources.sticker_manage
-import me.rosuh.easywatermark.shared.generated.resources.sticker_remove
+import me.rosuh.easywatermark.shared.generated.resources.sticker_none
 import me.rosuh.easywatermark.shared.generated.resources.sticker_section_builtin
 import me.rosuh.easywatermark.shared.generated.resources.sticker_section_mine
 import me.rosuh.easywatermark.shared.generated.resources.sticker_select_all
+import me.rosuh.easywatermark.shared.generated.resources.sticker_selected_count
 import me.rosuh.easywatermark.shared.generated.resources.template_delete
 import me.rosuh.easywatermark.shared.generated.resources.tips_cancel_dialog
-import me.rosuh.easywatermark.shared.generated.resources.tips_confirm_dialog
-import me.rosuh.easywatermark.shared.generated.resources.tips_delete_template
 import me.rosuh.easywatermark.shared.generated.resources.water_mark_mode_image
 import me.rosuh.easywatermark.ui.LocalEditorBottomOverlayHost
 import me.rosuh.easywatermark.ui.ewmTestTagsAsResourceId
@@ -138,18 +165,42 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Phosphor regular marks already credited on the Open Source screen. */
+/**
+ * The 12 built-in marks (ADR-0041). Raster art, drawn untinted — the art carries its own colour,
+ * so the enum order here is the display order in every surface.
+ *
+ * `rights_reserved` deliberately keeps the old `copyright` art slot renamed: iOS reuses an existing
+ * `icon_builtin_<key>.png` and devices in the field still hold the old white mark.
+ */
 enum class BuiltInSticker(
     val key: String,
     val drawable: DrawableResource,
     val label: StringResource,
 ) {
-    Copyright("copyright", Res.drawable.ic_sticker_copyright, Res.string.sticker_label_copyright),
-    Prohibit("prohibit", Res.drawable.ic_sticker_prohibit, Res.string.sticker_label_prohibit),
-    Shield("shield", Res.drawable.ic_sticker_shield_check, Res.string.sticker_label_shield),
-    Seal("seal", Res.drawable.ic_sticker_seal_check, Res.string.sticker_label_seal),
-    Camera("camera", Res.drawable.ic_sticker_camera, Res.string.sticker_label_camera),
-    Lock("lock", Res.drawable.ic_sticker_lock_simple, Res.string.sticker_label_lock),
+    Verified("verified", Res.drawable.ic_sticker_verified, Res.string.sticker_label_verified),
+    Original("original", Res.drawable.ic_sticker_original, Res.string.sticker_label_original),
+    NoAi("no_ai", Res.drawable.ic_sticker_no_ai, Res.string.sticker_label_no_ai),
+    NoRepost("no_repost", Res.drawable.ic_sticker_no_repost, Res.string.sticker_label_no_repost),
+    DoNotCopy(
+        "do_not_copy",
+        Res.drawable.ic_sticker_do_not_copy,
+        Res.string.sticker_label_do_not_copy,
+    ),
+    RightsReserved(
+        "rights_reserved",
+        Res.drawable.ic_sticker_rights_reserved,
+        Res.string.sticker_label_rights_reserved,
+    ),
+    Sample("sample", Res.drawable.ic_sticker_sample, Res.string.sticker_label_sample),
+    Private("private", Res.drawable.ic_sticker_private, Res.string.sticker_label_private),
+    Smiley("smiley", Res.drawable.ic_sticker_smiley, Res.string.sticker_label_smiley),
+    SealOriginal(
+        "seal_original",
+        Res.drawable.ic_sticker_seal_original,
+        Res.string.sticker_label_seal_original,
+    ),
+    NoReprint("no_reprint", Res.drawable.ic_sticker_no_reprint, Res.string.sticker_label_no_reprint),
+    AntiTheft("anti_theft", Res.drawable.ic_sticker_anti_theft, Res.string.sticker_label_anti_theft),
     ;
 
     fun matches(ref: MediaRef): Boolean {
@@ -162,19 +213,41 @@ enum class BuiltInSticker(
     }
 }
 
-fun Painter.toStickerBitmap(sizePx: Int = 256): ImageBitmap {
-    val bitmap = ImageBitmap(sizePx, sizePx)
-    val canvas = Canvas(bitmap)
+/**
+ * Rasterise a sticker painter for the render pipeline: aspect ratio preserved, long edge
+ * [maxEdgePx] (the pipeline's icon decode bound), no tint — the art owns its colour.
+ */
+fun Painter.toStickerBitmap(
+    maxEdgePx: Int = WatermarkIconCache.ICON_MAX_EDGE_PX,
+): ImageBitmap {
+    val edge = maxEdgePx.coerceAtLeast(1)
+    val intrinsic = intrinsicSize
+    val ratio = if (
+        intrinsic.width > 0f && intrinsic.height > 0f &&
+        intrinsic.width.isFinite() && intrinsic.height.isFinite()
+    ) {
+        intrinsic.width / intrinsic.height
+    } else {
+        1f
+    }
+    val widthPx: Int
+    val heightPx: Int
+    if (ratio >= 1f) {
+        widthPx = edge
+        heightPx = (edge / ratio).roundToInt().coerceIn(1, edge)
+    } else {
+        heightPx = edge
+        widthPx = (edge * ratio).roundToInt().coerceIn(1, edge)
+    }
+    val bitmap = ImageBitmap(widthPx, heightPx)
+    val target = Size(widthPx.toFloat(), heightPx.toFloat())
     CanvasDrawScope().draw(
         density = Density(1f),
         layoutDirection = LayoutDirection.Ltr,
-        canvas = canvas,
-        size = Size(sizePx.toFloat(), sizePx.toFloat()),
+        canvas = Canvas(bitmap),
+        size = target,
     ) {
-        draw(
-            size = Size(sizePx.toFloat(), sizePx.toFloat()),
-            colorFilter = ColorFilter.tint(Color.White),
-        )
+        draw(size = target)
     }
     return bitmap
 }
@@ -183,21 +256,96 @@ fun Painter.toStickerBitmap(sizePx: Int = 256): ImageBitmap {
 val LocalStickerSheetRequest = staticCompositionLocalOf { 0 }
 
 private val StickerTileShape = RoundedCornerShape(EwmTheme.shapes.chipRadiusDp)
-private val SelectedTagShape = RoundedCornerShape(bottomStart = 2.dp)
-private val CornerDeleteTagShape = RoundedCornerShape(bottomEnd = 2.dp)
+private val CheckboxShape = RoundedCornerShape(2.dp)
+private val CornerDeleteShape = RoundedCornerShape(bottomEnd = 2.dp)
+
+private val RailTileSize = 56.dp
+private val RailSpacing = 6.dp
+private val RailStartPadding = 12.dp
+
+/** Width the pinned `All` tile reserves at the end of the rail (56 tile + 12 end padding). */
+private val RailAllReserve = 68.dp
+private val RailAllEndPadding = 12.dp
+private val RailScrimWidth = 26.dp
+
+/** Wide Import grows with its label (longer locales) instead of clipping it at a fixed 136 dp. */
+private val WideImportMinWidth = 136.dp
+private val WideImportMaxWidth = 220.dp
+
+private val GridGap = 4.dp
+private val GridSidePadding = 16.dp
+
+/** Empty library: the labelled Import tile takes the rest of its row (columns 2…4), no hole. */
+private const val WIDE_IMPORT_SPAN = 3
+
+private val UtilityIconSize = 22.dp
+private val CheckboxSize = 18.dp
+private val PanelHeaderHeight = 44.dp
+private val SectionRowHeight = 32.dp
+private val SectionRowActionHeight = 40.dp
+private val DeleteFooterHeight = 48.dp
+private val HoverDeleteSize = 16.dp
+
+private const val BUILT_IN_ART_FRACTION = 0.84f
+private const val USER_ART_FRACTION = 0.78f
+private const val DIMMED_ALPHA = 0.3f
 
 private sealed interface StickerCell {
-    data object Add : StickerCell
+    data object None : StickerCell
+    data object Import : StickerCell
     data class BuiltIn(val sticker: BuiltInSticker) : StickerCell
     data class User(val sticker: Sticker) : StickerCell
 }
 
+/** The three vector glyphs the utility tiles draw themselves, so none of them borrows an icon. */
+private enum class StickerGlyph { None, Import, All }
+
 /**
- * Expandable `2.dp` darkroom management & browsing sheet opened from [InlineStickerRail] on compact
- * screens. Groups stickers into `Mine` and `Built-in` when user stickers exist and provides an
- * explicit `Manage` toggle for one-tap deletion alongside live 1-tap switching.
+ * Rail order: the applied built-in first (so the current mark is always reachable without
+ * scrolling), then the host's user stickers (already most-recent-first), then the rest of the
+ * built-ins in enum order. Snapshotted by the caller — a tap must never reorder tiles under
+ * the finger.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+private fun stickerRailOrder(
+    userStickers: List<Sticker>,
+    currentIcon: MediaRef,
+): List<StickerCell> {
+    val applied = BuiltInSticker.fromIcon(currentIcon)
+    return buildList {
+        if (applied != null) add(StickerCell.BuiltIn(applied))
+        userStickers.forEach { add(StickerCell.User(it)) }
+        BuiltInSticker.entries.forEach { if (it != applied) add(StickerCell.BuiltIn(it)) }
+    }
+}
+
+/**
+ * Height for the wide Import tile: exactly one cell, not a fraction of its own width. The span also
+ * swallows the gaps between its columns, so an `aspectRatio` would make it taller than every other
+ * tile in its row.
+ */
+private fun Modifier.wideImportCellHeight(
+    span: Int = WIDE_IMPORT_SPAN,
+    gap: Dp = GridGap,
+) = layout { measurable, constraints ->
+    val width = constraints.maxWidth
+    val height = ((width - gap.roundToPx() * (span - 1)) / span).coerceAtLeast(0)
+    val placeable = measurable.measure(Constraints.fixed(width, height))
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+}
+
+private fun StickerCell.key(): String = when (this) {
+    StickerCell.None -> "none"
+    StickerCell.Import -> "add"
+    is StickerCell.BuiltIn -> "builtin_${sticker.key}"
+    is StickerCell.User -> "user_${sticker.id}"
+}
+
+/**
+ * Docked sticker panel (compact/medium) and dialog body (large surfaces): one scrolling body of
+ * `None` + `Import` + user stickers and the built-in pack, with an in-place selection mode for
+ * batch deletion. Applying a sticker swaps only the watermark image (ADR-0041) and keeps the
+ * panel open.
+ */
 @Composable
 fun StickerPanelSheet(
     userStickers: List<Sticker>,
@@ -213,261 +361,96 @@ fun StickerPanelSheet(
     dismissOnSelect: Boolean = false,
     onDeleteUsers: ((List<Sticker>) -> Unit)? = null,
 ) {
+    StickerPanelSheetImpl(
+        userStickers = userStickers,
+        enabled = enabled,
+        useLargeDialog = useLargeDialog,
+        currentIcon = currentIcon,
+        initialSelectedId = null,
+        onDismiss = onDismiss,
+        onAdd = onAdd,
+        onApplyBuiltIn = onApplyBuiltIn,
+        onApplyUser = onApplyUser,
+        onDeleteUser = onDeleteUser,
+        onClear = onClear,
+        dismissOnSelect = dismissOnSelect,
+        onDeleteUsers = onDeleteUsers,
+    )
+}
+
+/**
+ * [StickerPanelSheet] plus the one thing the frozen public signature cannot carry: the sticker a
+ * rail long-press pre-selected, which opens the panel straight into selection mode.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StickerPanelSheetImpl(
+    userStickers: List<Sticker>,
+    enabled: Boolean,
+    useLargeDialog: Boolean,
+    currentIcon: MediaRef,
+    initialSelectedId: String?,
+    onDismiss: () -> Unit,
+    onAdd: () -> Unit,
+    onApplyBuiltIn: (BuiltInSticker, ImageBitmap) -> Unit,
+    onApplyUser: (Sticker) -> Unit,
+    onDeleteUser: (Sticker) -> Unit,
+    onClear: (() -> Unit)?,
+    dismissOnSelect: Boolean,
+    onDeleteUsers: ((List<Sticker>) -> Unit)?,
+) {
     val deleteUsers: (List<Sticker>) -> Unit = onDeleteUsers ?: { list -> list.forEach(onDeleteUser) }
-    var pendingDelete by remember { mutableStateOf<Sticker?>(null) }
-    var pendingBatchDelete by remember { mutableStateOf<List<Sticker>>(emptyList()) }
-    var managing by remember { mutableStateOf(false) }
-    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var pendingDelete by remember { mutableStateOf<List<Sticker>>(emptyList()) }
+    var managing by remember { mutableStateOf(initialSelectedId != null) }
+    var selectedIds by remember {
+        mutableStateOf(initialSelectedId?.let { setOf(it) } ?: emptySet<String>())
+    }
     LaunchedEffect(userStickers.isEmpty()) {
         if (userStickers.isEmpty()) managing = false
     }
     LaunchedEffect(managing, userStickers) {
         selectedIds = reconcileStickerSelection(managing, userStickers, selectedIds)
     }
-    val body: @Composable () -> Unit = {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .then(if (useLargeDialog) Modifier else Modifier.navigationBarsPadding())
-                .padding(bottom = 16.dp)
-                .testTag("stickerPanelSheet"),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(Res.string.water_mark_mode_image),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (!managing && currentIcon.value.isNotBlank() && onClear != null) {
-                        StickerRemoveAction(
-                            enabled = enabled,
-                            tag = "stickerSheetClear",
-                            compact = false,
-                            onClick = onClear,
-                        )
-                        Box(
-                            Modifier
-                                .width(1.dp)
-                                .height(16.dp)
-                                .background(Color.White.copy(alpha = 0.12f)),
-                        )
-                    }
-                    val closeInteraction = remember { MutableInteractionSource() }
-                    val closeHovered by closeInteraction.collectIsHoveredAsState()
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(StickerTileShape)
-                            .background(
-                                Color.White.copy(alpha = if (closeHovered) 0.12f else 0.05f),
-                                StickerTileShape,
-                            )
-                            .border(
-                                1.dp,
-                                Color.White.copy(alpha = if (closeHovered) 0.24f else 0.12f),
-                                StickerTileShape,
-                            )
-                            .hoverable(interactionSource = closeInteraction)
-                            .clickable(onClick = onDismiss)
-                            .testTag("stickerSheetClose"),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.ic_close_24dp),
-                            contentDescription = stringResource(Res.string.cd_back),
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f),
-                        )
-                    }
-                }
-            }
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-                    .height(1.dp)
-                    .background(Color.White.copy(alpha = 0.08f)),
-            )
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false)
-                    .heightIn(max = 360.dp),
-                contentPadding = PaddingValues(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (userStickers.isNotEmpty()) {
-                    item(
-                        key = "section_mine",
-                        span = { GridItemSpan(maxLineSpan) },
-                        contentType = "section",
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 2.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            StickerSectionLabel(
-                                text = stringResource(Res.string.sticker_section_mine),
-                                modifier = Modifier.testTag("stickerSectionMine"),
-                            )
-                            StickerManageToggleButton(
-                                managing = managing,
-                                enabled = enabled,
-                                compact = false,
-                                onClick = { managing = !managing },
-                            )
-                        }
-                    }
-                    item(key = "add", contentType = "add") {
-                        StickerAddCell(
-                            enabled = enabled,
-                            dimmed = managing,
-                            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                            onClick = onAdd,
-                        )
-                    }
-                    items(
-                        items = userStickers,
-                        key = { sticker -> "user_${sticker.id}" },
-                        contentType = { "user" },
-                    ) { sticker ->
-                        val selected = currentIcon.value.isNotBlank() &&
-                            currentIcon.value == sticker.icon.value
-                        StickerCellItem(
-                            cell = StickerCell.User(sticker),
-                            selected = selected,
-                            enabled = enabled,
-                            tileModifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                            builtInIconSize = 26.dp,
-                            userIconSize = 32.dp,
-                            showHoverDelete = false,
-                            manageSelectable = managing,
-                            manageSelected = sticker.id in selectedIds,
-                            manageSelectTag = "stickerManageSelect_${sticker.id}",
-                            onManageToggleSelect = {
-                                selectedIds = toggleStickerSelection(selectedIds, sticker.id)
-                            },
-                            onAdd = onAdd,
-                            onApplyBuiltIn = { _, _ -> },
-                            onApplyUser = { s ->
-                                onApplyUser(s)
-                                if (dismissOnSelect) onDismiss()
-                            },
-                            onRequestDelete = { pendingDelete = it },
-                        )
-                    }
-                    item(
-                        key = "section_builtin",
-                        span = { GridItemSpan(maxLineSpan) },
-                        contentType = "section",
-                    ) {
-                        StickerSectionLabel(
-                            text = stringResource(Res.string.sticker_section_builtin),
-                            dimmed = managing,
-                            modifier = Modifier
-                                .padding(top = 6.dp)
-                                .testTag("stickerSectionBuiltIn"),
-                        )
-                    }
-                    items(
-                        items = BuiltInSticker.entries,
-                        key = { builtIn -> "builtin_${builtIn.name}" },
-                        contentType = { "builtin" },
-                    ) { builtIn ->
-                        StickerCellItem(
-                            cell = StickerCell.BuiltIn(builtIn),
-                            selected = builtIn.matches(currentIcon),
-                            enabled = enabled,
-                            tileModifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                            builtInIconSize = 26.dp,
-                            userIconSize = 32.dp,
-                            showHoverDelete = false,
-                            dimmed = managing,
-                            onAdd = onAdd,
-                            onApplyBuiltIn = { b, bmp ->
-                                onApplyBuiltIn(b, bmp)
-                                if (dismissOnSelect) onDismiss()
-                            },
-                            onApplyUser = {},
-                            onRequestDelete = {},
-                        )
-                    }
+    val body: @Composable (docked: Boolean) -> Unit = { docked ->
+        StickerPanelBody(
+            userStickers = userStickers,
+            currentIcon = currentIcon,
+            enabled = enabled,
+            managing = managing,
+            selectedIds = selectedIds,
+            docked = docked,
+            applyBottomInset = !useLargeDialog,
+            onDismiss = onDismiss,
+            onStartManaging = { managing = true },
+            onStopManaging = { managing = false },
+            onToggleSelectAll = {
+                selectedIds = if (userStickers.all { it.id in selectedIds }) {
+                    emptySet()
                 } else {
-                    item(key = "add", contentType = "add") {
-                        StickerAddCell(
-                            enabled = enabled,
-                            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                            onClick = onAdd,
-                        )
-                    }
-                    items(
-                        items = BuiltInSticker.entries,
-                        key = { builtIn -> "builtin_${builtIn.name}" },
-                        contentType = { "builtin" },
-                    ) { builtIn ->
-                        StickerCellItem(
-                            cell = StickerCell.BuiltIn(builtIn),
-                            selected = builtIn.matches(currentIcon),
-                            enabled = enabled,
-                            tileModifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                            builtInIconSize = 26.dp,
-                            userIconSize = 32.dp,
-                            showHoverDelete = false,
-                            onAdd = onAdd,
-                            onApplyBuiltIn = { b, bmp ->
-                                onApplyBuiltIn(b, bmp)
-                                if (dismissOnSelect) onDismiss()
-                            },
-                            onApplyUser = {},
-                            onRequestDelete = {},
-                        )
-                    }
+                    userStickers.map { it.id }.toSet()
                 }
-            }
-            if (managing && userStickers.isNotEmpty()) {
-                val allSelected = userStickers.all { it.id in selectedIds }
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .height(1.dp)
-                        .background(Color.White.copy(alpha = 0.08f)),
-                )
-                StickerManageBatchBar(
-                    selectedCount = selectedIds.size,
-                    allSelected = allSelected,
-                    enabled = enabled,
-                    compact = false,
-                    onToggleSelectAll = {
-                        selectedIds = if (allSelected) {
-                            emptySet()
-                        } else {
-                            userStickers.map { it.id }.toSet()
-                        }
-                    },
-                    onDeleteSelected = {
-                        pendingBatchDelete = userStickers.filter { it.id in selectedIds }
-                    },
-                )
-            }
-        }
+            },
+            onToggleSelect = { sticker ->
+                selectedIds = toggleStickerSelection(selectedIds, sticker.id)
+            },
+            onRequestDeleteSelected = {
+                pendingDelete = userStickers.filter { it.id in selectedIds }
+            },
+            onAdd = onAdd,
+            onApplyBuiltIn = { builtIn, bitmap ->
+                onApplyBuiltIn(builtIn, bitmap)
+                if (dismissOnSelect) onDismiss()
+            },
+            onApplyUser = { sticker ->
+                onApplyUser(sticker)
+                if (dismissOnSelect) onDismiss()
+            },
+            onClear = onClear,
+            onLongPressUser = { sticker ->
+                managing = true
+                selectedIds = setOf(sticker.id)
+            },
+        )
     }
     val overlayHost = LocalEditorBottomOverlayHost.current
     if (useLargeDialog) {
@@ -475,7 +458,7 @@ fun StickerPanelSheet(
             onDismissRequest = onDismiss,
             maxWidth = 380.dp,
             scrollContent = false,
-        ) { body() }
+        ) { body(false) }
     } else if (overlayHost != null) {
         val overlayToken = remember { Any() }
         val latestOnDismiss by rememberUpdatedState(onDismiss)
@@ -484,41 +467,265 @@ fun StickerPanelSheet(
                 token = overlayToken,
                 onDismiss = { latestOnDismiss() },
             ) {
-                DockedStickerOverlaySurface(
-                    onDismiss = { latestOnDismiss() },
-                    body = body,
-                )
+                DockedStickerOverlaySurface(onDismiss = { latestOnDismiss() }) { body(true) }
             }
         }
         DisposableEffect(overlayHost, overlayToken) {
-            onDispose {
-                overlayHost.clear(overlayToken)
-            }
+            onDispose { overlayHost.clear(overlayToken) }
         }
     } else {
         EwmModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             scrimColor = Color.Transparent,
-        ) { body() }
+        ) { body(false) }
     }
     StickerDeleteConfirmDialog(
-        pendingDelete = pendingDelete,
-        onDismiss = { pendingDelete = null },
-        onConfirmDelete = { sticker ->
-            pendingDelete = null
-            onDeleteUser(sticker)
-        },
-    )
-    StickerBatchDeleteConfirmDialog(
-        pendingBatchDelete = pendingBatchDelete,
-        onDismiss = { pendingBatchDelete = emptyList() },
+        targets = pendingDelete,
+        onDismiss = { pendingDelete = emptyList() },
         onConfirmDelete = { targets ->
+            pendingDelete = emptyList()
             selectedIds = emptySet()
-            pendingBatchDelete = emptyList()
+            managing = false
             deleteUsers(targets)
         },
     )
+}
+
+@Composable
+private fun StickerPanelBody(
+    userStickers: List<Sticker>,
+    currentIcon: MediaRef,
+    enabled: Boolean,
+    managing: Boolean,
+    selectedIds: Set<String>,
+    /**
+     * Docked overlay: fill the fixed height C1 hands down, and let
+     * [DockedStickerOverlaySurface] own the `stickerPanelSheet` tag so the tagged node is the
+     * whole panel (handle row included). Dialog / modal sheet: wrap height and tag this body.
+     */
+    docked: Boolean,
+    applyBottomInset: Boolean,
+    onDismiss: () -> Unit,
+    onStartManaging: () -> Unit,
+    onStopManaging: () -> Unit,
+    onToggleSelectAll: () -> Unit,
+    onToggleSelect: (Sticker) -> Unit,
+    onRequestDeleteSelected: () -> Unit,
+    onAdd: () -> Unit,
+    onApplyBuiltIn: (BuiltInSticker, ImageBitmap) -> Unit,
+    onApplyUser: (Sticker) -> Unit,
+    onClear: (() -> Unit)?,
+    onLongPressUser: (Sticker) -> Unit,
+) {
+    val closeLabel = stringResource(Res.string.cd_sticker_close)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (docked) Modifier.fillMaxHeight() else Modifier)
+            .then(if (applyBottomInset) Modifier.navigationBarsPadding() else Modifier)
+            .then(if (docked) Modifier else Modifier.testTag("stickerPanelSheet")),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(PanelHeaderHeight)
+                .padding(start = 20.dp, end = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (managing) {
+                Text(
+                    text = stringResource(Res.string.sticker_selected_count, selectedIds.size),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.testTag("stickerSelectedCount"),
+                )
+                StickerSelectionActions(
+                    allSelected = userStickers.isNotEmpty() &&
+                        userStickers.all { it.id in selectedIds },
+                    enabled = enabled,
+                    compact = false,
+                    onToggleSelectAll = onToggleSelectAll,
+                    onDone = onStopManaging,
+                )
+            } else {
+                Text(
+                    text = stringResource(Res.string.water_mark_mode_image),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .semantics { contentDescription = closeLabel }
+                        .testTag("stickerSheetClose"),
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_close_24dp),
+                        contentDescription = closeLabel,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
+                    )
+                }
+            }
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = docked),
+            contentPadding = PaddingValues(
+                start = GridSidePadding,
+                end = GridSidePadding,
+                bottom = if (managing) 12.dp else 44.dp,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(GridGap),
+            verticalArrangement = Arrangement.spacedBy(GridGap),
+        ) {
+            if (userStickers.isNotEmpty()) {
+                item(
+                    key = "section_mine",
+                    span = { GridItemSpan(maxLineSpan) },
+                    contentType = "section",
+                ) {
+                    // Selection mode owns the header row instead, so Manage steps aside.
+                    val manageButton: (@Composable () -> Unit)? = if (managing) {
+                        null
+                    } else {
+                        {
+                            StickerTextButton(
+                                text = stringResource(Res.string.sticker_manage),
+                                tag = "stickerManageToggle",
+                                enabled = enabled,
+                                onClick = onStartManaging,
+                            )
+                        }
+                    }
+                    StickerSectionRow(
+                        text = stringResource(Res.string.sticker_section_mine),
+                        tag = "stickerSectionMine",
+                        action = manageButton,
+                    )
+                }
+            }
+            item(
+                key = "none",
+                contentType = "none",
+            ) {
+                StickerCellTile(
+                    cell = StickerCell.None,
+                    currentIcon = currentIcon,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    dimmed = managing,
+                    noneTag = "stickerSheetClear",
+                    onClear = onClear,
+                    onAdd = onAdd,
+                    onApplyBuiltIn = onApplyBuiltIn,
+                    onApplyUser = onApplyUser,
+                )
+            }
+            item(
+                key = "add",
+                span = {
+                    if (userStickers.isEmpty()) GridItemSpan(WIDE_IMPORT_SPAN) else GridItemSpan(1)
+                },
+                contentType = "add",
+            ) {
+                StickerCellTile(
+                    cell = StickerCell.Import,
+                    currentIcon = currentIcon,
+                    enabled = enabled,
+                    modifier = if (userStickers.isEmpty()) {
+                        Modifier.fillMaxWidth().wideImportCellHeight()
+                    } else {
+                        Modifier.fillMaxWidth().aspectRatio(1f)
+                    },
+                    dimmed = managing,
+                    wideImport = userStickers.isEmpty(),
+                    onClear = onClear,
+                    onAdd = onAdd,
+                    onApplyBuiltIn = onApplyBuiltIn,
+                    onApplyUser = onApplyUser,
+                )
+            }
+            items(
+                items = userStickers,
+                key = { sticker -> "user_${sticker.id}" },
+                contentType = { "user" },
+            ) { sticker ->
+                StickerCellTile(
+                    cell = StickerCell.User(sticker),
+                    currentIcon = currentIcon,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    selecting = managing,
+                    picked = sticker.id in selectedIds,
+                    onClear = onClear,
+                    onAdd = onAdd,
+                    onApplyBuiltIn = onApplyBuiltIn,
+                    onApplyUser = onApplyUser,
+                    onLongPressUser = onLongPressUser,
+                    onToggleUser = onToggleSelect,
+                )
+            }
+            item(
+                key = "section_builtin",
+                span = { GridItemSpan(maxLineSpan) },
+                contentType = "section",
+            ) {
+                StickerSectionRow(
+                    text = stringResource(Res.string.sticker_section_builtin),
+                    tag = "stickerSectionBuiltIn",
+                    dimmed = managing,
+                )
+            }
+            items(
+                items = BuiltInSticker.entries,
+                key = { builtIn -> "builtin_${builtIn.key}" },
+                contentType = { "builtin" },
+            ) { builtIn ->
+                StickerCellTile(
+                    cell = StickerCell.BuiltIn(builtIn),
+                    currentIcon = currentIcon,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    dimmed = managing,
+                    onClear = onClear,
+                    onAdd = onAdd,
+                    onApplyBuiltIn = onApplyBuiltIn,
+                    onApplyUser = onApplyUser,
+                )
+            }
+        }
+        val fadeMs = motionDurationMs(currentMotionPolicy(), EwmMotionTokens.optionPanelFadeMs)
+        AnimatedVisibility(
+            visible = managing && userStickers.isNotEmpty(),
+            enter = fadeIn(tween(fadeMs)),
+            exit = fadeOut(tween(fadeMs)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+            ) {
+                // Tag the inner box: the footer inset belongs to the padded wrapper, so the
+                // container and the full-width button measure the same width.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("stickerManageBatchBar"),
+                ) {
+                    StickerDeleteSelectedButton(
+                        selectedCount = selectedIds.size,
+                        enabled = enabled,
+                        onClick = onRequestDeleteSelected,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -539,27 +746,29 @@ private fun DockedStickerOverlaySurface(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .ewmTestTagsAsResourceId()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = {},
-            ),
+            )
+            .testTag("stickerPanelSheet"),
         shape = dockedShape,
         color = EwmTheme.panel.containerColor,
         tonalElevation = EwmTheme.panel.tonalElevation,
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(Color.White.copy(alpha = 0.12f)),
+                    .background(Color.White.copy(alpha = 0.11f)),
             )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(22.dp)
+                    .height(20.dp)
                     .pointerInput(Unit) {
                         val thresholdPx = 48.dp.toPx()
                         var totalDragY = 0f
@@ -602,9 +811,9 @@ private fun DockedStickerOverlaySurface(
 }
 
 /**
- * Displays an inline 4-column sticker grid in dual-pane inspectors ([useLargeDialog] = true) so
- * desktop/tablet previews stay unobstructed, or a quick-pick inline horizontal rail with a pinned
- * expand entry (`stickerExpand`) to open the grouped management [StickerPanelSheet] on phones.
+ * Compact/medium: a horizontal quick-pick rail with `None` and `Import` first and a pinned `All`
+ * tile that opens [StickerPanelSheet]. Expanded/wide: the same grid body embedded in the
+ * inspector ([useLargeDialog] = true) so the preview stays unobstructed.
  */
 @Composable
 fun StickerPanelOnIcon(
@@ -620,10 +829,8 @@ fun StickerPanelOnIcon(
     onClear: (() -> Unit)? = null,
     onDeleteUsers: ((List<Sticker>) -> Unit)? = null,
 ) {
-    val hasIcon = waterMark.iconUri.value.isNotBlank()
     if (useLargeDialog) {
         InlineStickerInspectorPanel(
-            hasIcon = hasIcon,
             currentIcon = waterMark.iconUri,
             userStickers = userStickers,
             modifier = modifier,
@@ -637,7 +844,6 @@ fun StickerPanelOnIcon(
         )
     } else {
         InlineStickerRail(
-            hasIcon = hasIcon,
             currentIcon = waterMark.iconUri,
             userStickers = userStickers,
             modifier = modifier,
@@ -654,7 +860,6 @@ fun StickerPanelOnIcon(
 
 @Composable
 private fun InlineStickerRail(
-    hasIcon: Boolean,
     currentIcon: MediaRef,
     userStickers: List<Sticker>,
     modifier: Modifier = Modifier,
@@ -666,137 +871,134 @@ private fun InlineStickerRail(
     onClear: (() -> Unit)? = null,
     onDeleteUsers: ((List<Sticker>) -> Unit)? = null,
 ) {
-    var pendingDelete by remember { mutableStateOf<Sticker?>(null) }
     var showSheet by remember { mutableStateOf(false) }
-    val motionPolicy = currentMotionPolicy()
-    val fadeMs = motionDurationMs(motionPolicy, EwmMotionTokens.optionPanelFadeMs)
-    val removeLabel = stringResource(Res.string.sticker_remove)
+    var sheetSelectedId by remember { mutableStateOf<String?>(null) }
+    // Re-snapshot the tile order on entry, when the panel closes, and when the list changes —
+    // never on a tap, which would move tiles under the finger.
+    var orderEpoch by remember { mutableIntStateOf(0) }
+    val cells = remember(userStickers, orderEpoch) {
+        stickerRailOrder(userStickers, currentIcon)
+    }
     val allStickersLabel = stringResource(Res.string.sticker_all_open)
-    Row(
+    val chrome = editorChromeColor()
+    Box(
         modifier = modifier
             .fillMaxWidth()
+            .height(RailTileSize)
             .testTag("stickerInlineRail"),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .padding(start = 12.dp, end = 4.dp)
-                .size(width = 44.dp, height = 48.dp)
-                .clip(StickerTileShape)
-                .clickable(enabled = enabled) { showSheet = true }
-                .semantics { contentDescription = allStickersLabel }
-                .testTag("stickerExpand"),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_tile_mode),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f),
-            )
-        }
-        Box(
-            Modifier
-                .width(1.dp)
-                .height(28.dp)
-                .background(Color.White.copy(alpha = 0.14f)),
-        )
         LazyRow(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = RailStartPadding, end = RailAllReserve),
+            horizontalArrangement = Arrangement.spacedBy(RailSpacing),
             verticalAlignment = Alignment.CenterVertically,
             overscrollEffect = rememberOverscrollEffect(),
         ) {
+            item(key = "none", contentType = "none") {
+                StickerCellTile(
+                    cell = StickerCell.None,
+                    currentIcon = currentIcon,
+                    enabled = enabled,
+                    modifier = Modifier.size(RailTileSize),
+                    onClear = onClear,
+                    onAdd = onAdd,
+                    onApplyBuiltIn = onApplyBuiltIn,
+                    onApplyUser = onApplyUser,
+                )
+            }
             item(key = "add", contentType = "add") {
-                StickerAddCell(
+                StickerCellTile(
+                    cell = StickerCell.Import,
+                    currentIcon = currentIcon,
                     enabled = enabled,
-                    modifier = Modifier.size(48.dp),
-                    onClick = onAdd,
-                )
-            }
-            items(
-                items = userStickers,
-                key = { sticker -> "user_${sticker.id}" },
-                contentType = { "user" },
-            ) { sticker ->
-                val selected = currentIcon.value.isNotBlank() &&
-                    currentIcon.value == sticker.icon.value
-                StickerCellItem(
-                    cell = StickerCell.User(sticker),
-                    selected = selected,
-                    enabled = enabled,
-                    tileModifier = Modifier.size(48.dp),
-                    builtInIconSize = 24.dp,
-                    userIconSize = 28.dp,
-                    showHoverDelete = false,
+                    modifier = if (userStickers.isEmpty()) {
+                        Modifier
+                            .widthIn(min = WideImportMinWidth, max = WideImportMaxWidth)
+                            .height(RailTileSize)
+                    } else {
+                        Modifier.size(RailTileSize)
+                    },
+                    wideImport = userStickers.isEmpty(),
+                    onClear = onClear,
                     onAdd = onAdd,
                     onApplyBuiltIn = onApplyBuiltIn,
                     onApplyUser = onApplyUser,
-                    onRequestDelete = { pendingDelete = it },
                 )
             }
             items(
-                items = BuiltInSticker.entries,
-                key = { builtIn -> "builtin_${builtIn.name}" },
-                contentType = { "builtin" },
-            ) { builtIn ->
-                StickerCellItem(
-                    cell = StickerCell.BuiltIn(builtIn),
-                    selected = builtIn.matches(currentIcon),
+                items = cells,
+                key = { cell -> cell.key() },
+                contentType = { cell -> if (cell is StickerCell.User) "user" else "builtin" },
+            ) { cell ->
+                StickerCellTile(
+                    cell = cell,
+                    currentIcon = currentIcon,
                     enabled = enabled,
-                    tileModifier = Modifier.size(48.dp),
-                    builtInIconSize = 24.dp,
-                    userIconSize = 28.dp,
-                    showHoverDelete = false,
+                    modifier = Modifier.size(RailTileSize),
+                    onClear = onClear,
                     onAdd = onAdd,
                     onApplyBuiltIn = onApplyBuiltIn,
                     onApplyUser = onApplyUser,
-                    onRequestDelete = { pendingDelete = it },
+                    onLongPressUser = { sticker ->
+                        sheetSelectedId = sticker.id
+                        showSheet = true
+                    },
                 )
             }
         }
-        AnimatedVisibility(
-            visible = hasIcon && onClear != null,
-            enter = fadeIn(tween(fadeMs)),
-            exit = fadeOut(tween(fadeMs)),
+        // The list fades out under the pinned All tile instead of being clipped mid-sticker.
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(RailScrimWidth + RailAllReserve)
+                .background(
+                    Brush.horizontalGradient(
+                        0f to Color.Transparent,
+                        RailScrimWidth / (RailScrimWidth + RailAllReserve) to chrome,
+                        1f to chrome,
+                    ),
+                ),
+        )
+        // The end inset lives on this wrapper so the tagged tile measures exactly 56 × 56.
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = RailAllEndPadding),
         ) {
-            if (onClear != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .width(1.dp)
-                            .height(28.dp)
-                            .background(Color.White.copy(alpha = 0.14f)),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 4.dp, end = 12.dp)
-                            .size(width = 44.dp, height = 48.dp)
-                            .clip(StickerTileShape)
-                            .clickable(enabled = enabled, onClick = onClear)
-                            .semantics { contentDescription = removeLabel }
-                            .testTag("stickerClear"),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.ic_close_24dp),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                        )
-                    }
-                }
+            StickerUtilityTile(
+                isSelected = false,
+                enabled = enabled,
+                label = allStickersLabel,
+                role = Role.Button,
+                modifier = Modifier
+                    .size(RailTileSize)
+                    .testTag("stickerExpand"),
+                onClick = {
+                    sheetSelectedId = null
+                    showSheet = true
+                },
+            ) {
+                StickerUtilityGlyph(
+                    glyph = StickerGlyph.All,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.74f),
+                    modifier = Modifier.size(UtilityIconSize),
+                )
             }
         }
     }
     if (showSheet) {
-        StickerPanelSheet(
+        StickerPanelSheetImpl(
             userStickers = userStickers,
             enabled = enabled,
             useLargeDialog = false,
             currentIcon = currentIcon,
-            onDismiss = { showSheet = false },
+            initialSelectedId = sheetSelectedId,
+            onDismiss = {
+                showSheet = false
+                sheetSelectedId = null
+                orderEpoch++
+            },
             onAdd = onAdd,
             onApplyBuiltIn = onApplyBuiltIn,
             onApplyUser = onApplyUser,
@@ -806,19 +1008,10 @@ private fun InlineStickerRail(
             onDeleteUsers = onDeleteUsers,
         )
     }
-    StickerDeleteConfirmDialog(
-        pendingDelete = pendingDelete,
-        onDismiss = { pendingDelete = null },
-        onConfirmDelete = { sticker ->
-            pendingDelete = null
-            onDeleteUser(sticker)
-        },
-    )
 }
 
 @Composable
 private fun InlineStickerInspectorPanel(
-    hasIcon: Boolean,
     currentIcon: MediaRef,
     userStickers: List<Sticker>,
     modifier: Modifier = Modifier,
@@ -831,8 +1024,7 @@ private fun InlineStickerInspectorPanel(
     onDeleteUsers: ((List<Sticker>) -> Unit)? = null,
 ) {
     val deleteUsers: (List<Sticker>) -> Unit = onDeleteUsers ?: { list -> list.forEach(onDeleteUser) }
-    var pendingDelete by remember { mutableStateOf<Sticker?>(null) }
-    var pendingBatchDelete by remember { mutableStateOf<List<Sticker>>(emptyList()) }
+    var pendingDelete by remember { mutableStateOf<List<Sticker>>(emptyList()) }
     var managing by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     LaunchedEffect(userStickers.isEmpty()) {
@@ -841,206 +1033,215 @@ private fun InlineStickerInspectorPanel(
     LaunchedEffect(managing, userStickers) {
         selectedIds = reconcileStickerSelection(managing, userStickers, selectedIds)
     }
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("stickerInlinePanel"),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    // `stickerInlinePanel` gets a node of its own: on the inspector form path the modifier handed
+    // down already carries `editorControl-Icon`, and two test tags on one layout node keep only the
+    // outer one — which left this tag unreachable in the real expanded editor.
+    Box(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("stickerInlinePanel"),
+            verticalArrangement = Arrangement.spacedBy(GridGap),
         ) {
-            Text(
-                text = stringResource(Res.string.water_mark_mode_image),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("stickerInlineTitle"),
-            )
-            if (!managing && hasIcon && onClear != null) {
-                StickerRemoveAction(
-                    enabled = enabled,
-                    tag = "stickerClear",
-                    compact = true,
-                    onClick = onClear,
-                )
-            }
-        }
-        if (userStickers.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                StickerSectionLabel(
-                    text = stringResource(Res.string.sticker_section_mine),
-                    modifier = Modifier.testTag("stickerSectionMine"),
-                )
-                StickerManageToggleButton(
-                    managing = managing,
-                    enabled = enabled,
-                    compact = true,
-                    onClick = { managing = !managing },
-                )
+            if (userStickers.isNotEmpty()) {
+                if (managing) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(SectionRowActionHeight),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.sticker_selected_count, selectedIds.size),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.testTag("stickerSelectedCount"),
+                        )
+                        StickerSelectionActions(
+                            allSelected = userStickers.all { it.id in selectedIds },
+                            enabled = enabled,
+                            compact = true,
+                            onToggleSelectAll = {
+                                selectedIds = if (userStickers.all { it.id in selectedIds }) {
+                                    emptySet()
+                                } else {
+                                    userStickers.map { it.id }.toSet()
+                                }
+                            },
+                            onDone = { managing = false },
+                        )
+                    }
+                } else {
+                    StickerSectionRow(
+                        text = stringResource(Res.string.sticker_section_mine),
+                        tag = "stickerSectionMine",
+                        action = {
+                            StickerTextButton(
+                                text = stringResource(Res.string.sticker_manage),
+                                tag = "stickerManageToggle",
+                                enabled = enabled,
+                                onClick = { managing = true },
+                            )
+                        },
+                    )
+                }
             }
             InspectorCellGridRows(
                 cells = buildList {
-                    add(StickerCell.Add)
+                    add(StickerCell.None)
+                    add(StickerCell.Import)
                     userStickers.forEach { add(StickerCell.User(it)) }
                 },
                 currentIcon = currentIcon,
                 enabled = enabled,
-                manageMode = managing,
+                selecting = managing,
                 selectedIds = selectedIds,
-                dimAdd = managing,
-                dimTiles = false,
+                dimOthers = managing,
+                wideImport = userStickers.isEmpty(),
                 showHoverDelete = !managing,
                 onAdd = onAdd,
                 onApplyBuiltIn = onApplyBuiltIn,
                 onApplyUser = onApplyUser,
+                onClear = onClear,
                 onToggleSelect = { sticker ->
                     selectedIds = toggleStickerSelection(selectedIds, sticker.id)
                 },
-                onRequestDelete = { pendingDelete = it },
+                onLongPressUser = { sticker ->
+                    managing = true
+                    selectedIds = setOf(sticker.id)
+                },
+                onHoverDeleteUser = { sticker -> pendingDelete = listOf(sticker) },
             )
-            if (managing) {
-                val allSelected = userStickers.all { it.id in selectedIds }
-                StickerManageBatchBar(
-                    selectedCount = selectedIds.size,
-                    allSelected = allSelected,
-                    enabled = enabled,
-                    compact = true,
-                    onToggleSelectAll = {
-                        selectedIds = if (allSelected) {
-                            emptySet()
-                        } else {
-                            userStickers.map { it.id }.toSet()
-                        }
-                    },
-                    onDeleteSelected = {
-                        pendingBatchDelete = userStickers.filter { it.id in selectedIds }
-                    },
-                )
+            if (managing && userStickers.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .testTag("stickerManageBatchBar"),
+                ) {
+                    StickerDeleteSelectedButton(
+                        selectedCount = selectedIds.size,
+                        enabled = enabled,
+                        onClick = { pendingDelete = userStickers.filter { it.id in selectedIds } },
+                    )
+                }
             }
-            StickerSectionLabel(
+            StickerSectionRow(
                 text = stringResource(Res.string.sticker_section_builtin),
+                tag = "stickerSectionBuiltIn",
                 dimmed = managing,
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .testTag("stickerSectionBuiltIn"),
             )
             InspectorCellGridRows(
                 cells = BuiltInSticker.entries.map { StickerCell.BuiltIn(it) },
                 currentIcon = currentIcon,
                 enabled = enabled,
-                manageMode = false,
+                selecting = false,
                 selectedIds = emptySet(),
-                dimAdd = false,
-                dimTiles = managing,
+                dimOthers = managing,
+                wideImport = false,
                 showHoverDelete = false,
                 onAdd = onAdd,
                 onApplyBuiltIn = onApplyBuiltIn,
                 onApplyUser = onApplyUser,
+                onClear = onClear,
                 onToggleSelect = {},
-                onRequestDelete = { pendingDelete = it },
-            )
-        } else {
-            InspectorCellGridRows(
-                cells = buildList {
-                    add(StickerCell.Add)
-                    BuiltInSticker.entries.forEach { add(StickerCell.BuiltIn(it)) }
-                },
-                currentIcon = currentIcon,
-                enabled = enabled,
-                manageMode = false,
-                selectedIds = emptySet(),
-                dimAdd = false,
-                dimTiles = false,
-                showHoverDelete = false,
-                onAdd = onAdd,
-                onApplyBuiltIn = onApplyBuiltIn,
-                onApplyUser = onApplyUser,
-                onToggleSelect = {},
-                onRequestDelete = { pendingDelete = it },
+                onLongPressUser = {},
+                onHoverDeleteUser = {},
             )
         }
     }
     StickerDeleteConfirmDialog(
-        pendingDelete = pendingDelete,
-        onDismiss = { pendingDelete = null },
-        onConfirmDelete = { sticker ->
-            pendingDelete = null
-            onDeleteUser(sticker)
-        },
-    )
-    StickerBatchDeleteConfirmDialog(
-        pendingBatchDelete = pendingBatchDelete,
-        onDismiss = { pendingBatchDelete = emptyList() },
+        targets = pendingDelete,
+        onDismiss = { pendingDelete = emptyList() },
         onConfirmDelete = { targets ->
+            pendingDelete = emptyList()
             selectedIds = emptySet()
-            pendingBatchDelete = emptyList()
+            managing = false
             deleteUsers(targets)
         },
     )
 }
 
+/**
+ * The inspector body is embedded in the inspector's own `verticalScroll`, so the 4-column grid is
+ * laid out as plain chunked rows — a `LazyVerticalGrid` cannot nest in an unbounded scroll.
+ */
 @Composable
 private fun InspectorCellGridRows(
     cells: List<StickerCell>,
     currentIcon: MediaRef,
     enabled: Boolean,
-    manageMode: Boolean,
+    selecting: Boolean,
     selectedIds: Set<String>,
-    dimAdd: Boolean,
-    dimTiles: Boolean,
+    /** Selection mode dims everything that is not a user sticker (None / Import / built-ins). */
+    dimOthers: Boolean,
+    wideImport: Boolean,
     showHoverDelete: Boolean,
     onAdd: () -> Unit,
     onApplyBuiltIn: (BuiltInSticker, ImageBitmap) -> Unit,
     onApplyUser: (Sticker) -> Unit,
+    onClear: (() -> Unit)?,
     onToggleSelect: (Sticker) -> Unit,
-    onRequestDelete: (Sticker) -> Unit,
+    onLongPressUser: (Sticker) -> Unit,
+    onHoverDeleteUser: (Sticker) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        cells.chunked(4).forEach { rowCells ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                rowCells.forEach { cell ->
-                    val cellSelected = when (cell) {
-                        StickerCell.Add -> false
-                        is StickerCell.BuiltIn -> cell.sticker.matches(currentIcon)
-                        is StickerCell.User -> currentIcon.value.isNotBlank() &&
-                            currentIcon.value == cell.sticker.icon.value
+    // The wide Import tile eats the rest of its row, so rows are chunked by span, not by count.
+    val rows = remember(cells, wideImport) {
+        val out = mutableListOf<List<StickerCell>>()
+        var row = mutableListOf<StickerCell>()
+        var used = 0
+        cells.forEach { cell ->
+            val span = if (cell is StickerCell.Import && wideImport) WIDE_IMPORT_SPAN else 1
+            if (used + span > 4) {
+                out.add(row)
+                row = mutableListOf()
+                used = 0
+            }
+            row.add(cell)
+            used += span
+        }
+        if (row.isNotEmpty()) out.add(row)
+        out
+    }
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // One cell size for every row: `weight(2f)` next to `weight(1f)` only splits the two gaps
+        // the row actually has, which left the first column narrower than the same column in the
+        // full rows below.
+        val cellSize = ((maxWidth - GridGap * 3) / 4).coerceAtLeast(0.dp)
+        val wideWidth = cellSize * WIDE_IMPORT_SPAN + GridGap * (WIDE_IMPORT_SPAN - 1)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(GridGap),
+        ) {
+            rows.forEach { rowCells ->
+                Row(horizontalArrangement = Arrangement.spacedBy(GridGap)) {
+                    rowCells.forEach { rowCell ->
+                        val wide = rowCell is StickerCell.Import && wideImport
+                        val user = (rowCell as? StickerCell.User)?.sticker
+                        StickerCellTile(
+                            cell = rowCell,
+                            currentIcon = currentIcon,
+                            enabled = enabled,
+                            modifier = if (wide) {
+                                Modifier.width(wideWidth).height(cellSize)
+                            } else {
+                                Modifier.size(cellSize)
+                            },
+                            selecting = selecting && user != null,
+                            picked = user != null && user.id in selectedIds,
+                            dimmed = user == null && dimOthers,
+                            wideImport = wide,
+                            showHoverDelete = showHoverDelete,
+                            onClear = onClear,
+                            onAdd = onAdd,
+                            onApplyBuiltIn = onApplyBuiltIn,
+                            onApplyUser = onApplyUser,
+                            onLongPressUser = onLongPressUser,
+                            onToggleUser = onToggleSelect,
+                            onHoverDeleteUser = onHoverDeleteUser,
+                        )
                     }
-                    val userSticker = (cell as? StickerCell.User)?.sticker
-                    StickerCellItem(
-                        cell = cell,
-                        selected = cellSelected,
-                        enabled = enabled,
-                        tileModifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f),
-                        builtInIconSize = 26.dp,
-                        userIconSize = 30.dp,
-                        showHoverDelete = showHoverDelete,
-                        manageSelectable = manageMode && userSticker != null,
-                        manageSelected = userSticker != null && userSticker.id in selectedIds,
-                        manageSelectTag = userSticker?.let { "stickerManageSelect_${it.id}" },
-                        onManageToggleSelect = userSticker?.let { { onToggleSelect(it) } },
-                        dimmed = if (cell is StickerCell.Add) dimAdd else dimTiles,
-                        onAdd = onAdd,
-                        onApplyBuiltIn = onApplyBuiltIn,
-                        onApplyUser = onApplyUser,
-                        onRequestDelete = onRequestDelete,
-                    )
-                }
-                repeat(4 - rowCells.size) {
-                    Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -1048,206 +1249,157 @@ private fun InspectorCellGridRows(
 }
 
 @Composable
-private fun StickerSectionLabel(
+private fun StickerSectionRow(
     text: String,
+    tag: String,
     modifier: Modifier = Modifier,
     dimmed: Boolean = false,
+    action: (@Composable () -> Unit)? = null,
 ) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        letterSpacing = 0.8.sp,
-        modifier = modifier.then(
-            if (dimmed) Modifier.graphicsLayer { alpha = 0.42f } else Modifier,
-        ),
-    )
-}
-
-@Composable
-private fun StickerManageToggleButton(
-    managing: Boolean,
-    enabled: Boolean,
-    compact: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val accent = editorAccentColor()
-    val selectedContainer = editorSelectedContainerColor()
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val fill = when {
-        managing -> selectedContainer
-        hovered && enabled -> Color.White.copy(alpha = 0.12f)
-        else -> Color.White.copy(alpha = 0.06f)
-    }
-    val borderColor = when {
-        managing -> accent
-        hovered && enabled -> Color.White.copy(alpha = 0.26f)
-        else -> Color.White.copy(alpha = 0.14f)
-    }
-    val tint = when {
-        managing -> accent
-        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        hovered -> MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f)
-    }
-    Box(
-        modifier = Modifier
-            .height(if (compact) 26.dp else 28.dp)
-            .clip(StickerTileShape)
-            .background(fill, StickerTileShape)
-            .border(1.dp, borderColor, StickerTileShape)
-            .hoverable(interactionSource = interaction, enabled = enabled)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = if (compact) 8.dp else 9.dp)
-            .testTag("stickerManageToggle"),
-        contentAlignment = Alignment.Center,
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(if (action == null) SectionRowHeight else SectionRowActionHeight),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (managing) {
-                        Res.drawable.ic_save_done
-                    } else {
-                        Res.drawable.ic_template_list_item_edit
-                    },
-                ),
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
-                tint = tint,
-            )
-            Text(
-                text = stringResource(if (managing) Res.string.preview_selection_done else Res.string.sticker_manage),
-                fontSize = 12.sp,
-                fontWeight = if (managing) FontWeight.SemiBold else FontWeight.Medium,
-                color = tint,
-                maxLines = 1,
-            )
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            letterSpacing = 0.8.sp,
+            modifier = Modifier
+                .then(if (dimmed) Modifier.graphicsLayer { alpha = DIMMED_ALPHA } else Modifier)
+                .testTag(tag),
+        )
+        action?.invoke()
     }
 }
 
+/**
+ * Borderless, fill-less text action (Manage / Select all / Done) — no pill, no outline.
+ * [compact] is the 12 sp / 40 dp form used in section label rows; otherwise 14 sp / 44 dp for the
+ * panel header.
+ */
 @Composable
-private fun StickerRemoveAction(
-    enabled: Boolean,
+private fun StickerTextButton(
+    text: String,
     tag: String,
-    compact: Boolean = false,
+    enabled: Boolean,
     onClick: () -> Unit,
+    accent: Boolean = false,
+    compact: Boolean = true,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val fill = if (hovered && enabled) {
-        Color.White.copy(alpha = 0.12f)
-    } else {
-        Color.White.copy(alpha = 0.06f)
+    val accentColor = editorAccentColor()
+    val color = when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        accent -> accentColor
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
     }
-    val borderColor = if (hovered && enabled) {
-        Color.White.copy(alpha = 0.26f)
-    } else {
-        Color.White.copy(alpha = 0.14f)
-    }
-    val tint = MaterialTheme.colorScheme.onSurface.copy(
-        alpha = when {
-            !enabled -> 0.38f
-            hovered -> 1f
-            else -> 0.88f
-        },
-    )
     Box(
         modifier = Modifier
-            .height(if (compact) 26.dp else 32.dp)
+            .defaultMinSize(
+                minWidth = 48.dp,
+                minHeight = if (compact) SectionRowActionHeight else PanelHeaderHeight,
+            )
             .clip(StickerTileShape)
-            .background(fill, StickerTileShape)
-            .border(1.dp, borderColor, StickerTileShape)
-            .hoverable(interactionSource = interaction, enabled = enabled)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = if (compact) 8.dp else 10.dp)
+            .semantics {
+                role = Role.Button
+                if (!enabled) disabled()
+            }
+            .padding(horizontal = 12.dp)
             .testTag(tag),
         contentAlignment = Alignment.Center,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StickerClearGlyph(
-                color = tint,
-                modifier = Modifier.size(if (compact) 11.dp else 12.dp),
-            )
-            Text(
-                text = stringResource(Res.string.sticker_remove),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = tint,
-                maxLines = 1,
-            )
-        }
+        Text(
+            text = text,
+            fontSize = if (compact) 12.sp else 14.sp,
+            fontWeight = if (accent) FontWeight.SemiBold else FontWeight.Medium,
+            color = color,
+            maxLines = 1,
+        )
     }
 }
 
 @Composable
-private fun StickerClearGlyph(
-    color: Color,
-    modifier: Modifier = Modifier,
+private fun StickerSelectionActions(
+    allSelected: Boolean,
+    enabled: Boolean,
+    compact: Boolean,
+    onToggleSelectAll: () -> Unit,
+    onDone: () -> Unit,
 ) {
-    Canvas(modifier = modifier) {
-        val strokeW = 1.25.dp.toPx()
-        val inset = strokeW / 2f
-        val radius = EwmTheme.shapes.chipRadiusDp.toPx()
-        drawRoundRect(
-            color = color,
-            topLeft = Offset(inset, inset),
-            size = Size(size.width - strokeW, size.height - strokeW),
-            cornerRadius = CornerRadius(radius, radius),
-            style = Stroke(width = strokeW),
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        StickerTextButton(
+            text = stringResource(
+                if (allSelected) Res.string.sticker_deselect_all else Res.string.sticker_select_all,
+            ),
+            tag = "stickerManageSelectAll",
+            enabled = enabled,
+            onClick = onToggleSelectAll,
+            compact = compact,
         )
-        val diagInset = strokeW + 1.5.dp.toPx()
-        drawLine(
-            color = color,
-            start = Offset(diagInset, size.height - diagInset),
-            end = Offset(size.width - diagInset, diagInset),
-            strokeWidth = strokeW,
-            cap = StrokeCap.Square,
+        StickerTextButton(
+            text = stringResource(Res.string.preview_selection_done),
+            tag = "stickerManageDone",
+            enabled = enabled,
+            onClick = onDone,
+            accent = true,
+            compact = compact,
+        )
+    }
+}
+
+/** Full-width rectangle destructive action: border only, error-coloured, disabled while n = 0. */
+@Composable
+private fun StickerDeleteSelectedButton(
+    selectedCount: Int,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val canDelete = enabled && selectedCount > 0
+    val error = MaterialTheme.colorScheme.error
+    val borderColor = if (canDelete) error.copy(alpha = 0.70f) else Color.White.copy(alpha = 0.12f)
+    val labelColor = if (canDelete) error else Color.White.copy(alpha = 0.34f)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(DeleteFooterHeight)
+            .border(1.dp, borderColor, RectangleShape)
+            .clickable(enabled = canDelete, onClick = onClick)
+            .semantics {
+                role = Role.Button
+                if (!canDelete) disabled()
+            }
+            .testTag("stickerManageDeleteSelected"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(Res.string.sticker_delete_selected, selectedCount),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = labelColor,
+            maxLines = 1,
         )
     }
 }
 
 @Composable
 private fun StickerDeleteConfirmDialog(
-    pendingDelete: Sticker?,
-    onDismiss: () -> Unit,
-    onConfirmDelete: (Sticker) -> Unit,
-) {
-    pendingDelete?.let { sticker ->
-        EwmConfirmDialog(
-            onDismissRequest = onDismiss,
-            title = stringResource(Res.string.template_delete),
-            text = stringResource(Res.string.tips_delete_template),
-            confirmLabel = stringResource(Res.string.tips_confirm_dialog),
-            dismissLabel = stringResource(Res.string.tips_cancel_dialog),
-            onConfirm = { onConfirmDelete(sticker) },
-        )
-    }
-}
-
-@Composable
-private fun StickerBatchDeleteConfirmDialog(
-    pendingBatchDelete: List<Sticker>,
+    targets: List<Sticker>,
     onDismiss: () -> Unit,
     onConfirmDelete: (List<Sticker>) -> Unit,
 ) {
-    if (pendingBatchDelete.isNotEmpty()) {
-        EwmConfirmDialog(
-            onDismissRequest = onDismiss,
-            title = stringResource(Res.string.template_delete),
-            text = stringResource(Res.string.sticker_delete_batch_confirm, pendingBatchDelete.size),
-            confirmLabel = stringResource(Res.string.tips_confirm_dialog),
-            dismissLabel = stringResource(Res.string.tips_cancel_dialog),
-            onConfirm = { onConfirmDelete(pendingBatchDelete) },
-        )
-    }
+    if (targets.isEmpty()) return
+    EwmConfirmDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(Res.string.sticker_delete_title),
+        text = stringResource(Res.string.sticker_delete_batch_confirm, targets.size),
+        confirmLabel = stringResource(Res.string.template_delete),
+        dismissLabel = stringResource(Res.string.tips_cancel_dialog),
+        onConfirm = { onConfirmDelete(targets) },
+    )
 }
 
 private fun toggleStickerSelection(selectedIds: Set<String>, id: String): Set<String> =
@@ -1264,386 +1416,309 @@ private fun reconcileStickerSelection(
 }
 
 @Composable
-private fun StickerManageBatchBar(
-    selectedCount: Int,
-    allSelected: Boolean,
-    enabled: Boolean,
-    compact: Boolean,
-    onToggleSelectAll: () -> Unit,
-    onDeleteSelected: () -> Unit,
-) {
-    val accent = editorAccentColor()
-    val selectedContainer = editorSelectedContainerColor()
-    val barHeight = if (compact) 30.dp else 36.dp
-    val selectAllInteraction = remember { MutableInteractionSource() }
-    val selectAllHovered by selectAllInteraction.collectIsHoveredAsState()
-    val selectAllFill = when {
-        allSelected -> selectedContainer
-        selectAllHovered && enabled -> Color.White.copy(alpha = 0.12f)
-        else -> Color.White.copy(alpha = 0.06f)
-    }
-    val selectAllBorder = when {
-        allSelected -> accent
-        selectAllHovered && enabled -> Color.White.copy(alpha = 0.26f)
-        else -> Color.White.copy(alpha = 0.14f)
-    }
-    val selectAllTint = when {
-        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        allSelected -> accent
-        selectAllHovered -> MaterialTheme.colorScheme.onSurface
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f)
-    }
-
-    val canDelete = enabled && selectedCount > 0
-    val deleteInteraction = remember { MutableInteractionSource() }
-    val deleteHovered by deleteInteraction.collectIsHoveredAsState()
-    val deleteFill = if (canDelete) {
-        MaterialTheme.colorScheme.error.copy(alpha = if (deleteHovered) 0.24f else 0.16f)
-    } else {
-        Color.White.copy(alpha = 0.04f)
-    }
-    val deleteBorder = if (canDelete) {
-        MaterialTheme.colorScheme.error.copy(alpha = if (deleteHovered) 0.90f else 0.70f)
-    } else {
-        Color.White.copy(alpha = 0.10f)
-    }
-    val deleteTint = if (canDelete) {
-        MaterialTheme.colorScheme.error
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = if (compact) 2.dp else 8.dp)
-            .testTag("stickerManageBatchBar"),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(barHeight)
-                .clip(StickerTileShape)
-                .background(selectAllFill, StickerTileShape)
-                .border(1.dp, selectAllBorder, StickerTileShape)
-                .hoverable(interactionSource = selectAllInteraction, enabled = enabled)
-                .clickable(enabled = enabled, onClick = onToggleSelectAll)
-                .padding(horizontal = 10.dp)
-                .testTag("stickerManageSelectAll"),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(
-                    if (allSelected) Res.string.sticker_deselect_all else Res.string.sticker_select_all,
-                ),
-                fontSize = 12.sp,
-                fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Medium,
-                color = selectAllTint,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(barHeight)
-                .clip(StickerTileShape)
-                .background(deleteFill, StickerTileShape)
-                .border(1.dp, deleteBorder, StickerTileShape)
-                .hoverable(interactionSource = deleteInteraction, enabled = canDelete)
-                .clickable(enabled = canDelete, onClick = onDeleteSelected)
-                .padding(horizontal = 10.dp)
-                .testTag("stickerManageDeleteSelected"),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(Res.string.sticker_delete_selected, selectedCount),
-                fontSize = 12.sp,
-                fontWeight = if (canDelete) FontWeight.SemiBold else FontWeight.Medium,
-                color = deleteTint,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun StickerCellItem(
+private fun StickerCellTile(
     cell: StickerCell,
-    selected: Boolean,
+    currentIcon: MediaRef,
     enabled: Boolean,
-    tileModifier: Modifier,
-    builtInIconSize: Dp,
-    userIconSize: Dp,
-    showHoverDelete: Boolean,
-    manageSelectable: Boolean = false,
-    manageSelected: Boolean = false,
-    manageSelectTag: String? = null,
-    onManageToggleSelect: (() -> Unit)? = null,
-    dimmed: Boolean = false,
+    modifier: Modifier,
     onAdd: () -> Unit,
     onApplyBuiltIn: (BuiltInSticker, ImageBitmap) -> Unit,
     onApplyUser: (Sticker) -> Unit,
-    onRequestDelete: (Sticker) -> Unit,
+    onClear: (() -> Unit)? = null,
+    selecting: Boolean = false,
+    picked: Boolean = false,
+    dimmed: Boolean = false,
+    wideImport: Boolean = false,
+    noneTag: String = "stickerClear",
+    showHoverDelete: Boolean = false,
+    onLongPressUser: ((Sticker) -> Unit)? = null,
+    onToggleUser: ((Sticker) -> Unit)? = null,
+    onHoverDeleteUser: ((Sticker) -> Unit)? = null,
 ) {
-    val accent = editorAccentColor()
     when (cell) {
-        StickerCell.Add -> {
-            StickerAddCell(
+        StickerCell.None -> {
+            val noneLabel = stringResource(Res.string.sticker_none)
+            val cleared = currentIcon.value.isBlank()
+            StickerUtilityTile(
+                isSelected = cleared,
                 enabled = enabled,
                 dimmed = dimmed,
-                modifier = tileModifier,
+                label = noneLabel,
+                modifier = modifier.testTag(noneTag),
+                onClick = { onClear?.invoke() },
+            ) {
+                StickerUtilityGlyph(
+                    glyph = StickerGlyph.None,
+                    // Dimmed (selection mode) drops the applied highlight, accent glyph included.
+                    color = if (cleared && !dimmed) {
+                        editorAccentColor()
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.74f)
+                    },
+                    modifier = Modifier.size(UtilityIconSize),
+                )
+            }
+        }
+        StickerCell.Import -> {
+            val importLabel = stringResource(Res.string.sticker_import)
+            StickerUtilityTile(
+                isSelected = false,
+                enabled = enabled,
+                dimmed = dimmed,
+                label = importLabel,
+                role = Role.Button,
+                modifier = modifier.testTag("stickerAdd"),
                 onClick = onAdd,
-            )
+            ) {
+                if (wideImport) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StickerUtilityGlyph(
+                            glyph = StickerGlyph.Import,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.74f),
+                            modifier = Modifier.size(UtilityIconSize),
+                        )
+                        Text(
+                            text = importLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                } else {
+                    StickerUtilityGlyph(
+                        glyph = StickerGlyph.Import,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.74f),
+                        modifier = Modifier.size(UtilityIconSize),
+                    )
+                }
+            }
         }
         is StickerCell.BuiltIn -> {
             val painter = painterResource(cell.sticker.drawable)
-            val label = stringResource(cell.sticker.label)
-            StickerGridCell(
-                selected = selected,
+            val builtInLabel = stringResource(cell.sticker.label)
+            StickerArtTile(
+                isSelected = cell.sticker.matches(currentIcon),
                 enabled = enabled,
                 dimmed = dimmed,
-                modifier = tileModifier.testTag("stickerBuiltIn_${cell.sticker.key}"),
+                label = builtInLabel,
+                modifier = modifier.testTag("stickerBuiltIn_${cell.sticker.key}"),
                 onClick = { onApplyBuiltIn(cell.sticker, painter.toStickerBitmap()) },
             ) {
-                Icon(
+                Image(
                     painter = painter,
-                    contentDescription = label,
-                    modifier = Modifier.size(builtInIconSize),
-                    tint = if (selected) {
-                        accent
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                    },
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(BUILT_IN_ART_FRACTION),
                 )
             }
         }
         is StickerCell.User -> {
-            StickerGridCell(
-                selected = selected,
+            val sticker = cell.sticker
+            StickerArtTile(
+                isSelected = !selecting && currentIcon.value.isNotBlank() &&
+                    currentIcon.value == sticker.icon.value,
                 enabled = enabled,
                 dimmed = dimmed,
-                manageSelectable = manageSelectable,
-                manageSelected = manageSelected,
-                manageSelectTag = manageSelectTag,
-                onManageToggleSelect = onManageToggleSelect,
-                modifier = tileModifier.testTag("stickerUser_${cell.sticker.id}"),
-                onClick = { onApplyUser(cell.sticker) },
-                onLongClick = { onRequestDelete(cell.sticker) },
-                hoverDeleteTag = if (showHoverDelete) "stickerDelete_${cell.sticker.id}" else null,
-                onHoverDelete = if (showHoverDelete) {
-                    { onRequestDelete(cell.sticker) }
+                modifier = modifier.testTag("stickerUser_${sticker.id}"),
+                selecting = selecting,
+                picked = picked,
+                checkboxTag = "stickerManageSelect_${sticker.id}",
+                hoverDeleteTag = if (showHoverDelete) "stickerDelete_${sticker.id}" else null,
+                onHoverDelete = if (showHoverDelete && onHoverDeleteUser != null) {
+                    { onHoverDeleteUser(sticker) }
                 } else {
                     null
                 },
+                onClick = {
+                    if (selecting) onToggleUser?.invoke(sticker) else onApplyUser(sticker)
+                },
+                onLongClick = if (!selecting && onLongPressUser != null) {
+                    { onLongPressUser(sticker) }
+                } else {
+                    null
+                },
+                onToggle = { onToggleUser?.invoke(sticker) },
             ) {
-                ProductAsyncImage(
-                    thumb = ProductThumb(
-                        ref = cell.sticker.icon,
-                        maxEdgePx = ProductThumb.UI_THUMB_MAX_EDGE,
-                    ),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(userIconSize),
+                UserStickerArt(
+                    sticker = sticker,
+                    modifier = Modifier.fillMaxSize(USER_ART_FRACTION),
                 )
             }
         }
     }
 }
 
+/** None / Import / All: the only tiles that get a well (fill); stickers sit bare on the surface. */
 @Composable
-private fun StickerAddCell(
+private fun StickerUtilityTile(
+    isSelected: Boolean,
     enabled: Boolean,
-    modifier: Modifier = Modifier,
-    dimmed: Boolean = false,
+    modifier: Modifier,
     onClick: () -> Unit,
-) {
-    val importLabel = stringResource(Res.string.sticker_import)
-    val interactionSource = remember { MutableInteractionSource() }
-    val hovered by interactionSource.collectIsHoveredAsState()
-    val accent = editorAccentColor()
-    val canInteract = enabled && !dimmed
-    val borderColor = if (hovered && canInteract) {
-        accent
-    } else {
-        Color.White.copy(alpha = 0.24f)
-    }
-    val plusColor = if (hovered && canInteract) {
-        accent
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f)
-    }
-    Box(
-        modifier = modifier
-            .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.42f } else Modifier)
-            .clip(StickerTileShape)
-            .background(Color.White.copy(alpha = 0.03f))
-            .hoverable(interactionSource = interactionSource, enabled = canInteract)
-            .clickable(enabled = canInteract, onClick = onClick)
-            .semantics { contentDescription = importLabel }
-            .testTag("stickerAdd"),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.matchParentSize()) {
-            val strokeW = 1.dp.toPx()
-            val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()), 0f)
-            val radius = EwmTheme.shapes.chipRadiusDp.toPx()
-            drawRoundRect(
-                color = borderColor,
-                topLeft = Offset(strokeW / 2f, strokeW / 2f),
-                size = Size(size.width - strokeW, size.height - strokeW),
-                cornerRadius = CornerRadius(radius, radius),
-                style = Stroke(width = strokeW, pathEffect = dash),
-            )
-            val plusHalf = 7.dp.toPx()
-            val plusStroke = 1.5.dp.toPx()
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            drawLine(
-                color = plusColor,
-                start = Offset(cx - plusHalf, cy),
-                end = Offset(cx + plusHalf, cy),
-                strokeWidth = plusStroke,
-                cap = StrokeCap.Square,
-            )
-            drawLine(
-                color = plusColor,
-                start = Offset(cx, cy - plusHalf),
-                end = Offset(cx, cy + plusHalf),
-                strokeWidth = plusStroke,
-                cap = StrokeCap.Square,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun StickerGridCell(
-    selected: Boolean,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
     dimmed: Boolean = false,
-    manageSelectable: Boolean = false,
-    manageSelected: Boolean = false,
-    onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
-    hoverDeleteTag: String? = null,
-    onHoverDelete: (() -> Unit)? = null,
-    manageSelectTag: String? = null,
-    onManageToggleSelect: (() -> Unit)? = null,
+    label: String? = null,
+    /** `None` is one option of the sticker choice group; `Import` and `All` just act. */
+    role: Role = Role.RadioButton,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val accent = editorAccentColor()
     val selectedContainer = editorSelectedContainerColor()
-    val chromeColor = editorChromeColor()
-    val interactionSource = remember { MutableInteractionSource() }
-    val hovered by interactionSource.collectIsHoveredAsState()
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     val canInteract = enabled && !dimmed
-    val manageToggle = if (manageSelectable) onManageToggleSelect else null
+    // Selection mode draws no applied highlight (spec 1.3): a dimmed tile keeps its idle well,
+    // while `selected` semantics still report what is actually applied.
+    val highlighted = isSelected && !dimmed
     val fill = when {
-        manageSelectable && manageSelected -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-        manageSelectable -> Color.White.copy(alpha = 0.06f)
-        selected -> selectedContainer
+        highlighted -> selectedContainer
         hovered && canInteract -> Color.White.copy(alpha = 0.10f)
-        else -> Color.White.copy(alpha = 0.05f)
+        else -> Color.White.copy(alpha = 0.06f)
     }
-    val borderModifier = when {
-        manageSelectable && manageSelected -> Modifier.border(
-            1.5.dp,
-            MaterialTheme.colorScheme.error,
-            StickerTileShape,
-        )
-        manageSelectable -> Modifier.border(
-            1.dp,
-            Color.White.copy(alpha = if (hovered && canInteract) 0.28f else 0.14f),
-            StickerTileShape,
-        )
-        selected -> Modifier.border(1.5.dp, accent, StickerTileShape)
-        hovered && canInteract -> Modifier.border(1.dp, Color.White.copy(alpha = 0.28f), StickerTileShape)
-        else -> Modifier.border(1.dp, Color.White.copy(alpha = 0.12f), StickerTileShape)
-    }
-    val primaryClick = manageToggle ?: onClick
     Box(
         modifier = modifier
-            .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.42f } else Modifier)
+            .then(if (dimmed) Modifier.graphicsLayer { alpha = DIMMED_ALPHA } else Modifier)
             .clip(StickerTileShape)
-            .background(fill)
-            .then(borderModifier)
-            .hoverable(interactionSource = interactionSource, enabled = canInteract)
-            .semantics { this.selected = if (manageSelectable) manageSelected else selected }
+            .background(fill, StickerTileShape)
+            .then(if (highlighted) Modifier.border(1.5.dp, accent, StickerTileShape) else Modifier)
+            .hoverable(interactionSource = interaction, enabled = canInteract)
+            .semantics {
+                selected = isSelected
+                if (label != null) contentDescription = label
+                this.role = role
+                if (!canInteract) disabled()
+            }
+            .clickable(enabled = canInteract, onClick = onClick),
+        contentAlignment = Alignment.Center,
+        content = content,
+    )
+}
+
+/** Sticker tile: no fill and no border at idle; the art is the affordance. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StickerArtTile(
+    isSelected: Boolean,
+    enabled: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    dimmed: Boolean = false,
+    label: String? = null,
+    selecting: Boolean = false,
+    picked: Boolean = false,
+    checkboxTag: String? = null,
+    hoverDeleteTag: String? = null,
+    onHoverDelete: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    onToggle: (() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val accent = editorAccentColor()
+    val selectedContainer = editorSelectedContainerColor()
+    val chrome = editorChromeColor()
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val canInteract = enabled && !dimmed
+    val chosen = if (selecting) picked else isSelected
+    // Selection mode draws no applied highlight (spec 1.3): a dimmed tile keeps its idle look
+    // (no fill, no border), while `selected` semantics still report what is actually applied.
+    val highlighted = chosen && !dimmed
+    val fill = when {
+        highlighted -> selectedContainer
+        hovered && canInteract -> Color.White.copy(alpha = 0.06f)
+        else -> Color.Transparent
+    }
+    Box(
+        modifier = modifier
+            .then(if (dimmed) Modifier.graphicsLayer { alpha = DIMMED_ALPHA } else Modifier)
+            .clip(StickerTileShape)
+            .background(fill, StickerTileShape)
             .then(
-                if (onLongClick != null && !manageSelectable) {
+                if (highlighted) Modifier.border(1.5.dp, accent, StickerTileShape) else Modifier,
+            )
+            .hoverable(interactionSource = interaction, enabled = canInteract)
+            .semantics {
+                selected = chosen
+                if (label != null) contentDescription = label
+                // Idle the tiles are one exclusive choice; in selection mode each is its own
+                // independent pick.
+                role = if (selecting) Role.Checkbox else Role.RadioButton
+                if (!canInteract) disabled()
+            }
+            .then(
+                if (onLongClick != null) {
                     Modifier.combinedClickable(
                         enabled = canInteract,
-                        onClick = primaryClick,
+                        onClick = onClick,
                         onLongClick = onLongClick,
                     )
                 } else {
-                    Modifier.clickable(enabled = canInteract, onClick = primaryClick)
+                    Modifier.clickable(enabled = canInteract, onClick = onClick)
                 },
             ),
         contentAlignment = Alignment.Center,
     ) {
         content()
-        if (manageSelectable) {
-            val badgeInteraction = remember { MutableInteractionSource() }
+        if (selecting) {
+            val checkboxInteraction = remember { MutableInteractionSource() }
             Box(
-                Modifier
+                modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(4.dp)
-                    .size(18.dp)
-                    .clip(StickerTileShape)
+                    .padding(5.dp)
+                    .size(CheckboxSize)
+                    .clip(CheckboxShape)
                     .background(
-                        if (manageSelected) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            chromeColor.copy(alpha = 0.72f)
-                        },
-                        StickerTileShape,
+                        if (picked) accent else chrome.copy(alpha = 0.7f),
+                        CheckboxShape,
                     )
                     .then(
-                        if (!manageSelected) {
-                            Modifier.border(1.dp, Color.White.copy(alpha = 0.45f), StickerTileShape)
-                        } else {
+                        if (picked) {
                             Modifier
+                        } else {
+                            Modifier.border(1.dp, Color.White.copy(alpha = 0.5f), CheckboxShape)
                         },
                     )
-                    .semantics { this.selected = manageSelected }
+                    .semantics {
+                        selected = picked
+                        role = Role.Checkbox
+                        if (!canInteract) disabled()
+                    }
                     .then(
-                        if (manageToggle != null) {
+                        if (onToggle != null) {
                             Modifier.clickable(
-                                interactionSource = badgeInteraction,
+                                interactionSource = checkboxInteraction,
                                 indication = null,
                                 enabled = canInteract,
-                                onClick = manageToggle,
+                                onClick = onToggle,
                             )
                         } else {
                             Modifier
                         },
                     )
-                    .then(manageSelectTag?.let { Modifier.testTag(it) } ?: Modifier),
+                    .then(checkboxTag?.let { Modifier.testTag(it) } ?: Modifier),
                 contentAlignment = Alignment.Center,
             ) {
-                if (manageSelected) {
+                if (picked) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_save_done),
                         contentDescription = null,
-                        modifier = Modifier.size(11.dp),
-                        tint = Color.White,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }
         } else if (onHoverDelete != null && hovered && canInteract) {
             Box(
-                Modifier
+                modifier = Modifier
                     .align(Alignment.TopStart)
-                    .size(16.dp)
-                    .background(chromeColor.copy(alpha = 0.90f), CornerDeleteTagShape)
-                    .border(0.75.dp, Color.White.copy(alpha = 0.22f), CornerDeleteTagShape)
+                    .size(HoverDeleteSize)
+                    .background(chrome.copy(alpha = 0.92f), CornerDeleteShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.24f), CornerDeleteShape)
                     .clickable(enabled = canInteract, onClick = onHoverDelete)
                     .then(hoverDeleteTag?.let { Modifier.testTag(it) } ?: Modifier),
                 contentAlignment = Alignment.Center,
@@ -1651,26 +1726,120 @@ private fun StickerGridCell(
                 Icon(
                     painter = painterResource(Res.drawable.ic_close_24dp),
                     contentDescription = stringResource(Res.string.template_delete),
-                    modifier = Modifier.size(9.dp),
+                    modifier = Modifier.size(10.dp),
                     tint = Color.White,
                 )
             }
         }
-        if (selected && !manageSelectable) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .size(14.dp)
-                    .background(accent, SelectedTagShape)
-                    .testTag("stickerSelectedBadge"),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_save_done),
-                    contentDescription = null,
-                    modifier = Modifier.size(9.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
+    }
+}
+
+/**
+ * User sticker thumbnail with a die-cut white outline, so a dark logo stays visible on dark chrome.
+ *
+ * [ProductAsyncImage] stays the loader: it owns the placeholder memory-cache key (a recycled
+ * `LazyRow` item shows the cached pixels on its first frame instead of blank) and the retry on a
+ * failed load. The outline is a draw-time effect on top of it, so there is still one decode.
+ */
+@Composable
+private fun UserStickerArt(
+    sticker: Sticker,
+    modifier: Modifier,
+) {
+    // Bumped on every Coil state change. The halo layer holds a *recording* of the content, and a
+    // snapshot read inside a draw cache is what re-records it once the thumb actually lands.
+    var loadEpoch by remember(sticker.icon.value) { mutableIntStateOf(0) }
+    ProductAsyncImage(
+        thumb = ProductThumb(sticker.icon, ProductThumb.UI_THUMB_MAX_EDGE),
+        contentDescription = null,
+        modifier = modifier.stickerHalo { loadEpoch },
+        contentScale = ContentScale.Fit,
+        onState = { loadEpoch++ },
+    )
+}
+
+/**
+ * 1 dp white outline following the content's alpha silhouette: the content is recorded into a
+ * graphics layer and stamped at the eight 1 dp offsets, then drawn untinted on top.
+ *
+ * ponytail: 8-way offset dilate stands in for feMorphology; a real SDF pass would not show at
+ * 56 dp. Raise the ring or go SDF if the outline ever needs to be thicker.
+ */
+@Composable
+private fun Modifier.stickerHalo(loadEpoch: () -> Int): Modifier {
+    val layer = rememberGraphicsLayer()
+    // Set once per layer: on Android a GraphicsLayer is a RenderNode, so a property changed between
+    // two draws of the same frame would retro-apply to both — the content would come out white too.
+    remember(layer) { layer.colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.9f)) }
+    return drawWithCache {
+        loadEpoch()
+        layer.record { drawContent() }
+        val ring = 1.dp.toPx()
+        onDrawWithContent {
+            for (dx in -1..1) {
+                for (dy in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    translate(dx * ring, dy * ring) { drawLayer(layer) }
+                }
+            }
+            drawContent()
+        }
+    }
+}
+
+/** 24-grid glyphs from the design prototype: `None` = ⊘, `Import` = +, `All` = a 3 × 3 dot grid. */
+@Composable
+private fun StickerUtilityGlyph(
+    glyph: StickerGlyph,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier) {
+        val unit = size.minDimension / 24f
+        val stroke = 1.6f * unit
+        when (glyph) {
+            StickerGlyph.None -> {
+                drawCircle(
+                    color = color,
+                    radius = 8.5f * unit,
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    style = Stroke(width = stroke),
                 )
+                drawLine(
+                    color = color,
+                    start = Offset(6f * unit, 18f * unit),
+                    end = Offset(18f * unit, 6f * unit),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round,
+                )
+            }
+            StickerGlyph.Import -> {
+                drawLine(
+                    color = color,
+                    start = Offset(12f * unit, 5f * unit),
+                    end = Offset(12f * unit, 19f * unit),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round,
+                )
+                drawLine(
+                    color = color,
+                    start = Offset(5f * unit, 12f * unit),
+                    end = Offset(19f * unit, 12f * unit),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round,
+                )
+            }
+            StickerGlyph.All -> {
+                val dots = listOf(6f, 12f, 18f)
+                dots.forEach { x ->
+                    dots.forEach { y ->
+                        drawCircle(
+                            color = color,
+                            radius = 1.5f * unit,
+                            center = Offset(x * unit, y * unit),
+                        )
+                    }
+                }
             }
         }
     }

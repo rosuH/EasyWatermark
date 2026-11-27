@@ -1,12 +1,22 @@
 package me.rosuh.easywatermark.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -17,6 +27,7 @@ import me.rosuh.easywatermark.ui.compose.WatermarkTextEditSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,9 +35,16 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import me.rosuh.easywatermark.ui.theme.EwmTheme
+import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
+import me.rosuh.easywatermark.ui.theme.motionDurationMs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import me.rosuh.easywatermark.data.model.ImageInfoUi
@@ -87,6 +105,32 @@ internal class EditorBottomOverlayHostState {
 }
 
 internal val LocalEditorBottomOverlayHost = staticCompositionLocalOf<EditorBottomOverlayHostState?> { null }
+
+/** C1: compact bottom overlay never grows past this, however tall the window is (Dp). */
+internal const val EDITOR_BOTTOM_OVERLAY_MAX_DP: Float = 440f
+
+/** C1: preferred compact bottom overlay height as a fraction of the editor root height. */
+internal const val EDITOR_BOTTOM_OVERLAY_ROOT_FRACTION: Float = 0.48f
+
+/**
+ * C1 — fixed height of the compact bottom overlay, in px.
+ *
+ * [bottomChromePx] is the filmstrip top → root bottom distance (filmstrip + bottom controls +
+ * bottom inset): the overlay must at least cover the chrome it is docked over. Beyond that it
+ * takes [EDITOR_BOTTOM_OVERLAY_ROOT_FRACTION] of the root, capped at [maxOverlayPx].
+ */
+internal fun editorBottomOverlayHeightPx(
+    rootHeightPx: Int,
+    bottomChromePx: Int,
+    maxOverlayPx: Int,
+): Int {
+    if (rootHeightPx <= 0) return bottomChromePx.coerceAtLeast(0)
+    val preferred = minOf(
+        (rootHeightPx * EDITOR_BOTTOM_OVERLAY_ROOT_FRACTION).roundToInt(),
+        maxOverlayPx,
+    )
+    return maxOf(bottomChromePx, preferred).coerceIn(0, rootHeightPx)
+}
 
 data class EditorUiIcons(
     val back: Painter,
@@ -237,6 +281,38 @@ fun EditorScreen(
                 bottomOverlayHost.dismiss()
             }
         }
+        // C1 — compact overlay height + preview refit. Measurement flows one way only:
+        // root height + bottom chrome height → overlay height → preview *child* height.
+        // The preview keeps its full weighted slot (only the tagged node inside it shrinks), so
+        // the filmstrip / bottom controls never move and cannot feed a new chrome height back in.
+        val density = LocalDensity.current
+        var rootHeightPx by remember { mutableIntStateOf(0) }
+        var bottomChromeContentPx by remember { mutableIntStateOf(0) }
+        // Filmstrip top → root bottom. The chrome sits inside [safeDrawingPadding], the overlay does not.
+        val bottomChromePx = bottomChromeContentPx + WindowInsets.safeDrawing.getBottom(density)
+        val overlayMaxPx = with(density) { EDITOR_BOTTOM_OVERLAY_MAX_DP.dp.roundToPx() }
+        val motionPolicy = currentMotionPolicy()
+        val overlaySlideMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelSlideMs)
+        val overlayFadeMs = motionDurationMs(motionPolicy, EwmTheme.motion.optionPanelFadeMs)
+        val overlayBody = bottomOverlayHost.content
+        // The owner clears the host as it leaves composition; keep the last body so the exit
+        // transition still has something to draw.
+        val retainedOverlayBody = remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+        if (overlayBody != null) {
+            retainedOverlayBody.value = overlayBody
+        }
+        // How much the preview gives up to the overlay. `.value` is read inside `layout`, so the
+        // refit animation invalidates layout only — it never recomposes the editor.
+        val previewRefitPx = animateIntAsState(
+            targetValue = if (overlayBody == null) {
+                0
+            } else {
+                (editorBottomOverlayHeightPx(rootHeightPx, bottomChromePx, overlayMaxPx) - bottomChromePx)
+                    .coerceAtLeast(0)
+            },
+            animationSpec = tween(overlaySlideMs, easing = FastOutSlowInEasing),
+            label = "editorPreviewRefit",
+        )
         CompositionLocalProvider(
             LocalPreviewInteraction provides PreviewInteraction(
                 selected?.uri?.value.orEmpty(),
@@ -256,7 +332,11 @@ fun EditorScreen(
                 .testTag("sharedComposeEditorScreen"),
             color = MaterialTheme.colorScheme.background,
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onSizeChanged { rootHeightPx = it.height },
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -346,63 +426,121 @@ fun EditorScreen(
                         }
                     } else {
                         // Compact / Medium: phone vertical stack (M1).
-                        EditorPreviewFrame(
-                            hasImage = hasPreviewContent,
-                            emptyText = emptyPreview,
-                            lowResolutionHint = lowResolutionHint,
+                        // C1: this slot keeps its weighted height; the refit shrinks the tagged
+                        // preview node inside it so `preview.bottom <= overlay.top`.
+                        Box(
                             modifier = Modifier
                                 .weight(1f, fill = true)
                                 .fillMaxWidth()
-                                .testTag("sharedComposeWatermarkPreview"),
-                        ) { previewModifier ->
-                            preview(previewModifier)
+                                .layout { measurable, constraints ->
+                                    val refit = previewRefitPx.value
+                                        .coerceIn(0, constraints.maxHeight)
+                                    val placeable = measurable.measure(
+                                        constraints.copy(
+                                            minHeight = (constraints.minHeight - refit).coerceAtLeast(0),
+                                            maxHeight = (constraints.maxHeight - refit).coerceAtLeast(0),
+                                        ),
+                                    )
+                                    layout(placeable.width, constraints.maxHeight) {
+                                        placeable.placeRelative(0, 0)
+                                    }
+                                },
+                        ) {
+                            EditorPreviewFrame(
+                                hasImage = hasPreviewContent,
+                                emptyText = emptyPreview,
+                                lowResolutionHint = lowResolutionHint,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag("sharedComposeWatermarkPreview"),
+                            ) { previewModifier ->
+                                preview(previewModifier)
+                            }
                         }
 
-                        EditorMainFilmstrip(
-                            imageList = imageList,
-                            selected = selected,
-                            progressiveSlots = progressiveSlots,
-                            hasProgressiveSlots = hasProgressiveSlots,
-                            thumbnail = thumbnail,
-                            onImageSelected = onImageSelected,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onSizeChanged { bottomChromeContentPx = it.height },
+                        ) {
+                            EditorMainFilmstrip(
+                                imageList = imageList,
+                                selected = selected,
+                                progressiveSlots = progressiveSlots,
+                                hasProgressiveSlots = hasProgressiveSlots,
+                                thumbnail = thumbnail,
+                                onImageSelected = onImageSelected,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
 
-                        EditorBottomControls(
-                            waterMark = waterMark,
-                            templateIcon = icons.templateList,
-                            onValueChange = onConfigChange,
-                            onGoTemplateList = showTemplateSheet,
-                            colorOption = colorOption,
-                            iconOption = iconOption,
-                            optionItem = optionItem,
-                            modifier = Modifier.fillMaxWidth(),
-                            initialTabIndex = forcedBottomTab,
-                            initialOptionIndex = forcedOptionIndex,
-                            currentFontName = fontPanelState.currentDisplayName,
-                            supportedStyles = fontPanelState.supportedStyles.styles,
-                            onOpenFontPanel = showFontSheet,
-                        )
+                            EditorBottomControls(
+                                waterMark = waterMark,
+                                templateIcon = icons.templateList,
+                                onValueChange = onConfigChange,
+                                onGoTemplateList = showTemplateSheet,
+                                colorOption = colorOption,
+                                iconOption = iconOption,
+                                optionItem = optionItem,
+                                modifier = Modifier.fillMaxWidth(),
+                                initialTabIndex = forcedBottomTab,
+                                initialOptionIndex = forcedOptionIndex,
+                                currentFontName = fontPanelState.currentDisplayName,
+                                supportedStyles = fontPanelState.supportedStyles.styles,
+                                onOpenFontPanel = showFontSheet,
+                            )
+                        }
                     }
                 }
                 if (!dualOrWide) {
-                    Box(
+                    AnimatedVisibility(
+                        visible = overlayBody != null,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .layout { measurable, constraints ->
-                                val maxH = if (constraints.hasBoundedHeight) {
-                                    (constraints.maxHeight * 0.58f).roundToInt().coerceAtLeast(1)
+                                // C1: fixed height. Root height comes from these constraints rather
+                                // than state, so the first frame is already the right size.
+                                val inner = if (constraints.hasBoundedHeight) {
+                                    val h = editorBottomOverlayHeightPx(
+                                        rootHeightPx = constraints.maxHeight,
+                                        bottomChromePx = bottomChromePx,
+                                        maxOverlayPx = overlayMaxPx,
+                                    )
+                                    constraints.copy(minHeight = h, maxHeight = h)
                                 } else {
-                                    constraints.maxHeight
+                                    constraints
                                 }
-                                val p = measurable.measure(
-                                    constraints.copy(maxHeight = constraints.maxHeight.coerceAtMost(maxH)),
-                                )
+                                val p = measurable.measure(inner)
                                 layout(p.width, p.height) { p.placeRelative(0, 0) }
-                            },
+                            }
+                            // The retained body stays composed for the exit transition. Once the
+                            // host has cleared it, it is a ghost on its way out: eat pointer input
+                            // in the Initial pass so nothing in it can still be tapped or dragged.
+                            .then(
+                                if (overlayBody == null) {
+                                    Modifier.pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                awaitPointerEvent(PointerEventPass.Initial)
+                                                    .changes.forEach { it.consume() }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                        enter = slideInVertically(
+                            animationSpec = tween(overlaySlideMs, easing = FastOutSlowInEasing),
+                            initialOffsetY = { it },
+                        ) + fadeIn(animationSpec = tween(overlayFadeMs, easing = FastOutSlowInEasing)),
+                        exit = slideOutVertically(
+                            animationSpec = tween(overlaySlideMs, easing = FastOutSlowInEasing),
+                            targetOffsetY = { it },
+                        ) + fadeOut(animationSpec = tween(overlayFadeMs, easing = FastOutSlowInEasing)),
+                        label = "editorBottomOverlay",
                     ) {
-                        bottomOverlayHost.content?.invoke()
+                        retainedOverlayBody.value?.invoke()
                     }
                 }
             }

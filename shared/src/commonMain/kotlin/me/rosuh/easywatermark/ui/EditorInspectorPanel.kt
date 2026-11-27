@@ -214,7 +214,8 @@ private fun ContentForm(
                 )
             }
             FuncType.Icon -> {
-                // Title + Remove action are owned by inline StickerPanelOnIcon (same row).
+                // No title row and no Remove action: inline StickerPanelOnIcon is the whole field
+                // (label row + grid, label row + grid) and `None` replaces Remove.
                 androidx.compose.runtime.CompositionLocalProvider(
                     me.rosuh.easywatermark.ui.compose.LocalStickerSheetRequest provides stickerOpenRequest,
                 ) {
