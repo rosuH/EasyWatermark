@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -27,6 +29,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
@@ -89,6 +92,29 @@ class StickerPanelWitnessUiTest {
         captureFrame("stickerRailWithLibrary")
     }
 
+    /** Maximum scroll: the last tile must end clear of the fade and of the pinned All tile. */
+    @Test
+    fun stickerRailScrolledToEnd() = witnessFrame {
+        val stickers = witnessStickers()
+        showEditorWitness(StickerHarness(stickers = stickers))
+        railViewport().performScrollToIndex(railItemCount(stickers.size) - 1)
+        waitForIdle()
+        tag("stickerBuiltIn_${BuiltInSticker.entries.last().key}").assertExists()
+        captureFrame("stickerRailScrolledToEnd")
+    }
+
+    /** RTL mirror at scroll start: All at the left, the fade running chrome → transparent. */
+    @Test
+    fun stickerRailRtl() = witnessFrame {
+        val stickers = witnessStickers()
+        showEditorWitness(
+            harness = StickerHarness(icon = appliedUserIcon(stickers), stickers = stickers),
+            layoutDirection = LayoutDirection.Rtl,
+        )
+        tag("stickerInlineRail").assertExists()
+        captureFrame("stickerRailRtl")
+    }
+
     @Test
     fun stickerRailBuiltInApplied() = witnessFrame {
         val stickers = witnessStickers()
@@ -134,6 +160,26 @@ class StickerPanelWitnessUiTest {
             openPanel()
         }
         captureFrame("stickerPanelSelection")
+    }
+
+    /** Width pressure on the selection header: 320 dp wide, font scale 1.5, everything selected. */
+    @Test
+    fun stickerPanelSelectionNarrow() = witnessFrame(NARROW_WIDTH_DP, PHONE_HEIGHT_DP) {
+        val stickers = witnessStickers()
+        showEditorWitness(
+            harness = StickerHarness(stickers = stickers),
+            widthDp = NARROW_WIDTH_DP,
+            fontScale = 1.5f,
+        )
+        openPanel()
+        if (stickers.isNotEmpty()) {
+            inPanel("stickerManageToggle").performClick()
+            waitForIdle()
+            inPanel("stickerManageSelectAll").performClick()
+            waitForIdle()
+            inPanel("stickerManageDone").assertExists()
+        }
+        captureFrame("stickerPanelSelectionNarrow")
     }
 
     @Test
@@ -235,6 +281,9 @@ class StickerPanelWitnessUiTest {
 
 private const val PHONE_WIDTH_DP = 393f
 private const val PHONE_HEIGHT_DP = 852f
+
+/** Narrowest phone the header has to survive (ADR-0041 selection mode). */
+private const val NARROW_WIDTH_DP = 320f
 private const val EXPANDED_WIDTH_DP = 1100f
 private const val EXPANDED_HEIGHT_DP = 760f
 
@@ -265,18 +314,25 @@ private fun ComposeUiTest.showEditorWitness(
     layoutClass: EditorLayoutClass = EditorLayoutClass.Compact,
     widthDp: Float = PHONE_WIDTH_DP,
     heightDp: Float = PHONE_HEIGHT_DP,
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
+    fontScale: Float = 1f,
 ) {
     warmThumbCache(harness.stickers)
     setContent {
-        ProvideMotionPolicy(MotionPolicy.Off) {
-            AppTheme(darkTheme = true) {
-                EditorScreenUnderTest(
-                    harness = harness,
-                    photo = witnessPhoto,
-                    modifier = Modifier.size(widthDp.dp, heightDp.dp),
-                    preview = { previewModifier -> WitnessPhotoArea(previewModifier) },
-                    layoutClass = layoutClass,
-                )
+        CompositionLocalProvider(
+            LocalLayoutDirection provides layoutDirection,
+            LocalDensity provides Density(WITNESS_DENSITY, fontScale),
+        ) {
+            ProvideMotionPolicy(MotionPolicy.Off) {
+                AppTheme(darkTheme = true) {
+                    EditorScreenUnderTest(
+                        harness = harness,
+                        photo = witnessPhoto,
+                        modifier = Modifier.size(widthDp.dp, heightDp.dp),
+                        preview = { previewModifier -> WitnessPhotoArea(previewModifier) },
+                        layoutClass = layoutClass,
+                    )
+                }
             }
         }
     }

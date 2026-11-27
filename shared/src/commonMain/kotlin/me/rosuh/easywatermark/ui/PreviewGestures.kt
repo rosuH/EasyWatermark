@@ -104,6 +104,25 @@ internal fun boundedViewPan(pan: Offset, zoom: Float, fitted: FittedImageRect): 
     pan.y.coerceIn(-fitted.height * (zoom - 1) / 2, fitted.height * (zoom - 1) / 2),
 )
 
+/**
+ * Pan for a resized preview surface ([from] → [to] fitted image): scaled with the fitted image so
+ * the photo point under the surface centre stays there, then clamped by [boundedViewPan] for the
+ * new fit. Zoom is untouched, and an unzoomed view keeps a zero pan.
+ */
+internal fun rebasedViewPan(
+    pan: Offset,
+    zoom: Float,
+    from: FittedImageRect?,
+    to: FittedImageRect?,
+): Offset {
+    if (from == null || to == null || from.width <= 0f || from.height <= 0f) return Offset.Zero
+    return boundedViewPan(
+        Offset(pan.x * to.width / from.width, pan.y * to.height / from.height),
+        zoom,
+        to,
+    )
+}
+
 internal data class RotatedSelectionFrame(
     val centerCanvas: Offset,
     val halfW: Float,
@@ -698,7 +717,18 @@ internal fun InteractiveOverlayPreview(
                     }
                 }
             }
-            Box(Modifier.fillMaxWidth().weight(1f).clipToBounds().testTag("previewGestureSurface").onSizeChanged { box = it }) {
+            // The sticker panel refits this surface while it opens, frame by frame: rebase the pan
+            // onto the new fit (no-op while unzoomed) instead of leaving a blank band behind.
+            fun fittedFor(size: IntSize) = computeFittedImageRect(
+                size.width.toFloat(), size.height.toFloat(), photo.width.toFloat(), photo.height.toFloat(),
+            )
+            Box(Modifier.fillMaxWidth().weight(1f).clipToBounds().testTag("previewGestureSurface")
+                .onSizeChanged { size ->
+                    if (pan != Offset.Zero) {
+                        pan = rebasedViewPan(pan, zoom, fittedFor(box), fittedFor(size))
+                    }
+                    box = size
+                }) {
                 Box(
                     Modifier.fillMaxSize().graphicsLayer {
                         scaleX = zoom; scaleY = zoom; translationX = pan.x; translationY = pan.y

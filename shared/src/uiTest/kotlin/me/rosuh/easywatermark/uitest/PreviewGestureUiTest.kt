@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Density
@@ -37,6 +38,24 @@ class PreviewGestureUiTest {
         CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) { drawRect(color) }
         return bitmap
     }
+
+    /** Photo-layer probe: the only node inside the zoom/pan layer that carries semantics. */
+    private val PAN_PROBE = "ewmPanProbe"
+
+    private fun SemanticsNodeInteractionsProvider.surfaceNode() =
+        onNodeWithTag("previewGestureSurface").fetchSemanticsNode()
+
+    private fun SemanticsNodeInteractionsProvider.layerOrigin(): Offset =
+        onNodeWithContentDescription(PAN_PROBE, useUnmergedTree = true).fetchSemanticsNode().positionInRoot
+
+    /**
+     * The photo layer fills the surface and is scaled about its centre, then translated by the pan:
+     * `layerOrigin = surfaceOrigin + size × (1 - zoom) / 2 + pan`.
+     */
+    private fun panOf(zoom: Float, surface: SemanticsNode, layer: Offset) = Offset(
+        layer.x - surface.positionInRoot.x - surface.size.width * (1f - zoom) / 2f,
+        layer.y - surface.positionInRoot.y - surface.size.height * (1f - zoom) / 2f,
+    )
 
     @Test
     fun doubleTapWatermarkOpensEditor_butBlankDoubleTapDoesNot() = runComposeUiTest {
@@ -521,6 +540,111 @@ class PreviewGestureUiTest {
         assertEquals(-1, hit.column)
         assertEquals(-1, hit.row)
         assertEquals(Offset.Zero, boundedViewPan(Offset(20f, 30f), 1f, fit))
+    }
+
+    @Test
+    fun rebasedViewPan_scalesWithTheFitAndStaysInsideTheNewBounds() {
+        // 300 x 300 surface vs 300 x 200 surface, square photo: the fit goes 300 -> 200.
+        val tall = computeFittedImageRect(300f, 300f, 300f, 300f)!!
+        val short = computeFittedImageRect(300f, 200f, 300f, 300f)!!
+        // Shrinking keeps the centred photo point: pan scales by 200/300, bounds go ±150 -> ±100.
+        assertEquals(Offset(40f, 20f), rebasedViewPan(Offset(60f, 30f), 2f, tall, short))
+        // A pan sitting on the old bound lands on the new bound, not past it.
+        assertEquals(Offset(100f, -100f), rebasedViewPan(Offset(150f, -150f), 2f, tall, short))
+        // Growing takes the same photo point back out.
+        assertEquals(Offset(150f, -150f), rebasedViewPan(Offset(100f, -100f), 2f, short, tall))
+        // Anything over the new bound is clamped, not merely scaled.
+        assertEquals(Offset(100f, 100f), rebasedViewPan(Offset(900f, 900f), 2f, tall, short))
+        // Unzoomed: no pan at all.
+        assertEquals(Offset.Zero, rebasedViewPan(Offset(80f, 80f), 1f, tall, short))
+        // Same fit in, same pan out.
+        assertEquals(Offset(40f, 20f), rebasedViewPan(Offset(40f, 20f), 2f, tall, tall))
+        // No fit (surface not laid out yet): nothing to rebase onto.
+        assertEquals(Offset.Zero, rebasedViewPan(Offset(40f, 20f), 2f, null, short))
+        assertEquals(Offset.Zero, rebasedViewPan(Offset(40f, 20f), 2f, tall, null))
+    }
+
+    /**
+     * The sticker panel refits the preview while it opens: a zoomed, panned view must rebase
+     * instead of keeping pixel pan that no longer fits the smaller image (blank band).
+     */
+    @Test
+    fun shrinkingTheSurfaceRebasesViewPanInsideTheNewBounds() = runComposeUiTest {
+        val photo = bitmap(300, 300, Color.White)
+        val cell = bitmap(60, 30, Color.Red)
+        // REPEAT + nothing selected: every gesture targets the view, never the watermark.
+        val config = WaterMark.default
+        var surfaceHeight by mutableStateOf(348.dp)
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalPreviewInteraction provides PreviewInteraction("photo", config, {}, {})) {
+                    LiveOverlayPreview(OverlayPreviewChrome.LiveLayers, photo,
+                        overlayCellFrom(cell, config, .4f, .4f, 300), null,
+                        modifier = Modifier.size(width = 300.dp, height = surfaceHeight),
+                        contentDescription = PAN_PROBE,
+                        onOffsetCommit = { _, _ -> }, renderGestureCell = { cell })
+                }
+            }
+        }
+        // Pinch about the surface centre in one symmetric event: pan stays zero, so the photo
+        // layer's origin gives the zoom away.
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            val mid = Offset(width / 2f, height / 2f)
+            down(0, mid - Offset(30f, 0f))
+            down(1, mid + Offset(30f, 0f))
+            updatePointerTo(0, mid - Offset(90f, 0f))
+            updatePointerTo(1, mid + Offset(90f, 0f))
+            move()
+            up(0)
+            up(1)
+        }
+        waitForIdle()
+        val zoomedSurface = surfaceNode()
+        val zoom = 1f - 2f * (layerOrigin().x - zoomedSurface.positionInRoot.x) / zoomedSurface.size.width
+        assertTrue(zoom > 1.5f, "the centred pinch must zoom the view in, got $zoom")
+        // Zoom came off the x axis, so the y axis is the check that the pan really stayed zero.
+        val centredPan = panOf(zoom, zoomedSurface, layerOrigin())
+        assertTrue(
+            abs(centredPan.x) < 1f && abs(centredPan.y) < 1f,
+            "a centred pinch must not pan, got $centredPan",
+        )
+
+        // Pan hard into the bottom-right corner: the pan ends clamped on the bound.
+        onNodeWithTag("previewGestureSurface").performTouchInput {
+            down(Offset(width / 2f, height / 2f))
+            moveBy(Offset(600f, 600f))
+            moveBy(Offset(600f, 600f))
+            up()
+        }
+        waitForIdle()
+        val beforeSurface = surfaceNode()
+        val beforeFit = computeFittedImageRect(
+            beforeSurface.size.width.toFloat(), beforeSurface.size.height.toFloat(), 300f, 300f,
+        )!!
+        val beforePan = panOf(zoom, beforeSurface, layerOrigin())
+        assertEquals(
+            beforeFit.width * (zoom - 1f) / 2f, beforePan.x, 1f,
+            "the drag must park the pan on the bound",
+        )
+
+        // The panel refit: the surface gets shorter, so the fitted image does too.
+        runOnIdle { surfaceHeight = 248.dp }
+        waitForIdle()
+        val afterSurface = surfaceNode()
+        val afterFit = computeFittedImageRect(
+            afterSurface.size.width.toFloat(), afterSurface.size.height.toFloat(), 300f, 300f,
+        )!!
+        assertTrue(afterFit.width < beforeFit.width, "the surface must actually shrink")
+        val afterPan = panOf(zoom, afterSurface, layerOrigin())
+        val boundX = afterFit.width * (zoom - 1f) / 2f
+        val boundY = afterFit.height * (zoom - 1f) / 2f
+        assertTrue(
+            abs(afterPan.x) <= boundX + 1f && abs(afterPan.y) <= boundY + 1f,
+            "pan $afterPan must stay inside the new bounds (±$boundX, ±$boundY)",
+        )
+        // Same photo point under the surface centre: pan scaled with the fitted image.
+        assertEquals(beforePan.x * afterFit.width / beforeFit.width, afterPan.x, 1.5f)
+        assertEquals(beforePan.y * afterFit.height / beforeFit.height, afterPan.y, 1.5f)
     }
 
     @Test

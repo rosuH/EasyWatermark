@@ -84,7 +84,11 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -92,6 +96,7 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -266,6 +271,8 @@ private val RailStartPadding = 12.dp
 /** Width the pinned `All` tile reserves at the end of the rail (56 tile + 12 end padding). */
 private val RailAllReserve = 68.dp
 private val RailAllEndPadding = 12.dp
+
+/** Fade over the end of the list viewport, so the last visible tile has no hard cut. */
 private val RailScrimWidth = 26.dp
 
 /** Wide Import grows with its label (longer locales) instead of clipping it at a fixed 136 dp. */
@@ -535,17 +542,14 @@ private fun StickerPanelBody(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (managing) {
-                Text(
-                    text = stringResource(Res.string.sticker_selected_count, selectedIds.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.testTag("stickerSelectedCount"),
-                )
-                StickerSelectionActions(
+                StickerSelectionHeader(
+                    count = stringResource(Res.string.sticker_selected_count, selectedIds.size),
+                    countStyle = MaterialTheme.typography.titleMedium,
                     allSelected = userStickers.isNotEmpty() &&
                         userStickers.all { it.id in selectedIds },
                     enabled = enabled,
                     compact = false,
+                    modifier = Modifier.fillMaxWidth(),
                     onToggleSelectAll = onToggleSelectAll,
                     onDone = onStopManaging,
                 )
@@ -606,6 +610,9 @@ private fun StickerPanelBody(
                         text = stringResource(Res.string.sticker_section_mine),
                         tag = "stickerSectionMine",
                         action = manageButton,
+                        // Manage steps aside in selection mode; the row keeps its height so the
+                        // grid does not jump.
+                        height = SectionRowActionHeight,
                     )
                 }
             }
@@ -881,6 +888,18 @@ private fun InlineStickerRail(
     }
     val allStickersLabel = stringResource(Res.string.sticker_all_open)
     val chrome = editorChromeColor()
+    // `horizontalGradient` is physical while `CenterEnd` mirrors, so pick the stops by direction:
+    // chrome always sits on the viewport's end edge and fades out towards the list.
+    val layoutDirection = LocalLayoutDirection.current
+    val railScrim = remember(chrome, layoutDirection) {
+        Brush.horizontalGradient(
+            if (layoutDirection == LayoutDirection.Rtl) {
+                listOf(chrome, Color.Transparent)
+            } else {
+                listOf(Color.Transparent, chrome)
+            },
+        )
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -888,8 +907,10 @@ private fun InlineStickerRail(
             .testTag("stickerInlineRail"),
     ) {
         LazyRow(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = RailStartPadding, end = RailAllReserve),
+            // The All reserve is an inset on the viewport, not content padding: no tile is drawn
+            // or hit-tested in the last 68 dp, so a tap there cannot apply an invisible sticker.
+            modifier = Modifier.fillMaxSize().padding(end = RailAllReserve),
+            contentPadding = PaddingValues(start = RailStartPadding, end = RailScrimWidth),
             horizontalArrangement = Arrangement.spacedBy(RailSpacing),
             verticalAlignment = Alignment.CenterVertically,
             overscrollEffect = rememberOverscrollEffect(),
@@ -946,19 +967,15 @@ private fun InlineStickerRail(
                 )
             }
         }
-        // The list fades out under the pinned All tile instead of being clipped mid-sticker.
+        // Paint only (no pointer input): the half-visible tile under the fade stays tappable and
+        // the list stays scrollable from here.
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
+                .padding(end = RailAllReserve)
                 .fillMaxHeight()
-                .width(RailScrimWidth + RailAllReserve)
-                .background(
-                    Brush.horizontalGradient(
-                        0f to Color.Transparent,
-                        RailScrimWidth / (RailScrimWidth + RailAllReserve) to chrome,
-                        1f to chrome,
-                    ),
-                ),
+                .width(RailScrimWidth)
+                .background(railScrim),
         )
         // The end inset lives on this wrapper so the tagged tile measures exactly 56 × 56.
         Box(
@@ -1045,33 +1062,24 @@ private fun InlineStickerInspectorPanel(
         ) {
             if (userStickers.isNotEmpty()) {
                 if (managing) {
-                    Row(
+                    StickerSelectionHeader(
+                        count = stringResource(Res.string.sticker_selected_count, selectedIds.size),
+                        countStyle = MaterialTheme.typography.labelLarge,
+                        allSelected = userStickers.all { it.id in selectedIds },
+                        enabled = enabled,
+                        compact = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(SectionRowActionHeight),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.sticker_selected_count, selectedIds.size),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.testTag("stickerSelectedCount"),
-                        )
-                        StickerSelectionActions(
-                            allSelected = userStickers.all { it.id in selectedIds },
-                            enabled = enabled,
-                            compact = true,
-                            onToggleSelectAll = {
-                                selectedIds = if (userStickers.all { it.id in selectedIds }) {
-                                    emptySet()
-                                } else {
-                                    userStickers.map { it.id }.toSet()
-                                }
-                            },
-                            onDone = { managing = false },
-                        )
-                    }
+                        onToggleSelectAll = {
+                            selectedIds = if (userStickers.all { it.id in selectedIds }) {
+                                emptySet()
+                            } else {
+                                userStickers.map { it.id }.toSet()
+                            }
+                        },
+                        onDone = { managing = false },
+                    )
                 } else {
                     StickerSectionRow(
                         text = stringResource(Res.string.sticker_section_mine),
@@ -1255,11 +1263,16 @@ private fun StickerSectionRow(
     modifier: Modifier = Modifier,
     dimmed: Boolean = false,
     action: (@Composable () -> Unit)? = null,
+    /**
+     * Pinned by the caller where the row hosts an action in one mode only — otherwise entering
+     * selection mode would drop the row by 8 dp and move every tile under it.
+     */
+    height: Dp = if (action == null) SectionRowHeight else SectionRowActionHeight,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(if (action == null) SectionRowHeight else SectionRowActionHeight),
+            .height(height),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1318,36 +1331,97 @@ private fun StickerTextButton(
             fontWeight = if (accent) FontWeight.SemiBold else FontWeight.Medium,
             color = color,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
+/**
+ * `n selected` / select all / `Done`, measured by priority instead of by
+ * [Arrangement.SpaceBetween]: `Done` is measured first and always keeps its full width, the
+ * select-all button gives way next, and the count gives way first (down to nothing). One line
+ * each, so a narrow phone at a large font scale neither clips `Done` nor grows the row.
+ *
+ * Both hosts hand this row a bounded width (`fillMaxWidth`).
+ */
 @Composable
-private fun StickerSelectionActions(
+private fun StickerSelectionHeader(
+    count: String,
+    countStyle: TextStyle,
     allSelected: Boolean,
     enabled: Boolean,
     compact: Boolean,
+    modifier: Modifier = Modifier,
     onToggleSelectAll: () -> Unit,
     onDone: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        StickerTextButton(
-            text = stringResource(
-                if (allSelected) Res.string.sticker_deselect_all else Res.string.sticker_select_all,
-            ),
-            tag = "stickerManageSelectAll",
-            enabled = enabled,
-            onClick = onToggleSelectAll,
-            compact = compact,
+    Layout(
+        modifier = modifier,
+        contents = listOf(
+            {
+                Text(
+                    text = count,
+                    style = countStyle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("stickerSelectedCount"),
+                )
+            },
+            {
+                StickerTextButton(
+                    text = stringResource(
+                        if (allSelected) {
+                            Res.string.sticker_deselect_all
+                        } else {
+                            Res.string.sticker_select_all
+                        },
+                    ),
+                    tag = "stickerManageSelectAll",
+                    enabled = enabled,
+                    onClick = onToggleSelectAll,
+                    compact = compact,
+                )
+            },
+            {
+                StickerTextButton(
+                    text = stringResource(Res.string.preview_selection_done),
+                    tag = "stickerManageDone",
+                    enabled = enabled,
+                    onClick = onDone,
+                    accent = true,
+                    compact = compact,
+                )
+            },
+        ),
+    ) { (countContent, selectAllContent, doneContent), constraints ->
+        val width = constraints.maxWidth
+        fun measure(content: List<Measurable>, room: Int): Placeable? =
+            content.firstOrNull()?.measure(
+                Constraints(maxWidth = room.coerceAtLeast(0), maxHeight = constraints.maxHeight),
+            )
+        val done = measure(doneContent, width)
+        val selectAll = measure(selectAllContent, width - (done?.width ?: 0))
+        val countLabel = measure(
+            countContent,
+            width - (done?.width ?: 0) - (selectAll?.width ?: 0),
         )
-        StickerTextButton(
-            text = stringResource(Res.string.preview_selection_done),
-            tag = "stickerManageDone",
-            enabled = enabled,
-            onClick = onDone,
-            accent = true,
-            compact = compact,
-        )
+        val height = listOfNotNull(countLabel, selectAll, done)
+            .maxOfOrNull { it.height }
+            ?.coerceIn(constraints.minHeight, constraints.maxHeight)
+            ?: constraints.minHeight
+        layout(width, height) {
+            var end = width
+            done?.let {
+                end -= it.width
+                it.placeRelative(end, (height - it.height) / 2)
+            }
+            selectAll?.let {
+                end -= it.width
+                it.placeRelative(end, (height - it.height) / 2)
+            }
+            countLabel?.placeRelative(0, (height - countLabel.height) / 2)
+        }
     }
 }
 
@@ -1572,6 +1646,9 @@ private fun StickerUtilityTile(
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val canInteract = enabled && !dimmed
+    // Only a choice tile may expose `selected`: on a plain button Android reports that property as
+    // checkable, which announced `Import` and `All` as "unchecked".
+    val isChoice = role != Role.Button
     // Selection mode draws no applied highlight (spec 1.3): a dimmed tile keeps its idle well,
     // while `selected` semantics still report what is actually applied.
     val highlighted = isSelected && !dimmed
@@ -1588,7 +1665,7 @@ private fun StickerUtilityTile(
             .then(if (highlighted) Modifier.border(1.5.dp, accent, StickerTileShape) else Modifier)
             .hoverable(interactionSource = interaction, enabled = canInteract)
             .semantics {
-                selected = isSelected
+                if (isChoice) selected = isSelected
                 if (label != null) contentDescription = label
                 this.role = role
                 if (!canInteract) disabled()

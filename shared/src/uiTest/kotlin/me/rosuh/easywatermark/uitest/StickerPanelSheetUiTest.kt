@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -21,8 +23,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -48,13 +54,17 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -172,11 +182,12 @@ private fun DockedStickerScaffold(
     host: EditorBottomOverlayHostState,
     harness: StickerHarness,
     onCanvasClick: () -> Unit = {},
+    width: Dp = 360.dp,
 ) {
     CompositionLocalProvider(LocalEditorBottomOverlayHost provides host) {
         Box(
             modifier = Modifier
-                .width(360.dp)
+                .width(width)
                 .fillMaxHeight(),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -326,6 +337,22 @@ private fun ComposeUiTest.awaitNoPanel() = waitUntil(timeoutMillis = 5_000) {
 /** How far a scrollable node has scrolled — survives lazy items being disposed. */
 private fun SemanticsNodeInteraction.verticalScrollOffset(): Float =
     fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+
+private fun SemanticsNodeInteraction.hasSelectedProperty(): Boolean =
+    fetchSemanticsNode().config.contains(SemanticsProperties.Selected)
+
+private fun SemanticsNodeInteraction.role(): Role? =
+    fetchSemanticsNode().config.getOrNull(SemanticsProperties.Role)
+
+/** The rail's scrolling viewport (the `LazyRow` node), not the tagged outer container. */
+internal fun SemanticsNodeInteractionsProvider.railViewport() =
+    onNode(
+        hasScrollAction() and hasAnyAncestor(hasTestTag("stickerInlineRail")),
+        useUnmergedTree = true,
+    )
+
+/** Rail item count: `None` + `Import` + user stickers + the 12 built-ins. */
+internal fun railItemCount(userStickers: Int) = 2 + userStickers + BuiltInSticker.entries.size
 
 /** Asserts the tagged nodes sit in this left-to-right order. */
 private fun SemanticsNodeInteractionsProvider.assertLeftToRight(vararg tags: String) {
@@ -664,6 +691,149 @@ class StickerPanelSheetUiTest {
         }
     }
 
+    /**
+     * Rail end region: the list viewport stops before the pinned `All` tile, the 26.dp fade sits
+     * over the end of that viewport (paint only), and the strip beyond `All` belongs to nobody.
+     */
+    @Test
+    fun railEndRegionKeepsTheListOffTheAllStripAndClearOfTheFade() = runComposeUiTest {
+        val userOne = Sticker(id = "user-1", icon = MediaRef("/tmp/icon-user-1.png"))
+        val harness = StickerHarness(stickers = listOf(userOne))
+        setContent {
+            AppTheme {
+                Box(modifier = Modifier.width(360.dp)) {
+                    StickerPanelHost(harness = harness, useLargeDialog = false)
+                }
+            }
+        }
+        val rail = tag("stickerInlineRail").getUnclippedBoundsInRoot()
+        tag("stickerExpand").assertWidthIsEqualTo(56.dp).assertHeightIsEqualTo(56.dp)
+        val all = tag("stickerExpand").getUnclippedBoundsInRoot()
+        (rail.right - all.right).assertIsEqualTo(12.dp, "All inset from the rail end", tolerance = 1.dp)
+
+        // The viewport itself ends 68.dp before the rail: no list content under the All tile.
+        val viewport = railViewport().getUnclippedBoundsInRoot()
+        viewport.left.assertIsEqualTo(rail.left, "rail viewport start", tolerance = 1.dp)
+        (rail.right - viewport.right).assertIsEqualTo(
+            68.dp,
+            "rail viewport must end before the pinned All tile",
+            tolerance = 1.dp,
+        )
+
+        // At maximum scroll the last tile ends clear of the 26.dp fade (68 + 26 before the end).
+        railViewport().performScrollToIndex(railItemCount(1) - 1)
+        waitForIdle()
+        val lastTag = "stickerBuiltIn_${BuiltInSticker.entries.last().key}"
+        val lastTile = tag(lastTag).getUnclippedBoundsInRoot()
+        (rail.right - lastTile.right).assertIsEqualTo(
+            94.dp,
+            "last tile at maximum scroll must clear the fade",
+            tolerance = 1.dp,
+        )
+        assertTrue(
+            lastTile.right <= all.left,
+            "last tile (${lastTile.right.value}dp) must stay left of All (${all.left.value}dp)",
+        )
+
+        // Mid-scroll: the 12.dp strip beyond All reaches nothing at all.
+        railViewport().performScrollToIndex(railItemCount(1) / 2)
+        waitForIdle()
+        tag("stickerInlineRail").performTouchInput {
+            click(Offset(width - 3.dp.toPx(), height / 2f))
+            click(Offset(width - 9.dp.toPx(), height / 2f))
+        }
+        waitForIdle()
+        runOnIdle {
+            assertTrue(
+                harness.appliedBuiltIns.isEmpty() && harness.appliedUsers.isEmpty(),
+                "a tap beyond All must apply nothing, got ${harness.appliedBuiltIns} / ${harness.appliedUsers}",
+            )
+            assertEquals(0, harness.clears)
+            assertEquals(0, harness.adds)
+        }
+        tag("stickerPanelSheet").assertDoesNotExist()
+
+        // The fade is paint only: the half-visible tile under it still takes the tap.
+        val fadeCenter = viewport.right - rail.left - 13.dp
+        tag("stickerInlineRail").performTouchInput {
+            click(Offset(fadeCenter.toPx(), height / 2f))
+        }
+        waitForIdle()
+        runOnIdle {
+            assertTrue(
+                harness.appliedBuiltIns.isNotEmpty() || harness.appliedUsers.isNotEmpty(),
+                "the fade must not swallow the tap on the tile under it",
+            )
+        }
+    }
+
+    @Test
+    fun railEndRegionMirrorsInRtl() = runComposeUiTest {
+        val userOne = Sticker(id = "user-1", icon = MediaRef("/tmp/icon-user-1.png"))
+        val harness = StickerHarness(stickers = listOf(userOne))
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    Box(modifier = Modifier.width(360.dp)) {
+                        StickerPanelHost(harness = harness, useLargeDialog = false)
+                    }
+                }
+            }
+        }
+        val rail = tag("stickerInlineRail").getUnclippedBoundsInRoot()
+        val all = tag("stickerExpand").getUnclippedBoundsInRoot()
+        tag("stickerExpand").assertWidthIsEqualTo(56.dp).assertHeightIsEqualTo(56.dp)
+        (all.left - rail.left).assertIsEqualTo(
+            12.dp,
+            "RTL pins All at the left with its 12.dp outer margin",
+            tolerance = 1.dp,
+        )
+        // Tiles start at the right: None is the right-most tile.
+        assertTrue(
+            tag("stickerClear").getUnclippedBoundsInRoot().right > all.right,
+            "RTL must mirror the rail: None sits right of All",
+        )
+
+        val viewport = railViewport().getUnclippedBoundsInRoot()
+        viewport.right.assertIsEqualTo(rail.right, "RTL rail viewport start", tolerance = 1.dp)
+        (viewport.left - rail.left).assertIsEqualTo(
+            68.dp,
+            "RTL rail viewport must end before the pinned All tile",
+            tolerance = 1.dp,
+        )
+
+        railViewport().performScrollToIndex(railItemCount(1) - 1)
+        waitForIdle()
+        val lastTile = tag("stickerBuiltIn_${BuiltInSticker.entries.last().key}")
+            .getUnclippedBoundsInRoot()
+        (lastTile.left - rail.left).assertIsEqualTo(
+            94.dp,
+            "RTL last tile at maximum scroll must clear the fade",
+            tolerance = 1.dp,
+        )
+        assertTrue(
+            lastTile.left >= all.right,
+            "RTL last tile (${lastTile.left.value}dp) must stay right of All (${all.right.value}dp)",
+        )
+
+        railViewport().performScrollToIndex(railItemCount(1) / 2)
+        waitForIdle()
+        tag("stickerInlineRail").performTouchInput {
+            click(Offset(3.dp.toPx(), height / 2f))
+            click(Offset(9.dp.toPx(), height / 2f))
+        }
+        waitForIdle()
+        runOnIdle {
+            assertTrue(
+                harness.appliedBuiltIns.isEmpty() && harness.appliedUsers.isEmpty(),
+                "RTL: a tap beyond All must apply nothing, got ${harness.appliedBuiltIns} / ${harness.appliedUsers}",
+            )
+            assertEquals(0, harness.clears)
+            assertEquals(0, harness.adds)
+        }
+        tag("stickerPanelSheet").assertDoesNotExist()
+    }
+
     // -----------------------------------------------------------------------------------------
     // 1.2 — panel
     // -----------------------------------------------------------------------------------------
@@ -993,6 +1163,124 @@ class StickerPanelSheetUiTest {
         inPanel("stickerManageToggle").assertIsDisplayed()
     }
 
+    @Test
+    fun dockedSelectionHeaderKeepsDoneUsableAtFontScale15() =
+        assertDockedSelectionHeaderKeepsDone(1.5f)
+
+    @Test
+    fun dockedSelectionHeaderKeepsDoneUsableAtFontScale20() =
+        assertDockedSelectionHeaderKeepsDone(2f)
+
+    /**
+     * Width pressure on the selection header (320 dp phone, large font scale, the longer
+     * "Deselect all" label): Done keeps its full width, select-all gives way next, and the count
+     * gives way first — one line each, same header height.
+     */
+    private fun assertDockedSelectionHeaderKeepsDone(fontScale: Float) = runComposeUiTest {
+        val host = EditorBottomOverlayHostState()
+        val users = listOf(
+            Sticker(id = "user-1", icon = MediaRef("/tmp/icon-user-1.png")),
+            Sticker(id = "user-2", icon = MediaRef("/tmp/icon-user-2.png")),
+        )
+        val harness = StickerHarness(stickers = users)
+        lateinit var deselectAll: String
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalDensity provides Density(1f, fontScale)) {
+                    deselectAll = stringResource(Res.string.sticker_deselect_all)
+                    Column {
+                        // What the Done label measures when nothing squeezes it (14 sp header form).
+                        Box(modifier = Modifier.requiredWidth(400.dp)) {
+                            Text(
+                                text = stringResource(Res.string.preview_selection_done),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                modifier = Modifier.testTag("testDoneLabelReference"),
+                            )
+                        }
+                        DockedStickerScaffold(host = host, harness = harness, width = 320.dp)
+                    }
+                }
+            }
+        }
+        tag("stickerExpand").performClick()
+        awaitPanel()
+        inPanel("stickerManageToggle").performClick()
+        waitForIdle()
+        inPanel("stickerManageSelectAll").performClick()
+        waitForIdle()
+        textInPanel("stickerManageSelectAll", deselectAll).assertExists()
+
+        val panel = tag("stickerPanelSheet").getUnclippedBoundsInRoot()
+        val done = inPanel("stickerManageDone").assertWidthIsAtLeast(48.dp).getUnclippedBoundsInRoot()
+        val selectAll = inPanel("stickerManageSelectAll").getUnclippedBoundsInRoot()
+        val count = tag("stickerSelectedCount").getUnclippedBoundsInRoot()
+        val reference = tag("testDoneLabelReference").getUnclippedBoundsInRoot()
+
+        assertTrue(
+            done.left >= panel.left && done.right <= panel.right,
+            "Done (${done.left.value}..${done.right.value}dp) must stay inside the header " +
+                "(${panel.left.value}..${panel.right.value}dp) at font scale $fontScale",
+        )
+        assertTrue(
+            selectAll.right <= done.left + 0.5.dp,
+            "select-all (${selectAll.right.value}dp) must not overlap Done (${done.left.value}dp)",
+        )
+        assertTrue(
+            count.right <= selectAll.left + 0.5.dp,
+            "the count (${count.right.value}dp) must give way to select-all (${selectAll.left.value}dp)",
+        )
+        // Not clipped: Done still gets its label's full width plus its 12.dp side padding.
+        assertTrue(
+            (done.right - done.left) >= (reference.right - reference.left) + 24.dp - 1.dp,
+            "Done (${(done.right - done.left).value}dp) must fit its label " +
+                "(${(reference.right - reference.left).value}dp + 24dp padding)",
+        )
+        // One line, unchanged height.
+        inPanel("stickerManageDone").assertHeightIsEqualTo(44.dp)
+        assertTrue(
+            (count.bottom - count.top) <= 44.dp,
+            "the count must stay on one line, got ${(count.bottom - count.top).value}dp",
+        )
+
+        inPanel("stickerManageDone").performClick()
+        waitForIdle()
+        tag("stickerSelectedCount").assertDoesNotExist()
+        inPanel("stickerManageToggle").assertIsDisplayed()
+    }
+
+    @Test
+    fun enteringSelectionModeInTheDockedPanelMovesNoTile() = runComposeUiTest {
+        val host = EditorBottomOverlayHostState()
+        val userOne = Sticker(id = "user-1", icon = MediaRef("/tmp/icon-user-1.png"))
+        val harness = StickerHarness(stickers = listOf(userOne))
+        setContent {
+            AppTheme {
+                DockedStickerScaffold(host = host, harness = harness)
+            }
+        }
+        tag("stickerExpand").performClick()
+        awaitPanel()
+        val before = inPanel("stickerUser_user-1").getUnclippedBoundsInRoot().top
+
+        inPanel("stickerManageToggle").performClick()
+        waitForIdle()
+        inPanel("stickerUser_user-1").getUnclippedBoundsInRoot().top.assertIsEqualTo(
+            before,
+            "Manage must not move the grid",
+            tolerance = 0.5.dp,
+        )
+
+        inPanel("stickerManageDone").performClick()
+        waitForIdle()
+        inPanel("stickerUser_user-1").getUnclippedBoundsInRoot().top.assertIsEqualTo(
+            before,
+            "Done must not move the grid",
+            tolerance = 0.5.dp,
+        )
+    }
+
     // -----------------------------------------------------------------------------------------
     // 1.4 — inspector (expanded / wide)
     // -----------------------------------------------------------------------------------------
@@ -1163,6 +1451,120 @@ class StickerPanelSheetUiTest {
                 tolerance = 1.5.dp,
             )
         }
+
+    /**
+     * The inspector's inline selection row runs the same priority rule, at its narrowest realistic
+     * width (under the 360 dp expanded inspector pane minus its padding) and font scale 2.
+     */
+    @Test
+    fun inspectorSelectionRowKeepsDoneUsableAtItsNarrowestWidth() = runComposeUiTest {
+        val users = listOf(
+            Sticker(id = "user-1", icon = MediaRef("/tmp/icon-user-1.png")),
+            Sticker(id = "user-2", icon = MediaRef("/tmp/icon-user-2.png")),
+        )
+        val harness = StickerHarness(stickers = users)
+        lateinit var deselectAll: String
+        setContent {
+            AppTheme {
+                CompositionLocalProvider(LocalDensity provides Density(1f, 2f)) {
+                    deselectAll = stringResource(Res.string.sticker_deselect_all)
+                    Column {
+                        // The compact (12 sp) Done label, unsqueezed.
+                        Box(modifier = Modifier.requiredWidth(400.dp)) {
+                            Text(
+                                text = stringResource(Res.string.preview_selection_done),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                modifier = Modifier.testTag("testDoneLabelReference"),
+                            )
+                        }
+                        Box(modifier = Modifier.width(300.dp)) {
+                            StickerPanelHost(harness = harness, useLargeDialog = true)
+                        }
+                    }
+                }
+            }
+        }
+        tag("stickerUser_user-2").performTouchInput { longClick() }
+        waitForIdle()
+        tag("stickerManageSelectAll").performClick()
+        waitForIdle()
+        textIn("stickerManageSelectAll", deselectAll).assertExists()
+
+        val row = tag("stickerInlinePanel").getUnclippedBoundsInRoot()
+        val done = tag("stickerManageDone").assertWidthIsAtLeast(48.dp).getUnclippedBoundsInRoot()
+        val selectAll = tag("stickerManageSelectAll").getUnclippedBoundsInRoot()
+        val count = tag("stickerSelectedCount").getUnclippedBoundsInRoot()
+        val reference = tag("testDoneLabelReference").getUnclippedBoundsInRoot()
+
+        assertTrue(
+            done.left >= row.left && done.right <= row.right,
+            "Done (${done.left.value}..${done.right.value}dp) must stay inside the inspector row " +
+                "(${row.left.value}..${row.right.value}dp)",
+        )
+        assertTrue(
+            selectAll.right <= done.left + 0.5.dp,
+            "select-all (${selectAll.right.value}dp) must not overlap Done (${done.left.value}dp)",
+        )
+        assertTrue(
+            (done.right - done.left) >= (reference.right - reference.left) + 24.dp - 1.dp,
+            "Done (${(done.right - done.left).value}dp) must fit its label " +
+                "(${(reference.right - reference.left).value}dp + 24dp padding)",
+        )
+        tag("stickerManageDone").assertHeightIsEqualTo(40.dp)
+        assertTrue(
+            (count.bottom - count.top) <= 40.dp,
+            "the count must stay on one line, got ${(count.bottom - count.top).value}dp",
+        )
+
+        tag("stickerManageDone").performClick()
+        waitForIdle()
+        tag("stickerSelectedCount").assertDoesNotExist()
+        tag("stickerManageToggle").assertIsDisplayed()
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // C4 — semantics
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * `Import` and `All` are plain buttons: a `selected` property on a non-tab node is reported as
+     * checkable on Android, which announced both as "unchecked". Only the choice tiles keep it.
+     */
+    @Test
+    fun importAndAllCarryNoSelectedSemantics() = runComposeUiTest {
+        val userOne = Sticker(id = "user-1", icon = MediaRef("/tmp/icon-user-1.png"))
+        val harness = StickerHarness(stickers = listOf(userOne))
+        lateinit var importLabel: String
+        lateinit var allLabel: String
+        setContent {
+            AppTheme {
+                importLabel = stringResource(Res.string.sticker_import)
+                allLabel = stringResource(Res.string.sticker_all_open)
+                Box(modifier = Modifier.width(360.dp)) {
+                    StickerPanelHost(harness = harness, useLargeDialog = false)
+                }
+            }
+        }
+        assertFalse(
+            tag("stickerAdd").hasSelectedProperty(),
+            "Import must expose no `selected` property",
+        )
+        assertFalse(
+            tag("stickerExpand").hasSelectedProperty(),
+            "All must expose no `selected` property",
+        )
+        // The choice tiles keep reporting what is applied.
+        assertTrue(tag("stickerClear").hasSelectedProperty(), "None is a choice tile")
+        assertTrue(tag("stickerUser_user-1").hasSelectedProperty(), "sticker tiles are choice tiles")
+
+        // Role and label are unchanged.
+        assertEquals(Role.Button, tag("stickerAdd").role())
+        assertEquals(Role.Button, tag("stickerExpand").role())
+        describedAs("stickerAdd", importLabel).assertExists()
+        describedAs("stickerExpand", allLabel).assertExists()
+    }
 
     // -----------------------------------------------------------------------------------------
     // C1 — overlay height and preview refit
