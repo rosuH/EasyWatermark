@@ -932,6 +932,63 @@ class StickerPanelSheetUiTest {
         textInPanel("stickerAdd", importLabel).assertExists()
     }
 
+    /**
+     * The first import makes the Mine row (with Manage) the grid's new first item: the panel shows
+     * the grid's start instead of keeping `None` at the top with the new row above the viewport.
+     * A later import leaves a scrolled grid where the user put it.
+     */
+    @Test
+    fun firstImportShowsTheMineRowAndLaterImportsKeepTheScrollPosition() = runComposeUiTest {
+        val host = EditorBottomOverlayHostState()
+        val harness = StickerHarness()
+        setContent {
+            AppTheme {
+                DockedStickerScaffold(host = host, harness = harness)
+            }
+        }
+        tag("stickerExpand").performClick()
+        awaitPanel()
+
+        runOnIdle {
+            harness.stickers = listOf(Sticker(id = "user-1", icon = MediaRef("/tmp/icon-user-1.png")))
+        }
+        waitForIdle()
+        val grid = onNode(
+            hasScrollAction() and hasAnyAncestor(hasTestTag("stickerPanelSheet")),
+            useUnmergedTree = true,
+        )
+        val viewport = grid.getUnclippedBoundsInRoot()
+        val mine = inPanel("stickerSectionMine").assertIsDisplayed().getUnclippedBoundsInRoot()
+        inPanel("stickerManageToggle").assertIsDisplayed()
+        val none = tag("stickerSheetClear").assertIsDisplayed().getUnclippedBoundsInRoot()
+        inPanel("stickerAdd").assertIsDisplayed()
+        inPanel("stickerUser_user-1").assertIsDisplayed()
+        assertTrue(
+            mine.top >= viewport.top && mine.bottom <= none.top && none.bottom <= viewport.bottom,
+            "Mine (${mine.top.value}..${mine.bottom.value}dp) must sit above None " +
+                "(${none.top.value}..${none.bottom.value}dp) inside the grid " +
+                "(${viewport.top.value}..${viewport.bottom.value}dp)",
+        )
+
+        // Scroll down, then import again: what the user is looking at must not move.
+        val atStart = grid.verticalScrollOffset()
+        grid.performTouchInput { swipeUp() }
+        waitForIdle()
+        assertTrue(grid.verticalScrollOffset() > atStart, "the grid must scroll down first")
+        val anchor = "stickerBuiltIn_${BuiltInSticker.entries.last().key}"
+        val anchorTop = inPanel(anchor).getUnclippedBoundsInRoot().top
+        runOnIdle {
+            harness.stickers =
+                listOf(Sticker(id = "user-2", icon = MediaRef("/tmp/icon-user-2.png"))) + harness.stickers
+        }
+        waitForIdle()
+        inPanel(anchor).getUnclippedBoundsInRoot().top.assertIsEqualTo(
+            anchorTop,
+            "a later import must not move the scrolled grid",
+            tolerance = 0.5.dp,
+        )
+    }
+
     @Test
     fun panelApplyKeepsThePanelOpenAndMovesTheSelection() = runComposeUiTest {
         val host = EditorBottomOverlayHostState()
