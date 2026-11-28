@@ -84,7 +84,9 @@ fi
 #   GRADLE_USER_HOME or the Kotlin/Native data dir. A healthy cold run compiles
 #   (CPU) or downloads (growth), so silence alone does not trip it. A hard cap of
 #   EWM_PREFETCH_ATTEMPT_MAX_SECONDS (2400 s, cold Archive runs take ~11 min)
-#   bounds any single attempt.
+#   bounds any single attempt. The thread dump printed before a kill is
+#   abandoned after EWM_PREFETCH_DUMP_SECONDS (30 s): jstack can hang on a
+#   stalled JVM.
 # Gradle's own retries stay quiet below the stall limit. In Gradle 9.7 dependency
 # resolution tries a repository request org.gradle.internal.repository.max.tentatives
 # times (3, pinned below), backing off 1 s then 2 s, then disables that repository
@@ -101,10 +103,12 @@ heartbeat="${EWM_PREFETCH_HEARTBEAT_SECONDS:-60}"
 poll="${EWM_PREFETCH_POLL_SECONDS:-15}"
 cpu_progress="${EWM_PREFETCH_CPU_PROGRESS_SECONDS:-1}"
 retry_sleep_unit="${EWM_PREFETCH_RETRY_SLEEP_SECONDS:-20}"
+dump_limit="${EWM_PREFETCH_DUMP_SECONDS:-30}"
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/ewm-prefetch.XXXXXX")
 gradle_pid=""
 tail_pid=""
+dump_pid=""
 
 # Print a pid and all of its descendants.
 tree_pids() {
@@ -165,6 +169,32 @@ dump_threads() {
   done
 }
 
+# Run dump_threads in the background and give up on it after dump_limit
+# seconds; jstack has no timeout of its own.
+dump_threads_bounded() {
+  dump_threads "$1" &
+  dump_pid=$!
+  _dumped=0
+  while kill -0 "$dump_pid" 2>/dev/null && [ "$_dumped" -lt "$dump_limit" ]; do
+    sleep 1
+    _dumped=$((_dumped + 1))
+  done
+  if kill -0 "$dump_pid" 2>/dev/null; then
+    echo "ci_post_clone: thread dump abandoned after ${dump_limit}s"
+    kill_dump
+  fi
+  wait "$dump_pid" 2>/dev/null || true
+  dump_pid=""
+}
+
+# Kill the dump subshell and its jstack/awk/head children.
+kill_dump() {
+  if [ -n "$dump_pid" ]; then
+    # shellcheck disable=SC2046
+    kill -KILL $(tree_pids "$dump_pid") 2>/dev/null || true
+  fi
+}
+
 kill_tree() {
   _pids=$(watched_pids "$1")
   # shellcheck disable=SC2086
@@ -179,6 +209,7 @@ kill_tree() {
 }
 
 cleanup() {
+  kill_dump
   if [ -n "$gradle_pid" ] && kill -0 "$gradle_pid" 2>/dev/null; then
     kill_tree "$gradle_pid"
   fi
@@ -255,7 +286,7 @@ run_gradle_attempt() {
     fi
     if [ -n "$verdict" ]; then
       echo "ci_post_clone: attempt ${label} ${verdict}; killing Gradle process tree"
-      dump_threads "$gradle_pid"
+      dump_threads_bounded "$gradle_pid"
       kill_tree "$gradle_pid"
       break
     fi
