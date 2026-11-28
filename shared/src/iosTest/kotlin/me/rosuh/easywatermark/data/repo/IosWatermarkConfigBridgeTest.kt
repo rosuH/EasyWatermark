@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.toPixelMap
 import kotlinx.coroutines.runBlocking
 import me.rosuh.easywatermark.data.datastore.createWaterMarkDataStore
 import me.rosuh.easywatermark.data.model.MediaRef
+import me.rosuh.easywatermark.data.model.Sticker
+import me.rosuh.easywatermark.data.model.StickerCatalog
 import me.rosuh.easywatermark.data.model.TextPaintStyle
 import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WatermarkMode
@@ -228,7 +230,7 @@ class IosWatermarkConfigBridgeTest {
 
     /**
  * Persist picked icon bytes (Option A) and prove the full durable-icon contract on the iOS * runtime: empty-store defaults → write copies bytes to an app-private path + flips mode to Image →
- * the bytes read back identically → replacement stores new bytes AND cleans up the prior owned file.
+ * the bytes read back identically → replacement stores new bytes and keeps the prior owned file.
      */
     @Test
     fun bridge_icon_persistence_roundtrip_and_replacement_cleanup() = runBlocking {
@@ -264,9 +266,9 @@ class IosWatermarkConfigBridgeTest {
             IosIconPersistence.readIconBytes(ref2).contentEquals(second),
             "replacement bytes must read back from the new path",
         )
-        assertFalse(
+        assertTrue(
             NSFileManager.defaultManager.fileExistsAtPath(ref1.value),
-            "the prior helper-owned icon file must be cleaned up on replacement",
+            "the prior helper-owned icon file stays so the sticker library can keep it",
         )
     }
 
@@ -431,6 +433,33 @@ class IosWatermarkConfigBridgeTest {
         assertFalse(IosIconPersistence.canReadIcon(MediaRef("   ")))
         assertFailsWith<IllegalStateException> {
             IosIconPersistence.readIconBytes(missingRotated)
+        }
+    }
+
+    @Test
+    fun iconPersistence_loadStickers_relocates_rotated_container_entries() {
+        val previousCatalog = IosIconPersistence.readCatalogText()
+        val ownedPath = IosIconPersistence.writeIconBytes(byteArrayOf(7, 8, 9, 10))
+        try {
+            val fileName = ownedPath.substringAfterLast(IosIconPersistence.ICON_FILE_PREFIX)
+            val rotatedPath =
+                "/var/mobile/Containers/Data/Application/OLD-UUID/Documents/watermark_icons/icon_$fileName"
+            val encoded = StickerCatalog.encode(
+                listOf(Sticker(id = "sticker-reloc-1", icon = MediaRef(rotatedPath))),
+            )
+            IosIconPersistence.writeCatalogText(encoded)
+
+            val loaded = IosIconPersistence.loadStickers()
+            assertEquals(1, loaded.size)
+            assertEquals("sticker-reloc-1", loaded.single().id)
+            assertEquals(ownedPath, loaded.single().icon.value)
+
+            // loadStickers() also self-heals persisted catalog contents on disk.
+            val healedOnDisk = StickerCatalog.decode(IosIconPersistence.readCatalogText())
+            assertEquals(listOf(Sticker(id = "sticker-reloc-1", icon = MediaRef(ownedPath))), healedOnDisk)
+        } finally {
+            IosIconPersistence.writeCatalogText(previousCatalog)
+            IosIconPersistence.deleteIfOwned(ownedPath)
         }
     }
 }

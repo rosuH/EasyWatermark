@@ -32,3 +32,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Sticker lettering typefaces
+
+- **Projects:** [Roboto Condensed](https://github.com/googlefonts/roboto), [IBM Plex Mono](https://github.com/IBM/plex), [Dream Han Sans CN](https://github.com/Pal3love/dream-han-cjk), [Noto Serif SC](https://github.com/notofonts/noto-cjk)
+- **Use:** Glyph outlines only. The lettering in the built-in sticker art (`shared/src/commonMain/composeResources/drawable/ic_sticker_*.webp`) is converted to plain path data by the generator in `docs/design/sticker-pack/` (see its *Lettering* section for which face each mark uses). No font binary ships in the app, none is linked, and no `font-family` reference survives the conversion.
+- **License:** [SIL Open Font License 1.1](https://openfontlicense.org/) for all four.

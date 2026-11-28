@@ -100,6 +100,45 @@ class AndroidIconPersistence internal constructor(
         }
     }
 
+    /**
+     * Writes PNG bytes as an owned icon. When [fixedId] is provided (built-in stickers), the target
+     * file is updated atomically in place so repeated selections do not accumulate duplicate PNGs.
+     */
+    fun writeOwnedPng(bytes: ByteArray, fixedId: String? = null): MediaRef {
+        require(bytes.isNotEmpty()) { "Icon png is empty" }
+        check(iconDirectory.exists() || iconDirectory.mkdirs()) { "Unable to create private icon directory" }
+        val directory = iconDirectory.canonicalFile
+        val id = (fixedId ?: nextId()).takeIf(::isSafeId) ?: error("Unsafe icon identity")
+        val destination = File(directory, "icon-$id.png").canonicalFile
+        check(destination.parentFile == directory) { "Icon destination escaped private directory" }
+        if (fixedId == null) {
+            check(!destination.exists()) { "Icon destination collision" }
+        }
+        val staging = File.createTempFile("icon-staging-", ".tmp", directory)
+        var published = false
+        try {
+            FileOutputStream(staging).use { output ->
+                output.write(bytes)
+                output.fd.sync()
+            }
+            if (!staging.renameTo(destination)) {
+                if (fixedId != null && destination.exists()) {
+                    destination.delete()
+                }
+                check(staging.renameTo(destination)) { "Unable to publish owned png icon" }
+            }
+            val uri = contentUriForFile(destination)
+            check(uri.scheme == "content" && uri.authority == authority) {
+                "Private icon URI has unexpected authority"
+            }
+            published = true
+            return MediaRef(uri.toString())
+        } finally {
+            staging.delete()
+            if (!published && fixedId == null) destination.delete()
+        }
+    }
+
     /** Deletes [ref] only when it belongs to this helper's exact authority and directory. */
     override fun deleteIfOwned(ref: MediaRef): Boolean = ownedFile(ref)?.delete() == true
 

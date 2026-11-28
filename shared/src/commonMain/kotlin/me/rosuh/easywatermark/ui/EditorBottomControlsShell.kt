@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import me.rosuh.easywatermark.data.model.FuncType
+import me.rosuh.easywatermark.ui.compose.LocalStickerSheetRequest
 import me.rosuh.easywatermark.ui.theme.EwmTheme
 import me.rosuh.easywatermark.ui.theme.currentMotionPolicy
 import me.rosuh.easywatermark.ui.theme.motionDurationMs
@@ -57,6 +59,8 @@ fun <T> EditorBottomControlsShell(
  * Icon/Style tools never open the text dialog as a side effect of selection.
      */
     shouldSignalActivation: (T) -> Boolean = { false },
+    /** Every tap, including a tap on the already selected chip. Icon uses this to reopen its panel. */
+    countsAsStickerOpen: (T) -> Boolean = { false },
     onIndicatorPosition: (startPx: Int, endPx: Int) -> Unit = { _, _ -> },
     initialTabIndex: Int = 0,
     initialOptionIndex: Int = 0,
@@ -85,6 +89,7 @@ fun <T> EditorBottomControlsShell(
     // 0 = no user activation yet (default selection alone must not open the text sheet).
     // Reset on tab change so switching back to Content does not auto-open the text sheet.
     var optionActivationSignal by remember(safeTabIndex) { mutableIntStateOf(0) }
+    var stickerOpenRequest by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // Fixed slot: prevents preview reflow when control body height differs (slider vs palette).
@@ -112,15 +117,17 @@ fun <T> EditorBottomControlsShell(
                     enter togetherWith exit
                 },
                 label = "editorOptionControl",
-            ) { option ->
-                if (option != null) {
-                    optionControl(
-                        option,
-                        Modifier.fillMaxWidth(),
-                        optionActivationSignal,
-                    )
+                ) { option ->
+                    if (option != null) {
+                        CompositionLocalProvider(LocalStickerSheetRequest provides stickerOpenRequest) {
+                            optionControl(
+                                option,
+                                Modifier.fillMaxWidth(),
+                                optionActivationSignal,
+                            )
+                        }
+                    }
                 }
-            }
         }
         // Reset LazyRow + scroll state per tab so Content→Style does not run insert/placement
         // animations across unrelated catalogs (chip label ghosting when flinging immediately).
@@ -149,6 +156,9 @@ fun <T> EditorBottomControlsShell(
                 },
                 onOptionSelected = {
                     selectedOption = it
+                    if (countsAsStickerOpen(it)) {
+                        stickerOpenRequest += 1
+                    }
                     if (shouldSignalActivation(it)) {
                         optionActivationSignal += 1
                     }

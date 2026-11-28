@@ -12,9 +12,22 @@ internal object IosWatermarkIconCache {
     private val cache = WatermarkIconCache<ImageBitmap>()
 
     fun decoded(ref: MediaRef, maxEdgePx: Int): ImageBitmap {
-        return cache.decoded(ref, maxEdgePx) {
-            val bytes = IosIconPersistence.readIconBytes(ref)
-            IosImageDecoder.decodeThumbnail(bytes, maxEdgePx = maxEdgePx)
+        val resolved = IosIconPersistence.resolveOwnedPath(ref.value) ?: ref.value
+        if (resolved.isBlank() || !IosIconPersistence.canReadIcon(ref)) {
+            error("IosIconPersistence: could not read icon bytes at '${ref.value}'")
+        }
+        val keyRef = MediaRef(resolved)
+        return cache.decoded(keyRef, maxEdgePx) {
+            runCatching {
+                IosImageIODecoder.decodeThumbnail(
+                    sourcePath = resolved,
+                    maxEdgePx = maxEdgePx,
+                    allowSubsample = true,
+                )
+            }.getOrElse {
+                val bytes = IosIconPersistence.readIconBytes(ref)
+                IosImageDecoder.decodeThumbnail(bytes, maxEdgePx = maxEdgePx)
+            }
         }
     }
 

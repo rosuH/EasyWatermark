@@ -454,4 +454,23 @@ class WatermarkTextCellRasterTest {
             "1:1 drawWidth glyph pixels must match un-capped manual draw without downscale blur (maxDelta=$maxDelta)",
         )
     }
+
+    @Test
+    fun content_dims_remain_unrotated_across_rotations() {
+        val content = WatermarkTextContent(
+            text = "GOLDEN WATERMARK",
+            style = TextStyle(fontSize = 24.sp),
+            color = Color.White,
+        )
+        val deg0 = WatermarkCellComposer.composeTextCellRaster(env, content, degree = 0f)
+        val deg45 = WatermarkCellComposer.composeTextCellRaster(env, content, degree = 45f)
+        val deg90 = WatermarkCellComposer.composeTextCellRaster(env, content, degree = 90f)
+        assertTrue(deg0.contentWidth > deg0.contentHeight)
+        assertEquals(deg0.contentWidth, deg45.contentWidth, 0.5f)
+        assertEquals(deg0.contentHeight, deg45.contentHeight, 0.5f)
+        assertEquals(deg0.contentWidth, deg90.contentWidth, 0.5f)
+        assertEquals(deg0.contentHeight, deg90.contentHeight, 0.5f)
+        // Rotated logical AABB expands while contentWidth stays tightly unrotated.
+        assertTrue(deg90.logicalHeight > deg90.contentHeight)
+    }
 }

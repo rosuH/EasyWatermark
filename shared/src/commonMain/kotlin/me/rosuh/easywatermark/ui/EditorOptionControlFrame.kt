@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun EditorOptionControlFrame(
     modifier: Modifier = Modifier,
+    horizontalPadding: Dp = 16.dp,
     content: @Composable (innerModifier: Modifier) -> Unit,
 ) {
     Box(
@@ -21,7 +23,7 @@ fun EditorOptionControlFrame(
         content(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = horizontalPadding, vertical = 4.dp),
         )
     }
 }

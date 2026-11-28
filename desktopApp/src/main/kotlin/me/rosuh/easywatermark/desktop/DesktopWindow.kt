@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -43,6 +45,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.awtTransferable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
@@ -56,10 +59,13 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.input.key.KeyShortcut
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.rosuh.easywatermark.ProductVersion
 import me.rosuh.easywatermark.data.db.buildTemplateDatabase
@@ -98,7 +104,9 @@ import me.rosuh.easywatermark.render.neighborIndices
 import me.rosuh.easywatermark.ui.DraftRenderConflator
 import me.rosuh.easywatermark.ui.LiveOverlayPreview
 import me.rosuh.easywatermark.ui.OverlayCell
+import me.rosuh.easywatermark.ui.emptyOverlayCellFor
 import me.rosuh.easywatermark.ui.overlayCellFrom
+import me.rosuh.easywatermark.ui.usesLargeScreenDialog
 import me.rosuh.easywatermark.ui.withOffset
 import me.rosuh.easywatermark.render.DesktopSaveDecision
 import me.rosuh.easywatermark.render.DesktopWatermarkComposer
@@ -135,6 +143,9 @@ import me.rosuh.easywatermark.shared.generated.resources.dialog_save_success_whe
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_generic
 import me.rosuh.easywatermark.shared.generated.resources.dialog_save_error_cancelled
 import me.rosuh.easywatermark.shared.generated.resources.share
+import me.rosuh.easywatermark.shared.generated.resources.tips_list_empty
+import me.rosuh.easywatermark.shared.generated.resources.water_mark_mode_image
+import me.rosuh.easywatermark.ui.EditorLayoutClass
 import me.rosuh.easywatermark.ui.sharedString
 import me.rosuh.easywatermark.ui.EditorBottomControls
 import me.rosuh.easywatermark.ui.EditorScreen
@@ -154,7 +165,7 @@ import me.rosuh.easywatermark.ui.ProductShellNav
 import me.rosuh.easywatermark.ui.SharedProductDrawables
 import me.rosuh.easywatermark.ui.desktopClampPreviewOffsetDrag
 
-import me.rosuh.easywatermark.ui.compose.IconWatermarkOption
+import me.rosuh.easywatermark.ui.compose.StickerPanelOnIcon
 import me.rosuh.easywatermark.ui.compose.TextColorOption
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleLabels
 import me.rosuh.easywatermark.ui.compose.TextPaintStyleOption
@@ -329,7 +340,7 @@ private data class FrozenItemInput(
  * **Write:** Save / Export (unique names under [resolveDesktopOutputDir]) and Save As (exact path).
  * **Preview:** app-private temp only; never becomes [lastSavedFile].
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 fun launchDesktopWindow() = application {
     me.rosuh.easywatermark.ui.StartupTrace.mark("host_create_start")
     if (System.getProperty("ewm.preview.probe") == "true" ||
@@ -403,6 +414,8 @@ fun launchDesktopWindow() = application {
         )
     }
     val iconCache = remember { WatermarkIconCache<ImageBitmap>() }
+    val stickerCatalogMutex = remember { Mutex() }
+    val stickerActionGen = remember { java.util.concurrent.atomic.AtomicInteger(0) }
     DisposableEffect(previewImages) {
         onDispose {
             previewImages.closeFromOwner()
@@ -508,9 +521,7 @@ fun launchDesktopWindow() = application {
 
     fun decodeDesktopIcon(wm: WaterMark): ImageBitmap? {
         if (wm.markMode != me.rosuh.easywatermark.data.model.WatermarkMode.Image) return null
-        if (wm.iconUri.value.isBlank()) {
-            error("Image-mode preview requires an icon file")
-        }
+        if (wm.iconUri.value.isBlank()) return null
         val iconFile = File(wm.iconUri.value)
         require(iconFile.isFile) { "Image-mode preview icon is missing: ${wm.iconUri.value}" }
         return iconCache.decoded(wm.iconUri, WatermarkIconCache.ICON_MAX_EDGE_PX) {
@@ -585,8 +596,16 @@ fun launchDesktopWindow() = application {
         return msg
     }
 
-    suspend fun composeDesktopOverlayCellRaster(wm: WaterMark, imageWidth: Int): RasteredWatermarkCell {
-        val icon = decodeDesktopIcon(wm)
+    suspend fun composeDesktopOverlayCellRaster(
+        wm: WaterMark,
+        imageWidth: Int,
+    ): RasteredWatermarkCell? {
+        if (wm.markMode == WatermarkMode.Image && wm.iconUri.value.isBlank()) return null
+        val icon = if (wm.markMode == WatermarkMode.Image) {
+            decodeDesktopIcon(wm) ?: return null
+        } else {
+            null
+        }
         PreviewSourceReuseProbe.recordCompose()
         val family = if (wm.markMode == WatermarkMode.Text) {
             when (val resolution = fontAccess.resolve(wm.fontRef)) {
@@ -605,8 +624,8 @@ fun launchDesktopWindow() = application {
         )
     }
 
-    suspend fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap =
-        composeDesktopOverlayCellRaster(wm, imageWidth).bitmap
+    suspend fun composeDesktopOverlayCell(wm: WaterMark, imageWidth: Int): ImageBitmap? =
+        composeDesktopOverlayCellRaster(wm, imageWidth)?.bitmap
 
     /**
      * In-memory editor preview: Source reuse + overlay cell. No DataStore first() on this path.
@@ -666,8 +685,30 @@ fun launchDesktopWindow() = application {
                 }
             } ?: error("Source decode returned null")
             bench.mark("source")
+            if (
+                (wm.markMode == WatermarkMode.Image && wm.iconUri.value.isBlank()) ||
+                (wm.markMode == WatermarkMode.Text && wm.text.isBlank())
+            ) {
+                val emptyOverlay = emptyOverlayCellFor(wm, source.width)
+                return publishLiveLayers(
+                    gen = gen,
+                    photo = source,
+                    overlay = emptyOverlay,
+                    path = path,
+                    ox = ox,
+                    oy = oy,
+                    isDraft = isDraft,
+                    maxEdge = maxEdge,
+                    bench = bench,
+                    msg = "Preview no sticker ${source.width}x${source.height} maxEdge=$maxEdge",
+                )
+            }
             val cell = withContext(Dispatchers.Default) {
                 composeDesktopOverlayCellRaster(wm, source.width)
+            } ?: run {
+                clearLiveLayers()
+                bench.finish(mapOf("noSticker" to true, "isDraft" to isDraft, "maxEdge" to maxEdge))
+                return "Preview no sticker"
             }
             bench.mark("compose")
             val overlay = overlayCellFrom(
@@ -770,6 +811,11 @@ fun launchDesktopWindow() = application {
     // Both font selection entry points commit through the repository. Repaint only after its
     // fontRef emission so the existing conflator composes the committed font, not a stale snapshot.
     LaunchedEffect(waterMark.fontRef) {
+        if (freezeCurrentItemInput().sourcePath != null) {
+            submitPreviewPaint(isDraft = false)
+        }
+    }
+    LaunchedEffect(waterMark.markMode, waterMark.iconUri, waterMark.text.isBlank()) {
         if (freezeCurrentItemInput().sourcePath != null) {
             submitPreviewPaint(isDraft = false)
         }
@@ -1288,6 +1334,37 @@ fun launchDesktopWindow() = application {
                     var colorDraft by remember(waterMark.textColor) {
                         mutableStateOf(formatArgbHexColor(waterMark.textColor))
                     }
+                    val stickerDir = remember(appDataDir) { File(appDataDir, "watermark_icons") }
+                    var reloadStickersJob by remember { mutableStateOf<Job?>(null) }
+                    var stickers by remember {
+                        mutableStateOf(
+                            me.rosuh.easywatermark.data.model.StickerCatalog.decode(
+                                DesktopIconPersistence.readCatalogText(stickerDir),
+                            ),
+                        )
+                    }
+                    fun reloadStickers() {
+                        reloadStickersJob?.cancel()
+                        reloadStickersJob = scope.launch {
+                            val loaded = stickerCatalogMutex.withLock {
+                                withContext(Dispatchers.IO) {
+                                    me.rosuh.easywatermark.data.model.StickerCatalog.decode(
+                                        DesktopIconPersistence.readCatalogText(stickerDir),
+                                    )
+                                }
+                            }
+                            stickers = loaded
+                        }
+                    }
+                    fun clearLiveSticker() {
+                        val gen = stickerActionGen.incrementAndGet()
+                        scope.launch {
+                            stickerCatalogMutex.withLock {
+                                if (gen != stickerActionGen.get()) return@withLock
+                                repo.updateIcon(MediaRef.Empty)
+                            }
+                        }
+                    }
                     // I1: window size in Dp → pure EditorLayoutClass (Expanded on typical Desktop).
                     ContentEditorThemeHost(
                         enabled = followPhoto,
@@ -1343,7 +1420,10 @@ fun launchDesktopWindow() = application {
                                 },
                                 renderGestureCell = null,
                                 renderGestureCellRaster = { config ->
-                                    withContext(Dispatchers.Default) { composeDesktopOverlayCellRaster(config, photo!!.width) }
+                                    withContext(Dispatchers.Default) {
+                                        composeDesktopOverlayCellRaster(config, photo!!.width)
+                                            ?: error("Image mode has no sticker cell")
+                                    }
                                 },
                                 chrome = chrome,
                                 photo = if (chrome == OverlayPreviewChrome.LiveLayers) photo else null,
@@ -1403,13 +1483,72 @@ fun launchDesktopWindow() = application {
                                 onCustomTextChange = { colorDraft = it },
                             )
                         },
-                        iconOption = { optionModifier, mark, onIcon ->
-                            IconWatermarkOption(
-                                hasIcon = mark.iconUri.isEmpty().not(),
-                                pickLabel = "Open icon…",
+                        iconOption = { optionModifier, mark, _ ->
+                            val sheetReq = me.rosuh.easywatermark.ui.compose.LocalStickerSheetRequest.current
+                            LaunchedEffect(sheetReq) {
+                                reloadStickers()
+                            }
+                            suspend fun sanitizeSingleOffsetIfNeeded() {
+                                val current = session.launchScreenUiStateFlow.value.curImageInfo ?: return
+                                if (repo.waterMark.first().tileMode != WatermarkTileMode.CLAMP) return
+                                val coerced = me.rosuh.easywatermark.data.model.StickerPlacement
+                                    .sanitizeLiveSingleOffset(current.offsetX, current.offsetY) ?: return
+                                session.applyOffset(
+                                    current.copy(offsetX = coerced.first, offsetY = coerced.second),
+                                )
+                            }
+                            fun deleteStickers(
+                                targets: List<me.rosuh.easywatermark.data.model.Sticker>,
+                            ) {
+                                if (targets.isEmpty()) return
+                                stickerActionGen.incrementAndGet()
+                                scope.launch {
+                                    val ids = targets.map { it.id }.toSet()
+                                    try {
+                                        val remaining = stickerCatalogMutex.withLock {
+                                            val (decoded, deletedOrphanIcons) = withContext(Dispatchers.IO) {
+                                                val next = me.rosuh.easywatermark.data.model.StickerCatalog.removeAll(
+                                                    DesktopIconPersistence.readCatalogText(stickerDir),
+                                                    ids,
+                                                )
+                                                DesktopIconPersistence.writeCatalogText(stickerDir, next)
+                                                val decoded = me.rosuh.easywatermark.data.model.StickerCatalog.decode(next)
+                                                val remainingIcons = decoded.mapTo(mutableSetOf()) { it.icon.value }
+                                                val ownedDir = stickerDir.canonicalFile
+                                                val orphaned = targets.asSequence()
+                                                    .map { it.icon.value }
+                                                    .distinct()
+                                                    .filter { it !in remainingIcons }
+                                                    .toList()
+                                                orphaned.forEach { path ->
+                                                    val canonical = File(path).canonicalFile
+                                                    val owned = canonical.parentFile == ownedDir &&
+                                                        canonical.name.startsWith("icon-")
+                                                    if (owned) canonical.delete()
+                                                }
+                                                decoded to orphaned.toSet()
+                                            }
+                                            val currentLiveIcon = repo.waterMark.first().iconUri.value
+                                            if (currentLiveIcon.isNotEmpty() && currentLiveIcon in deletedOrphanIcons) {
+                                                repo.updateIcon(MediaRef.Empty)
+                                            }
+                                            decoded
+                                        }
+                                        reloadStickersJob?.cancel()
+                                        stickers = remaining
+                                    } catch (t: Throwable) {
+                                        if (t is CancellationException) throw t
+                                        status = "Failed: ${t.message}"
+                                    }
+                                }
+                            }
+                            StickerPanelOnIcon(
+                                waterMark = mark,
+                                userStickers = stickers,
                                 modifier = optionModifier,
                                 enabled = !busy,
-                                onPick = {
+                                useLargeDialog = usesLargeScreenDialog(layoutClass),
+                                onAdd = {
                                     val dialog = FileDialog(window, "Open icon", FileDialog.LOAD).apply {
                                         setFilenameFilter { _, fileName ->
                                             fileName.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
@@ -1420,21 +1559,106 @@ fun launchDesktopWindow() = application {
                                     val name = dialog.file
                                     if (dir != null && name != null) {
                                         val selected = File(dir, name)
+                                        val gen = stickerActionGen.incrementAndGet()
                                         scope.launch {
                                             try {
                                                 val copied = withContext(Dispatchers.IO) {
-                                                    DesktopIconPersistence.persistIcon(
-                                                        selected, File(appDataDir, "watermark_icons"),
+                                                    DesktopIconPersistence.persistLibraryIcon(
+                                                        selected,
+                                                        stickerDir,
+                                                        java.util.UUID.randomUUID().toString(),
                                                     )
                                                 }
-                                                onIcon(MediaRef(copied.absolutePath))
+                                                val ref = MediaRef(copied.absolutePath)
+                                                val sticker = me.rosuh.easywatermark.data.model.Sticker(
+                                                    id = java.util.UUID.randomUUID().toString(),
+                                                    icon = ref,
+                                                )
+                                                val loaded = stickerCatalogMutex.withLock {
+                                                    val decoded = withContext(Dispatchers.IO) {
+                                                        val next = me.rosuh.easywatermark.data.model.StickerCatalog.add(
+                                                            DesktopIconPersistence.readCatalogText(stickerDir),
+                                                            sticker,
+                                                        )
+                                                        DesktopIconPersistence.writeCatalogText(stickerDir, next)
+                                                        me.rosuh.easywatermark.data.model.StickerCatalog.decode(next)
+                                                    }
+                                                    if (gen == stickerActionGen.get()) {
+                                                        session.applyConfigIf(
+                                                            stillValid = { gen == stickerActionGen.get() },
+                                                            change = WatermarkConfigChange.Icon(ref),
+                                                        )
+                                                    }
+                                                    decoded
+                                                }
+                                                reloadStickersJob?.cancel()
+                                                stickers = loaded
                                             } catch (t: Throwable) {
+                                                if (t is CancellationException) throw t
                                                 status = "Failed: ${t.message}"
                                             }
                                         }
                                     }
                                 },
-                                preview = {},
+                                onApplyBuiltIn = { builtIn, bitmap ->
+                                    val gen = stickerActionGen.incrementAndGet()
+                                    scope.launch {
+                                        try {
+                                            val bytes = DesktopWatermarkTextRenderer.encodePng(bitmap)
+                                            val file = withContext(Dispatchers.IO) {
+                                                DesktopIconPersistence.persistBuiltInPng(
+                                                    bytes = bytes,
+                                                    iconsDir = stickerDir,
+                                                    key = builtIn.key,
+                                                )
+                                            }
+                                            if (gen != stickerActionGen.get()) return@launch
+                                            session.applyConfigIf(
+                                                stillValid = { gen == stickerActionGen.get() },
+                                                change = WatermarkConfigChange.Icon(MediaRef(file.absolutePath)),
+                                            ) ?: return@launch
+                                            if (gen != stickerActionGen.get()) return@launch
+                                            sanitizeSingleOffsetIfNeeded()
+                                            submitPreviewPaint(isDraft = false)
+                                        } catch (t: Throwable) {
+                                            if (t is CancellationException) throw t
+                                            status = "Failed: ${t.message}"
+                                        }
+                                    }
+                                },
+                                onApplyUser = { sticker ->
+                                    val gen = stickerActionGen.incrementAndGet()
+                                    scope.launch {
+                                        val applied = stickerCatalogMutex.withLock {
+                                            if (gen != stickerActionGen.get()) return@withLock false
+                                            val stillInCatalog = withContext(Dispatchers.IO) {
+                                                val existing = DesktopIconPersistence.readCatalogText(stickerDir)
+                                                val decoded = me.rosuh.easywatermark.data.model.StickerCatalog.decode(existing)
+                                                if (decoded.none { it.id == sticker.id }) {
+                                                    false
+                                                } else {
+                                                    val next = me.rosuh.easywatermark.data.model.StickerCatalog
+                                                        .markUsed(existing, sticker.id)
+                                                    if (next != existing) {
+                                                        DesktopIconPersistence.writeCatalogText(stickerDir, next)
+                                                    }
+                                                    true
+                                                }
+                                            }
+                                            if (!stillInCatalog || gen != stickerActionGen.get()) return@withLock false
+                                            session.applyConfigIf(
+                                                stillValid = { gen == stickerActionGen.get() },
+                                                change = WatermarkConfigChange.Icon(sticker.icon),
+                                            ) != null
+                                        }
+                                        if (!applied || gen != stickerActionGen.get()) return@launch
+                                        sanitizeSingleOffsetIfNeeded()
+                                        submitPreviewPaint(isDraft = false)
+                                    }
+                                },
+                                onDeleteUser = { deleteStickers(listOf(it)) },
+                                onDeleteUsers = { deleteStickers(it) },
+                                onClear = { clearLiveSticker() },
                             )
                         },
                         onBack = { session.onBackPressed() },
@@ -1443,6 +1667,7 @@ fun launchDesktopWindow() = application {
                         onGoAboutScreen = {
                             session.openAbout(me.rosuh.easywatermark.ui.LaunchScreenUiState.Editor)
                         },
+                        onClearWatermark = { clearLiveSticker() },
                         onImageSelected = { info ->
                             filmstripSwitchJob?.cancel()
                             filmstripSwitchJob = scope.launch {
@@ -1553,6 +1778,15 @@ fun launchDesktopWindow() = application {
                         modifier = Modifier.fillMaxSize(),
                         layoutClass = layoutClass,
                         initialInspectorTab = e2eInspectorTab,
+                        forcedOptionIndex = if (
+                            System.getProperty("ewm.desktop.forceMarkMode")
+                                ?.trim()
+                                ?.equals("image", ignoreCase = true) == true
+                        ) {
+                            1
+                        } else {
+                            0
+                        },
                     )
                     }
                     } // ContentEditorThemeHost // BoxWithConstraints Editor

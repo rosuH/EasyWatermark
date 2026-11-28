@@ -357,6 +357,7 @@ class MainActivity : ComponentActivity() {
                                 .collectAsStateWithLifecycle(
                                     initialValue = viewModel.launchScreenUiStateFlow.value.waterMark,
                                 )
+                            val stickers by viewModel.stickers.collectAsStateWithLifecycle()
                             // P0: immutable projection for filmstrip/preview (drops jobState/result vars).
                             val editorSelection by viewModel.launchScreenUiStateFlow
                                 .map { st ->
@@ -605,6 +606,13 @@ class MainActivity : ComponentActivity() {
                                                     viewModel.applyConfig(change)
                                                 },
                                                 onIconPicked = viewModel::importWatermarkIcon,
+                                                onApplyBuiltInPng = viewModel::applyBuiltInPng,
+                                                stickers = stickers,
+                                                onApplySticker = viewModel::applySticker,
+                                                onDeleteSticker = viewModel::deleteSticker,
+                                                onDeleteStickers = viewModel::deleteStickers,
+                                                onReloadStickers = viewModel::reloadStickers,
+                                                onClearWatermark = viewModel::clearLiveIcon,
                                                 onImageSelected = { ui ->
                                                     viewModel.process(
                                                         Action.EditorImageSelected(ui.toImageInfo()),

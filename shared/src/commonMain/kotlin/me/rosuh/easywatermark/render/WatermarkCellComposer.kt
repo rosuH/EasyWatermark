@@ -39,6 +39,8 @@ data class RasteredWatermarkCell(
     val logicalHeight: Int = bitmap.height,
     val drawWidth: Int = logicalWidth,
     val drawHeight: Int = logicalHeight,
+    val contentWidth: Float = drawWidth.toFloat(),
+    val contentHeight: Float = drawHeight.toFloat(),
 ) {
     init {
         require(logicalWidth >= 1 && logicalHeight >= 1) {
@@ -46,6 +48,9 @@ data class RasteredWatermarkCell(
         }
         require(drawWidth in 1..logicalWidth && drawHeight in 1..logicalHeight) {
             "RasteredWatermarkCell draw dims must be in 1..logical (got ${drawWidth}x$drawHeight vs ${logicalWidth}x$logicalHeight)"
+        }
+        require(contentWidth.isFinite() && contentWidth > 0f && contentHeight.isFinite() && contentHeight > 0f) {
+            "RasteredWatermarkCell content dims must be finite and > 0 (got ${contentWidth}x$contentHeight)"
         }
     }
 }
@@ -221,6 +226,8 @@ object WatermarkCellComposer {
             logicalHeight = finalHeight,
             drawWidth = drawWidth,
             drawHeight = drawHeight,
+            contentWidth = cw,
+            contentHeight = ch,
         )
     }
 
@@ -415,6 +422,8 @@ object WatermarkCellComposer {
             logicalHeight = finalHeight,
             drawWidth = drawWidth,
             drawHeight = drawHeight,
+            contentWidth = textWidth,
+            contentHeight = textHeight,
         )
     }
 
@@ -591,6 +600,8 @@ object WatermarkCellComposer {
                 bitmap = bitmap,
                 logicalWidth = logicalWidth,
                 logicalHeight = logicalHeight,
+                contentWidth = scaledWidth.toFloat(),
+                contentHeight = scaledHeight.toFloat(),
             )
         }
 
@@ -634,6 +645,8 @@ object WatermarkCellComposer {
                 logicalHeight = logicalHeight,
                 drawWidth = drawWidth,
                 drawHeight = drawHeight,
+                contentWidth = scaledIntW.toFloat(),
+                contentHeight = scaledIntH.toFloat(),
             )
         }
 
@@ -678,6 +691,8 @@ object WatermarkCellComposer {
             logicalHeight = logicalHeight,
             drawWidth = drawWidth,
             drawHeight = drawHeight,
+            contentWidth = scaledW,
+            contentHeight = scaledH,
         )
     }
 

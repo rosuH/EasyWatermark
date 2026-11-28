@@ -26,17 +26,54 @@ internal fun mergeLaunchPreservingLiveImages(
     before: LaunchScreenState,
 ): LaunchScreenState {
     if (live == before) return reduced
+    if (reduced.uiState != LaunchScreenUiState.Editor) return reduced
     val liveByUri = live.selectedImageList.associateBy { it.uri }
     if (liveByUri.isEmpty()) return reduced
+    val liveContinues = live.uiState == LaunchScreenUiState.Editor &&
+        reduced.selectedImageList.any { it.uri in liveByUri }
+    val mergedDefaultX = if (liveContinues) {
+        live.defaultClampOffsetX ?: reduced.defaultClampOffsetX
+    } else {
+        reduced.defaultClampOffsetX
+    }
+    val mergedDefaultY = if (liveContinues) {
+        live.defaultClampOffsetY ?: reduced.defaultClampOffsetY
+    } else {
+        reduced.defaultClampOffsetY
+    }
+    val mergedAnchor = if (liveContinues) {
+        live.defaultClampAnchorUri?.takeIf { anchor ->
+            reduced.selectedImageList.any { it.uri == anchor }
+        } ?: reduced.defaultClampAnchorUri
+    } else {
+        reduced.defaultClampAnchorUri
+    }
     val mergedList = reduced.selectedImageList.map { item ->
-        liveByUri[item.uri] ?: item
+        liveByUri[item.uri] ?: if (
+            mergedDefaultX != null &&
+            mergedDefaultY != null &&
+            !item.hasCustomOffset &&
+            item.offsetX == 0.5f &&
+            item.offsetY == 0.5f
+        ) {
+            item.copy(
+                offsetX = mergedDefaultX,
+                offsetY = mergedDefaultY,
+                hasCustomOffset = false,
+            )
+        } else {
+            item
+        }
     }
     val curUri = reduced.curImageInfo?.uri ?: live.curImageInfo?.uri
-    val mergedCur = curUri?.let { uri -> liveByUri[uri] ?: reduced.curImageInfo }
+    val mergedCur = curUri?.let { uri -> mergedList.firstOrNull { it.uri == uri } }
         ?: reduced.curImageInfo
     return reduced.copy(
         selectedImageList = mergedList,
         curImageInfo = mergedCur,
+        defaultClampOffsetX = mergedDefaultX,
+        defaultClampOffsetY = mergedDefaultY,
+        defaultClampAnchorUri = mergedAnchor,
     )
 }
 
@@ -75,6 +112,9 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionUiSn
                         imageList = snapshot.galleryPicked.orEmpty(),
                         selectedImageList = imageInfoList,
                         curImageInfo = imageInfoList.firstOrNull(),
+                        defaultClampOffsetX = null,
+                        defaultClampOffsetY = null,
+                        defaultClampAnchorUri = null,
                     ),
                 )
             } else {
@@ -95,13 +135,60 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionUiSn
         is AppIntent.EnterEditor -> {
             // Historical product rule: empty selection is a no-op (never clears an existing list).
             if (intent.selected.isEmpty()) return snapshot
+            val existingByUri = snapshot.launch.selectedImageList.associateBy { it.uri }
+            val continuingSession = snapshot.launch.uiState == LaunchScreenUiState.Editor &&
+                intent.selected.any { it.uri in existingByUri }
+            val defaultX = if (continuingSession) snapshot.launch.defaultClampOffsetX else null
+            val defaultY = if (continuingSession) snapshot.launch.defaultClampOffsetY else null
+            val defaultAnchor = if (
+                continuingSession &&
+                snapshot.launch.defaultClampAnchorUri != null &&
+                intent.selected.any { it.uri == snapshot.launch.defaultClampAnchorUri }
+            ) {
+                snapshot.launch.defaultClampAnchorUri
+            } else {
+                null
+            }
+            val mergedSelected = if (!continuingSession) {
+                intent.selected
+            } else {
+                intent.selected.map { incoming ->
+                    val prior = existingByUri[incoming.uri]
+                    when {
+                        prior != null && incoming === prior -> incoming
+                        prior != null &&
+                            (prior.hasCustomOffset || prior.offsetX != 0.5f || prior.offsetY != 0.5f) &&
+                            incoming.offsetX == 0.5f &&
+                            incoming.offsetY == 0.5f &&
+                            !incoming.hasCustomOffset -> incoming.copy(
+                            offsetX = prior.offsetX,
+                            offsetY = prior.offsetY,
+                            hasCustomOffset = prior.hasCustomOffset,
+                        )
+                        prior == null &&
+                            defaultX != null &&
+                            defaultY != null &&
+                            !incoming.hasCustomOffset &&
+                            incoming.offsetX == 0.5f &&
+                            incoming.offsetY == 0.5f -> incoming.copy(
+                            offsetX = defaultX,
+                            offsetY = defaultY,
+                            hasCustomOffset = false,
+                        )
+                        else -> incoming
+                    }
+                }
+            }
             snapshot.copy(
                 launch = snapshot.launch.copy(
                     uiState = LaunchScreenUiState.Editor,
                     imageList = intent.gallerySnapshot,
-                    selectedImageList = intent.selected,
+                    selectedImageList = mergedSelected,
                     waterMark = intent.waterMark,
-                    curImageInfo = intent.selected.firstOrNull(),
+                    curImageInfo = mergedSelected.firstOrNull(),
+                    defaultClampOffsetX = defaultX,
+                    defaultClampOffsetY = defaultY,
+                    defaultClampAnchorUri = defaultAnchor,
                 ),
             )
         }
@@ -132,6 +219,9 @@ fun reduceSessionUi(snapshot: SessionUiSnapshot, intent: AppIntent): SessionUiSn
                             imageList = emptyList(),
                             selectedImageList = emptyList(),
                             curImageInfo = null,
+                            defaultClampOffsetX = null,
+                            defaultClampOffsetY = null,
+                            defaultClampAnchorUri = null,
                         ),
                     )
                 }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import me.rosuh.easywatermark.data.model.FuncType
 import me.rosuh.easywatermark.data.model.MediaRef
@@ -11,6 +12,7 @@ import me.rosuh.easywatermark.data.model.TextTypeface
 import me.rosuh.easywatermark.data.model.WaterMark
 import me.rosuh.easywatermark.data.model.WatermarkConfigChange
 import me.rosuh.easywatermark.data.model.WatermarkConfigRules
+import me.rosuh.easywatermark.data.model.WatermarkMode
 import me.rosuh.easywatermark.data.model.WatermarkTileMode
 import me.rosuh.easywatermark.shared.generated.resources.Res
 import me.rosuh.easywatermark.shared.generated.resources.title_content
@@ -61,13 +63,21 @@ fun EditorBottomControls(
     val contentLabel = stringResource(Res.string.title_content)
     val styleLabel = stringResource(Res.string.title_style)
     val layoutLabel = stringResource(Res.string.title_layout)
+    // Image mode: hide typeface (and color, which image marks ignore) so Degree stays on-screen.
+    val styleForMode = if (waterMark.markMode == WatermarkMode.Image) {
+        styleOptions.filter {
+            it.type != FuncType.TextTypeFace && it.type != FuncType.Color
+        }
+    } else {
+        styleOptions
+    }
 
     EditorBottomControlsShell(
         tabs = listOf(
             EditorBottomControlTab(label = contentLabel, options = contentOptions),
             EditorBottomControlTab(
                 label = styleLabel,
-                options = styleOptions,
+                options = styleForMode,
                 useCompactPadding = true,
             ),
             EditorBottomControlTab(label = layoutLabel, options = layoutOptions),
@@ -92,6 +102,7 @@ fun EditorBottomControls(
         optionItem = optionItem,
         // Only Text opens a modal on select; Icon must not bump the signal or Text flashes on exit.
         shouldSignalActivation = { it.type == FuncType.Text },
+        countsAsStickerOpen = { it.type == FuncType.Icon },
         onIndicatorPosition = onIndicatorPosition,
         initialTabIndex = initialTabIndex,
         initialOptionIndex = initialOptionIndex,
@@ -247,7 +258,10 @@ internal fun EditorOptionControl(
 
     val tagged = modifier.testTag("editorControl-${spec.type.stableKey()}")
     if (framed) {
-        EditorOptionControlFrame(modifier = tagged) { innerModifier ->
+        EditorOptionControlFrame(
+            modifier = tagged,
+            horizontalPadding = if (spec.type == FuncType.Icon) 0.dp else 16.dp,
+        ) { innerModifier ->
             body(innerModifier)
         }
     } else {

@@ -47,3 +47,4 @@ Early KMP/CMP decisions trace to the archived CMP migration plan ([`2026-06-12-c
 | [0038](0038-testmap-continuous-routes.md) | Testmap continuous routes beside independent cases; one setup/session/restore and attributable steps | **Proposed** |
 | [0039](0039-testmap-android-model-directed-journey.md) | Testmap Android model-directed journey as an evidence-gated runner adapter | **Proposed** |
 | [0040](0040-preview-gesture-targets.md) | Preview gesture targets and watermark editing | **Accepted** (owner 2026-10-18) |
+| [0041](0041-reusable-sticker-asset-library.md) | Reusable sticker asset library | **Proposed** — owner-approved asset-only sticker direction, pending verification sign-off |
