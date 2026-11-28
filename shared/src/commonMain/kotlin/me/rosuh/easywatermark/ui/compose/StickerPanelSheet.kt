@@ -38,6 +38,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.shape.CircleShape
@@ -526,6 +527,12 @@ private fun StickerPanelBody(
     onLongPressUser: (Sticker) -> Unit,
 ) {
     val closeLabel = stringResource(Res.string.cd_sticker_close)
+    val gridState = rememberLazyGridState()
+    // The first import inserts the Mine row above `None`. The grid keeps `None` anchored at the
+    // top, which would leave the new row and Manage above the viewport, so show the start instead.
+    LaunchedEffect(userStickers.isEmpty()) {
+        if (userStickers.isNotEmpty()) gridState.scrollToItem(0)
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -576,6 +583,7 @@ private fun StickerPanelBody(
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
+            state = gridState,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = docked),
